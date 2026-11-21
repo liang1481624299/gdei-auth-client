@@ -1,6 +1,7 @@
 // qml/components/DeviceItem.qml
 // 单台设备条目 / One device row: MAC + category tag, detail line, status line.
 import QtQuick
+import QtQuick.Controls
 import "../theme"
 
 Rectangle {
