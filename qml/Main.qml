@@ -27,7 +27,6 @@ Window {
     ScrollView {
         anchors.fill: parent
         clip: true
-        contentWidth: viewport.width
 
         Column {
             width: parent.width
