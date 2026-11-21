@@ -85,7 +85,7 @@ set(APP_HEADERS
     src/core/msvc_stdext_compat.hpp
 )
 
-qt_add_executable(gdei-connect WIN32 ${APP_SOURCES} ${APP_HEADERS})
+qt_add_executable(gdei-connect WIN32 MACOSX_BUNDLE ${APP_SOURCES} ${APP_HEADERS})
 
 target_include_directories(gdei-connect PRIVATE src)
 
