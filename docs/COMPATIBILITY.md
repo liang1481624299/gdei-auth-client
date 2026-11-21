@@ -1,76 +1,65 @@
 # 兼容策略 / Compatibility Strategy
 
-核对日期：2026-11-21。目标范围：下列最低版本 → 2026-11-21 仍在维护的新系统。
+核对日期：2026-11-21。本项目**固定 Qt6、C++20、Qt Quick/QML**，单一源码仓库、单一 CMake 构建，不做 Qt 版本分支，不维护两套工程。
 
-## 1. 分层原则 / Layering
+## 1. 硬性平台基线 / Hard Baseline
 
-- **核心库 `gdei_core`**：纯 C++17，不链接 Qt；HTTP 后端 Windows 用 WinINet，其余用 libcurl。CLI 覆盖面最广。
-- **CLI `gdei-auth`**：只依赖核心库，无显示器设备可直接运行。
-- **GUI `gdei-auth-gui`**：Qt Widgets 封装核心库；能装 Qt 的系统才提供图形界面。
+| 平台 | 架构 | 版本底线 | 打包产物 |
+|---|---|---|---|
+| Windows | x86 / x64 / ARM64 | Windows 10 1509 ~ Windows 11 25H2 | NSIS exe 安装包 |
+| macOS | x64 / ARM64 | macOS 10.15 Catalina 及以上 | DragNDrop dmg |
+| Android | ARM / ARM64 / x86 / x64 | Android 8.0（API 26）及以上 | apk（前台服务） |
+| Linux | x86 / x64 / ARM | 内核 5.0 及以上 | deb / rpm / Arch `pkg.tar.zst` |
 
-## 2. Qt 版本分档 / Qt Tiering
+> 说明：上表是产品交付目标。Qt6 官方支持矩阵在个别旧底线上可能更严（例如部分 Qt6 LTS 版本要求更新的 Windows / macOS 版本）；标注为“底线”的系统需在对应工具链上实机构建验证，见第 4 节待办。
 
-依据 Qt 官方支持平台文档：
+## 2. 技术栈基线 / Tech Stack Baseline
 
-- Qt 6.5 官方底线：Windows 10 **1809+**、macOS **11+**、iOS **14+**、Android **8.0 (API 26)+**。
-- Qt 5.15 官方底线：Windows 10、macOS **10.13+**、Android **5.0 (API 21)+**。
-
-| 平台底线 | GUI 选用 | 理由 / Reason |
-|---|---|---|
-| Windows 10 1703 / 1709 | Qt 5.15 | Qt6 要求 1809+ |
-| Windows 10 1809+ / Windows 11 | Qt 6 LTS | Qt6 官方支持 |
-| macOS 10.13 High Sierra | Qt 5.15 | Qt6 要求 macOS 11+ |
-| macOS 11+ | Qt 6 LTS | Qt6 官方支持 |
-| Android 7.1 (API 25) | Qt 5.15 | Qt6.5 从 API 26 起 |
-| Android 8.0 (API 26)+ | Qt 6.5+ | Qt6 官方支持 |
-| iOS 11 | Qt 5.15（尽力） | 现代 Qt 对 iOS 11 仅旧版可尝试 |
-| iOS 10.3 | 不支持 | 低于现代 Qt 实际部署底线 |
-| iOS 14+ | Qt 6 | Qt6 官方支持 |
-
-参考：
-- Qt 6.5 Supported Platforms: https://doc.qt.io/qt-6.5/supported-platforms.html
-- Qt 5.15 Supported Platforms: https://doc.qt.io/qt-5/supported-platforms.html
+- 后端逻辑、网络、持久化、加密、系统能力：**C++20**
+- UI：**Qt Quick QML + Qt Quick Controls 2**（禁止用 Qt Widgets 做主界面）
+- 构建系统：**CMake**（单一工程）
+- Qt 版本：**Qt6 固定**，不允许切 Qt5
+- 网络：优先 `QNetworkAccessManager`（HTTP/1.1、HTTP/2）；预留 libcurl 接入 HTTP/3 的扩展接口，上层业务逻辑不改
+- 许可证：LGPL；不引入 GPL 强传染依赖，不引入重型第三方 GUI 框架、CEF、WebView、Node.js 或浏览器内核
 
 ## 3. 平台明细 / Platform Details
 
 ### Windows
 
-- CLI：WinINet 自带，可运行于列出的 Windows 版本；编译器 MSVC 2019+ 或对应 MinGW。
-- GUI：
-  - 1703 / 1709 → Qt 5.15；
-  - 1809+ / 11 → Qt 6 LTS；ARM64 需从 x64 Windows 交叉编译部署。
-
-### Linux（内核 4.10 – 4.14）
-
-- CLI：用发行版自带 GCC/Clang 编译，链接系统 libcurl；注意不要在更新的 glibc 上编译后拷到老系统（符号兼容）。
-- GUI：老发行版用 Qt 5.15，并在同代系统上构建。
+- 工具链：MSVC 2019+ 或对应 MinGW，C++20 支持。
+- x64 为常规构建目标；x86 / ARM64 需对应工具链交叉编译。
+- 后台能力：系统托盘 + 静默保活。
+- 安装包：CPack NSIS。
 
 ### macOS
 
-- 10.13：Qt 5.15，`CMAKE_OSX_DEPLOYMENT_TARGET=10.13`；不要把部署目标降到 Qt 默认值以下。
-- 11+：Qt 6 LTS。
+- 工具链：Xcode 13+，`CMAKE_OSX_DEPLOYMENT_TARGET=10.15`。
+- 同时支持 Intel x64 与 Apple Silicon ARM64；可出通用二进制或分别打包。
+- 后台能力：系统托盘 + 静默保活。
+- 安装包：CPack DragNDrop（dmg）。
 
 ### Android
 
-- CLI：Termux 环境编译可执行文件。
-- GUI：7.1 用 Qt 5.15；8.0+ 用 Qt 6.5+；NDK/JDK/Gradle 版本与所用 Qt 套件官方要求对齐。
+- 构建：Qt for Android 套件 + NDK + JDK + Gradle，版本与所用 Qt6 官方要求对齐。
+- 最低 SDK：API 26（Android 8.0）。
+- 后台能力：前台服务保活；首次运行引导用户关闭电池优化。
+- 产物：apk。
 
-### iOS
+### Linux
 
-- 无终端 CLI；仅 GUI，需 Xcode 工程、开发者签名与上架/侧载配置。
-- 10.3 不支持；11 用 Qt 5.15 尽力打包并实测；14+ 用 Qt6。
-
-### ChromeOS（Chrome 55 – 62）
-
-- 普通 Chromebook 不能直接安装 Qt 原生程序。
-- 可行方向：后续补 **PWA 网页前端**（复用同一套 HTTP/认证逻辑），或在 Linux/Android 容器中跑 CLI。
-
-### Windows 10 Mobile 1709
-
-- 现代 Qt 无对应移植，不提供原生客户端；仅建议网页或脚本方案。
+- 工具链：GCC 11+ / Clang 13+，内核 5.0+。
+- 打包：CPack 生成 deb / rpm / tgz；Arch `pkg.tar.zst` 由打包脚本基于 tar 产物压缩生成。
+- 注意不要在更新的 glibc 上编译后拷贝到老系统（符号兼容）。
+- 后台能力：系统托盘 + 静默保活。
 
 ## 4. 待办 / Open Items
 
-- [ ] 增加 Web/PWA 前端，覆盖 ChromeOS 与无 Qt 环境。
-- [ ] 在各底线系统上实机编译验证（本仓库当前为源码基准，未本地交叉编译）。
-- [ ] iOS 工程与签名配置（Qt 5.15 档）。
+- [ ] 在各底线系统 / 架构上实机编译验证（当前仓库为源码基准，本机无 Qt 与编译器，未本地构建）。
+- [ ] Android apk 签名、前台服务与电池优化引导的真机验证。
+- [ ] Linux deb / rpm / Arch 包在对应发行版上安装验证。
+- [ ] 系统托盘与后台保活在桌面三平台的实机行为验证。
+
+## 参考 / References
+
+- Qt 6 Supported Platforms: https://doc.qt.io/qt-6/supported-platforms.html
+- Qt for Android: https://doc.qt.io/qt-6/android-getting-started.html

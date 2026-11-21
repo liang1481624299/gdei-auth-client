@@ -1,6 +1,7 @@
 # 构建产物 / build output
 build/
 cmake-build-*/
+dist/
 *.o
 *.obj
 *.exe
@@ -9,6 +10,13 @@ cmake-build-*/
 *.lib
 *.so
 *.dylib
+*.apk
+*.deb
+*.rpm
+*.dmg
+*.pkg.tar.zst
+*.zip
+*.tar.gz
 
 # 含口令的本地配置 / local config with credentials
 config.json

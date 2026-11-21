@@ -18,10 +18,13 @@
 
 ## 2. 请求要点 / Request
 
+**登录时序 / Flow**：先 `GET` 登录页 → 解析 HTML 提取 CSRF token（隐藏域）→ 携带完整请求头（UA / Referer / Cookie）`POST` 表单提交。完整 CookieJar 管理会话，匹配 Nginx 会话校验与 IP 绑定。
+
 - 方法：`POST`，`Content-Type: application/x-www-form-urlencoded; charset=UTF-8`
 - 带 `X-Requested-With: XMLHttpRequest`，`Referer: https://nac.gdei.edu.cn/portal/2021/login.jsp`
 - 直连 IP 时仍需在 `Host` 头带原始域名。
 - 用户名不带 `@域名` 后缀；`userip` 留空，由服务端按来源 IP 识别。
+- 实现位置：`src/core/PortalClient.cpp`（`sendRequest` / `extractCsrf` / `buildForm` / `parsePayload`）。
 
 ### 表单字段（顺序与浏览器 `serializeArray()` 一致）
 
@@ -72,9 +75,9 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 
 ## 4. 字符集 / Encoding
 
-- 内部一律按 **UTF-8** 处理用户名、口令与报文。
+- 内部一律按 **UTF-8** 处理用户名、口令与报文（QString 内部 UTF-16，跨边界按 UTF-8 取字节）。
 - 口令在 Base64 之前先按 UTF-8 取字节，避免非 ASCII 口令乱码。
-- Windows 下命令行参数从宽字符（UTF-16）转 UTF-8；POSIX/Android 假设终端为 UTF-8。
+- 网络报文经 `QNetworkAccessManager` 发送，表单体按 UTF-8 编码后 `application/x-www-form-urlencoded`。
 
 ## 5. 已知限制 / Notes
 

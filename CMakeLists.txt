@@ -1,75 +1,108 @@
-# CMakeLists.txt — GDEI 校园网认证客户端 / campus auth client
-# 核心库（core）+ 命令行（cli）始终构建；Qt 图形界面（gui）按需打开。
-# Core CLI always builds; Qt GUI is optional.
-cmake_minimum_required(VERSION 3.10)
-project(gdei-auth-client CXX)
+# CMakeLists.txt — gdei-connect 校园网自动认证客户端
+# Single-source, single CMake build. Fixed Qt6, C++20, Qt Quick/QML.
+# 单一源码、单一 CMake；固定 Qt6，不维护 Qt5 分支。
+cmake_minimum_required(VERSION 3.16)
+project(gdei-connect LANGUAGES CXX)
 
-# C++17：核心避免使用 C++20/23 特性，以兼容旧工具链（VS2017 15.7+ / Xcode 10+ / NDK r22+）。
-# Core stays away from C++20/23 features so older toolchains can still build it.
-set(CMAKE_CXX_STANDARD 17)
+# ---- 标准 / Language standard ----
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(GDEI_BUILD_GUI "Build the optional Qt GUI" OFF)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 
-# ---------------------------------------------------------------- core ----
-set(CORE_SOURCES
-    core/src/encoding.cpp
-    core/src/json.cpp
-    core/src/config.cpp
-    core/src/portal_client.cpp
-    core/src/keepalive.cpp
-    core/src/http_client.cpp
+# ---- Qt6 固定依赖 / Fixed Qt6 dependencies ----
+find_package(Qt6 REQUIRED COMPONENTS
+    Core Quick QuickControls2 Network Qml Svg
 )
 
+# ---- 源码 / Sources ----
+set(APP_SOURCES
+    src/main.cpp
+    src/core/Logger.cpp
+    src/core/Crypto.cpp
+    src/core/ConfigStore.cpp
+    src/core/SessionCookieJar.cpp
+    src/core/PortalClient.cpp
+    src/core/KeepAlive.cpp
+    src/core/I18n.cpp
+    src/app/AuthController.cpp
+    src/app/LogController.cpp
+    src/app/AppController.cpp
+)
+
+set(APP_HEADERS
+    src/core/Constants.hpp
+    src/core/Types.hpp
+    src/core/Logger.hpp
+    src/core/Crypto.hpp
+    src/core/ConfigStore.hpp
+    src/core/SessionCookieJar.hpp
+    src/core/PortalClient.hpp
+    src/core/KeepAlive.hpp
+    src/core/I18n.hpp
+    src/app/AuthController.hpp
+    src/app/LogController.hpp
+    src/app/AppController.hpp
+)
+
+qt_add_executable(gdei-connect WIN32 ${APP_SOURCES} ${APP_HEADERS})
+
+target_include_directories(gdei-connect PRIVATE src)
+
+# ---- QML 模块 / QML module ----
+qt_add_qml_module(gdei-connect
+    URI GdeiConnect
+    VERSION 1.0
+    QML_FILES
+        qml/Main.qml
+        qml/theme/Theme.qml
+        qml/components/Card.qml
+        qml/components/TextField.qml
+        qml/components/PrimaryButton.qml
+        qml/components/Switch.qml
+        qml/components/LangSelector.qml
+        qml/components/LogPanel.qml
+)
+
+target_link_libraries(gdei-connect PRIVATE
+    Qt6::Core
+    Qt6::Quick
+    Qt6::QuickControls2
+    Qt6::Network
+    Qt6::Qml
+    Qt6::Svg
+)
+
+# ---- 平台宏 / Platform macros ----
+target_compile_definitions(gdei-connect PRIVATE
+    QT_NO_CAST_FROM_ASCII
+    QT_NO_CAST_TO_ASCII
+)
+
+# ---- 安装 / Install ----
+install(TARGETS gdei-connect
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+)
+
+# ---- 打包 / Packaging (deb / rpm / Arch tar.zst / macOS dmg / Windows exe) ----
+set(CPACK_PACKAGE_NAME "gdei-connect")
+set(CPACK_PACKAGE_VERSION "0.1.0")
+set(CPACK_PACKAGE_VENDOR "GDEI")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GDEI campus network auto-auth client")
+set(CPACK_RESOURCE_FILE_LICENSE "")
+
 if(WIN32)
-    # Windows 原生 WinINet 后端（Win7 起自带）。
-    list(APPEND CORE_SOURCES core/src/http_wininet.cpp)
-    # 目标系统版本：Windows 7 (0x0601) 起。
-    add_definitions(-D_WIN32_WINNT=0x0601)
-else()
-    # 非 Windows：优先使用 libcurl；找不到时核心仍可编译，HTTP 后端为 Stub。
-    find_package(CURL QUIET)
-    if(CURL_FOUND)
-        add_definitions(-DGDEI_HAVE_CURL)
-        list(APPEND CORE_SOURCES core/src/http_curl.cpp)
-    endif()
+    set(CPACK_GENERATOR "NSIS")
+elseif(APPLE)
+    set(CPACK_GENERATOR "DragNDrop")
+elseif(UNIX)
+    # Debian / RPM / 压缩包；Arch pkg.tar.zst 由打包脚本基于 tar 产物生成。
+    set(CPACK_GENERATOR "DEB;RPM;TGZ")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 endif()
 
-add_library(gdei_core STATIC ${CORE_SOURCES})
-target_include_directories(gdei_core PUBLIC core/include)
-
-if(WIN32)
-    target_link_libraries(gdei_core PUBLIC wininet)
-else()
-    if(CURL_FOUND)
-        target_link_libraries(gdei_core PUBLIC CURL::libcurl)
-    endif()
-endif()
-
-# ------------------------------------------------------------------ cli ----
-add_executable(gdei-auth cli/main.cpp)
-target_link_libraries(gdei-auth PRIVATE gdei_core)
-
-# ------------------------------------------------------------------ gui ----
-if(GDEI_BUILD_GUI)
-    set(CMAKE_AUTOMOC ON)
-    find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets QUIET)
-    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
-
-    add_executable(gdei-auth-gui WIN32
-        gui/qt/main.cpp
-        gui/qt/mainwindow.cpp
-    )
-    target_include_directories(gdei-auth-gui PRIVATE gui/qt)
-    target_link_libraries(gdei-auth-gui PRIVATE gdei_core Qt${QT_VERSION_MAJOR}::Widgets)
-
-    # Qt 版本分档：新系统用 Qt 6 LTS；旧底线（Win10 1703/1709、macOS 10.13、
-    # Android 7.1、iOS 11）用 Qt 5.15。find_package 会优先找到 Qt6。
-endif()
-
-# 安装 / install
-install(TARGETS gdei-auth RUNTIME DESTINATION bin)
-if(GDEI_BUILD_GUI)
-    install(TARGETS gdei-auth-gui RUNTIME DESTINATION bin)
-endif()
+include(CPack)

@@ -1,0 +1,41 @@
+# CI：在 Linux / Windows / macOS 上配置并构建 Qt6/QML 工程。
+# CI: configure & build the Qt6/QML project on Linux / Windows / macOS.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.5.3'
+          components: 'qtbase qtdeclarative qtquickcontrols2 qtsvg'
+          cache: true
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdei-connect-${{ matrix.os }}
+          path: build
+          retention-days: 14
