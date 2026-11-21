@@ -9,11 +9,10 @@ Rectangle {
 
     Theme { id: th }
 
-    property int radius: th.radius
     property int margins: 18
 
     color: th.card
-    radius: root.radius
+    radius: th.radius
     border.width: 1
     border.color: th.border
 
