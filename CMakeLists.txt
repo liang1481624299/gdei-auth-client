@@ -4,7 +4,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(gdei-auth-client CXX)
 
-set(CMAKE_CXX_STANDARD 11)
+# C++17：核心避免使用 C++20/23 特性，以兼容旧工具链（VS2017 15.7+ / Xcode 10+ / NDK r22+）。
+# Core stays away from C++20/23 features so older toolchains can still build it.
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -62,7 +64,8 @@ if(GDEI_BUILD_GUI)
     target_include_directories(gdei-auth-gui PRIVATE gui/qt)
     target_link_libraries(gdei-auth-gui PRIVATE gdei_core Qt${QT_VERSION_MAJOR}::Widgets)
 
-    # 老 Windows 建议用 Qt 5.12 LTS（最后一个官方支持 Win7 的大版本）。
+    # Qt 版本分档：新系统用 Qt 6 LTS；旧底线（Win10 1703/1709、macOS 10.13、
+    # Android 7.1、iOS 11）用 Qt 5.15。find_package 会优先找到 Qt6。
 endif()
 
 # 安装 / install

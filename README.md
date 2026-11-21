@@ -33,7 +33,9 @@ gdei-auth-client/
 │   ├── python/             #   campus_core.py / campus_gui.py
 │   ├── windows/            #   portal.ps1 / login.bat
 │   └── unix/               #   login.sh
-└── docs/PROTOCOL.md        # 抓包协议逆向说明 / captured protocol notes
+└── docs/
+    ├── PROTOCOL.md         # 抓包协议逆向说明 / captured protocol notes
+    └── COMPATIBILITY.md    # 兼容策略与 Qt 分档 / compatibility & Qt tiering
 ```
 
 ## 快速开始 / Quick Start
@@ -65,6 +67,15 @@ gdei-auth --help       # 帮助 / help
 构建时打开 `-DGDEI_BUILD_GUI=ON`，运行 `gdei-auth-gui`。界面提供：
 账号口令填写、状态 / 上线 / 下线 / 保存、保活开关与日志框。
 
+## 版本策略 / Version Strategy
+
+- **核心 CLI**：纯 C++17，不依赖 Qt，可在更老的系统上运行；HTTP 后端 Windows 用 WinINet，其余用 libcurl。
+- **GUI**：在系统底线允许时尽量用**最新 Qt 6 LTS**；当 Qt6 官方不再支持该旧系统时，回退 **Qt 5.15 LTS**。
+- 分档依据 Qt 官方支持平台文档（2026-11 核对）：
+  - Qt 6.5 起：Windows 10 **1809+**、macOS **11+**、iOS **14+**、Android **8.0 (API 26)+**。
+  - Qt 5.15：Windows 10、macOS **10.13+**、Android **5.0 (API 21)+**。
+- 低于上述 Qt 底线的系统，只能跑 CLI 或走网页方案；现代 Qt 不再提供支持。
+
 ## 各平台构建 / Build
 
 ### Windows
@@ -77,8 +88,7 @@ cmake --build build --config Release
 ```
 
 - 产物：`build/.../gdei-auth.exe`（CLI）、`gdei-auth-gui.exe`（GUI）。
-- **Windows 7（含无 SP1）**：GUI 请用 **Qt 5.12 LTS**（最后一个官方支持 Win7 的大版本）；
-  Qt 6 已放弃 Win7。CLI 用 VS2015 工具集或对应 MinGW 即可。
+- **Win10 1703 / 1709**：GUI 用 **Qt 5.15**（Qt6 要求 1809+）；**1809 及以上 / Win11** 用最新 Qt 6 LTS。
 
 ### Linux
 
@@ -88,26 +98,50 @@ cmake -B build
 cmake --build build
 ```
 
+内核 4.10–4.14 的老发行版建议用发行版自带的 GCC/Clang 编译 CLI；GUI 若需要，用 Qt 5.15 并在同代系统上构建，避免新 glibc 符号。
+
 ### macOS
 
 安装 Xcode Command Line Tools 后用上述 CMake 流程；libcurl 随系统提供。
 
+- **macOS 10.13 High Sierra**：GUI 用 **Qt 5.15**（Qt6 要求 macOS 11+）；**macOS 11+** 用最新 Qt 6。
+
 ### Android
 
 - **Termux（CLI）**：`pkg install clang cmake libcurl`，再按 CMake 流程编译出可执行文件。
-- **Qt for Android（GUI）**：用 Qt 套件部署 `gui/qt`；核心库通过 NDK 编译。
+- **Qt for Android（GUI）**：
+  - **Android 7.1 (API 25)**：用 **Qt 5.15**；
+  - **Android 8.0 (API 26) 及以上**：可用 Qt 6.5+；NDK 版本与官方 Qt 套件保持一致。
+
+### iOS
+
+- iOS 无终端 CLI；只有 GUI 形态，需 Xcode 工程与开发者签名。
+- **iOS 11**：尽力用 **Qt 5.15**；**iOS 10.3** 已低于现代 Qt 实际部署底线，不保证可运行；**iOS 14+** 用 Qt 6。
+
+### ChromeOS / Windows Phone
+
+- **ChromeOS（Chrome 55–62）**：普通 Chromebook 不能直接安装 Qt 程序；建议后续补一个 **PWA 网页前端**，或在 Linux/Android 容器里跑 CLI。
+- **Windows 10 Mobile 1709**：现代 Qt 已无对应移植，**不提供原生客户端**；仅建议网页或脚本方案。
 
 ## 兼容矩阵 / Compatibility
 
-| 平台 | 架构 | CLI | GUI | 备注 |
+> 范围：列出的最低版本 → 2026-11-21 仍在维护的新系统。CLI 不依赖 Qt，覆盖面比 GUI 更广。
+
+| 平台 | 架构 | CLI | GUI 建议 | 备注 / Notes |
 |---|---|---|---|---|
-| Windows 7（含无 SP1） | x86 / x64 | ✅ | Qt 5.12 | Qt6 不支持 Win7 |
-| Windows 8 / 8.1 | x86 / x64 | ✅ | Qt 5.12 / 5.15 | |
-| Windows 10 1509–22H2 | x86 / x64 / ARM64 | ✅ | Qt 5.15 / Qt6 | ARM64 用对应工具链 |
-| Windows 11（测试版–25H2） | x86 / x64 / ARM64 | ✅ | Qt6 | |
-| Linux（内核 2.7–7 区间） | x86 / x64 / ARM | ✅ | 可选 Qt | 需 libcurl 或自带 HTTP 后端 |
-| macOS 10.15–27.1 | x64 / ARM64 | ✅ | 可选 Qt | |
-| Android 4–15 | x86 / x64 / ARM / ARM64 | ✅（Termux） | 可选 Qt for Android | 老 Android 注意 NDK 最低版本 |
+| Windows 10 1703 / 1709 | x64 / ARM64 | ✅ | Qt 5.15 | Qt6 需 1809+ |
+| Windows 10 1809–22H2 | x64 / ARM64 | ✅ | Qt 6 LTS | ARM64 交叉编译 |
+| Windows 11（–25H2） | x64 / ARM64 | ✅ | Qt 6 LTS | |
+| macOS 10.13 High Sierra | x64 | ✅ | Qt 5.15 | Qt6 需 macOS 11+ |
+| macOS 11 – 27.x | x64 / ARM64 | ✅ | Qt 6 LTS | |
+| Android 7.1 (API 25) | ARM / ARM64 / x86 | ✅（Termux） | Qt 5.15 | |
+| Android 8.0 – 15 | ARM / ARM64 / x86 / x64 | ✅（Termux） | Qt 6.5+ | NDK 与 Qt 套件对齐 |
+| iOS 10.3 | arm64 | ➖ | ❌ | 低于现代 Qt 部署底线 |
+| iOS 11 | arm64 | ➖ | Qt 5.15（尽力） | 需实测签名打包 |
+| iOS 14 – 18 | arm64 | ➖ | Qt 6 | |
+| Linux 内核 4.10 – 4.14 | x86 / x64 / ARM | ✅ | Qt 5.15（同代构建） | 注意 glibc 符号兼容 |
+| Windows 10 Mobile 1709 | ARM | ➖ | ❌ | 现代 Qt 无移植 |
+| ChromeOS Chrome 55 – 62 | x86 / x64 | ➖ | ❌ | 建议 PWA 网页前端 |
 
 > 说明：本仓库在 Windows 沙箱中生成源码基准，未在本地交叉编译；请按上表在目标工具链上构建验证。
 > Source baseline authored in a Windows sandbox; build on the target toolchain.
