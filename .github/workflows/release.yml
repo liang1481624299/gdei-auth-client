@@ -26,7 +26,6 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.5.3'
-          modules: 'qtbase qtdeclarative qtquickcontrols2 qtsvg'
           cache: true
 
       - name: Configure
