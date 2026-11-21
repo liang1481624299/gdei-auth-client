@@ -52,7 +52,20 @@ jobs:
         shell: bash
         run: bash packaging/linux/deploy.sh build dist
 
+      # 非标签触发（workflow_dispatch 冒烟）：产物作为工作流归档，不挂 Release。
+      # Non-tag smoke dispatch: keep artifacts as workflow artifacts, not a Release.
+      - name: Upload workflow artifacts
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}
+          path: dist/
+          retention-days: 7
+
+      # 仅 v* 标签触发时把产物挂到 GitHub Release。
+      # Attach artifacts to the GitHub Release only on v* tag pushes.
       - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
