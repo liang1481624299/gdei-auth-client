@@ -12,6 +12,7 @@
 #include <QNetworkRequest>
 #include <QSslError>
 #include <QRegularExpression>
+#include <QStringDecoder>
 #include <QUrl>
 
 namespace gdei {
@@ -109,6 +110,60 @@ QString PortalClient::extractCsrf(const QString& html) const {
         QRegularExpression::CaseInsensitiveOption);
     m = re2.match(html);
     return m.hasMatch() ? m.captured(1) : QString();
+}
+
+namespace {
+// 归一化编码名；不在允许集合内返回空串交由调用方回退 UTF-8。
+// Normalize a charset name; return empty when outside the allowed set.
+QString normalizeCharset(const QString& raw) {
+    QString s = raw.trimmed().toLower();
+    s.remove('"').remove('\'');
+    if (s == "utf8" || s == "utf-8") return "utf-8";
+    if (s == "gbk" || s == "gb2312" || s == "gb18030" || s == "cp936") return "gbk";
+    if (s == "windows-1252" || s == "cp1252") return "windows-1252";
+    if (s == "iso-8859-1" || s == "latin1" || s == "latin-1") return "iso-8859-1";
+    return {};
+}
+} // namespace
+
+QString PortalClient::detectCharset(const QByteArray& contentType, const QByteArray& body) const {
+    // 优先级：HTTP Content-Type charset → HTML meta charset → 默认 UTF-8。
+    // Priority: Content-Type charset → HTML meta charset → default UTF-8.
+    QRegularExpression reHdr("charset=([^\\s;]+)", QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch mh = reHdr.match(QString::fromLatin1(contentType));
+    if (mh.hasMatch()) {
+        const QString cs = normalizeCharset(mh.captured(1));
+        if (!cs.isEmpty()) return cs;
+    }
+
+    QRegularExpression reMeta(
+        "<meta[^>]+charset=[\"']?([^\\s\"'>/]+)",
+        QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch mm = reMeta.match(QString::fromUtf8(body));
+    if (mm.hasMatch()) {
+        const QString cs = normalizeCharset(mm.captured(1));
+        if (!cs.isEmpty()) return cs;
+    }
+
+    return "utf-8";
+}
+
+QString PortalClient::decodeBody(const QByteArray& raw, const QByteArray& contentType) const {
+    const QString cs = detectCharset(contentType, raw);
+
+    if (cs == "windows-1252" || cs == "iso-8859-1") {
+        const char* name = cs == "windows-1252" ? "Windows-1252" : "ISO-8859-1";
+        QStringDecoder decoder(name);
+        return decoder(raw);
+    }
+    if (cs == "gbk") {
+        // TODO(P1): 接入 Qt5Compat 的 QTextCodec 以支持 GBK/GB2312；当前回退 UTF-8。
+        // TODO(P1): link Qt5Compat QTextCodec for GBK/GB2312; fall back to UTF-8 meanwhile.
+        if (m_log) {
+            m_log->warning(tr("GBK/GB2312 codec pending, falling back to UTF-8 / GBK 编码待接入，暂按 UTF-8 解码"));
+        }
+    }
+    return QString::fromUtf8(raw);
 }
 
 QString PortalClient::buildForm(const QString& user, const QString& pass) const {
@@ -220,7 +275,9 @@ void PortalClient::onPageReply() {
     if (!reply) return;
     reply->deleteLater();
 
-    const QString html = QString::fromUtf8(reply->readAll());
+    const QByteArray rawPage = reply->readAll();
+    const QString html = decodeBody(rawPage,
+        reply->header(QNetworkRequest::ContentTypeHeader).toByteArray());
     m_csrf = extractCsrf(html);
     if (!m_csrf.isEmpty()) log(LogLevel::Debug, tr("CSRF token extracted"));
 
@@ -270,7 +327,8 @@ void PortalClient::onLoginReply() {
 
     bool ok = false;
     QString message;
-    parsePayload(QString::fromUtf8(raw), ok, message);
+    parsePayload(decodeBody(raw, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray()),
+                 ok, message);
     if (ok) {
         setState(AuthState::Online);
         setOnline(true);
@@ -290,7 +348,9 @@ void PortalClient::onLogoutReply() {
 
     bool ok = false;
     QString message;
-    parsePayload(QString::fromUtf8(reply->readAll()), ok, message);
+    const QByteArray rawLogout = reply->readAll();
+    parsePayload(decodeBody(rawLogout, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray()),
+                 ok, message);
     setState(AuthState::Offline);
     setOnline(false);
     log(LogLevel::Info, ok ? tr("Logged out / 已下线") : tr("Logout result / 注销结果: ") + message);
@@ -313,7 +373,7 @@ void PortalClient::onProbeReply() {
     // 探测同样要求 2xx 且响应体含 NCSI 特征串；状态码异常或空体均判离线。
     // Probe requires a 2xx status and the NCSI marker; bad status or empty body = offline.
     const bool statusOk = (status == 0) || (status >= 200 && status < 300);
-    const QString body = QString::fromUtf8(raw);
+    const QString body = decodeBody(raw, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray());
     const bool online = statusOk && !raw.trimmed().isEmpty() &&
                         body.contains("Microsoft", Qt::CaseInsensitive);
     setOnline(online);

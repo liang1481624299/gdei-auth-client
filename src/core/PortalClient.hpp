@@ -8,6 +8,7 @@
 #include "core/Types.hpp"
 
 #include <QObject>
+#include <QByteArray>
 #include <QString>
 
 class QNetworkAccessManager;
@@ -66,6 +67,8 @@ private:
                                const QString& body = QString());
     QString extractCsrf(const QString& html) const;
     QString buildForm(const QString& user, const QString& pass) const;
+    QString detectCharset(const QByteArray& contentType, const QByteArray& body) const;
+    QString decodeBody(const QByteArray& raw, const QByteArray& contentType) const;
     void parsePayload(const QString& text, bool& ok, QString& message) const;
     void setState(AuthState s);
     void setOnline(bool v);
