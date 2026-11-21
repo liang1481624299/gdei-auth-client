@@ -12,7 +12,7 @@ ComboBox {
     model: app.i18n.languages
     textRole: "name"
     valueRole: "value"
-    currentValue: app.i18n.lang
+    currentIndex: app.i18n.lang
 
     implicitHeight: 38
 
