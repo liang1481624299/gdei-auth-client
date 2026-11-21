@@ -67,7 +67,7 @@ QNetworkReply* PortalClient::sendRequest(const QString& method,
     req.setRawHeader("Host", m_cfg->host().toUtf8());
     req.setRawHeader("Referer",
         QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, m_cfg->host(),
-            constants::LOGIN_PAGE_PATH + m_cfg->nasip()));
+            constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
     req.setTransferTimeout(constants::CONNECT_TIMEOUT_MS);
 
     if (!body.isEmpty()) {
