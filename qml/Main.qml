@@ -2,7 +2,7 @@
 // 主界面 / Root window. QML 只负责交互，业务逻辑经 app.* 暴露到 C++。
 import QtQuick
 import QtQuick.Controls
-import "../theme"
+import "theme"
 import "components"
 
 Window {
