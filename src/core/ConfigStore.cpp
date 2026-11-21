@@ -4,6 +4,7 @@
 #include "core/SecretStore.hpp"
 
 #include <QSettings>
+#include <utility>
 
 namespace gdei {
 
@@ -22,6 +23,13 @@ QString ConfigStore::host() const { return m_host; }
 QString ConfigStore::ip() const { return m_ip; }
 QString ConfigStore::nasip() const { return m_nasip; }
 bool ConfigStore::allowInsecureSsl() const { return m_allowInsecureSsl; }
+int ConfigStore::keepaliveMinSec() const { return m_keepaliveMinSec; }
+int ConfigStore::keepaliveMaxSec() const { return m_keepaliveMaxSec; }
+int ConfigStore::offlineFailThreshold() const { return m_offlineFailThreshold; }
+
+namespace {
+int clampInt(int v, int lo, int hi) { return qBound(lo, v, hi); }
+} // namespace
 
 void ConfigStore::setUsername(const QString& v) {
     if (m_username == v) return;
@@ -60,6 +68,21 @@ void ConfigStore::setAllowInsecureSsl(bool v) {
     if (m_allowInsecureSsl == v) return;
     m_allowInsecureSsl = v; emit allowInsecureSslChanged();
 }
+void ConfigStore::setKeepaliveMinSec(int v) {
+    const int c = clampInt(v, constants::KEEPALIVE_MIN_BOUND_SEC, constants::KEEPALIVE_MAX_BOUND_SEC);
+    if (m_keepaliveMinSec == c) return;
+    m_keepaliveMinSec = c; emit keepaliveMinSecChanged();
+}
+void ConfigStore::setKeepaliveMaxSec(int v) {
+    const int c = clampInt(v, constants::KEEPALIVE_MIN_BOUND_SEC, constants::KEEPALIVE_MAX_BOUND_SEC);
+    if (m_keepaliveMaxSec == c) return;
+    m_keepaliveMaxSec = c; emit keepaliveMaxSecChanged();
+}
+void ConfigStore::setOfflineFailThreshold(int v) {
+    const int c = clampInt(v, constants::FAIL_THRESHOLD_MIN, constants::FAIL_THRESHOLD_MAX);
+    if (m_offlineFailThreshold == c) return;
+    m_offlineFailThreshold = c; emit offlineFailThresholdChanged();
+}
 
 void ConfigStore::load() {
     QSettings s(constants::ORG_NAME, constants::APP_NAME);
@@ -71,6 +94,13 @@ void ConfigStore::load() {
     m_ip   = s.value("ip", constants::DEFAULT_IP).toString();
     m_nasip = s.value("nasip", constants::DEFAULT_NASIP).toString();
     m_allowInsecureSsl = s.value("allow_insecure_ssl", false).toBool();
+    m_keepaliveMinSec = clampInt(s.value("keepalive_min_sec", constants::KEEPALIVE_MIN_SEC).toInt(),
+                                 constants::KEEPALIVE_MIN_BOUND_SEC, constants::KEEPALIVE_MAX_BOUND_SEC);
+    m_keepaliveMaxSec = clampInt(s.value("keepalive_max_sec", constants::KEEPALIVE_MAX_SEC).toInt(),
+                                 constants::KEEPALIVE_MIN_BOUND_SEC, constants::KEEPALIVE_MAX_BOUND_SEC);
+    if (m_keepaliveMaxSec < m_keepaliveMinSec) std::swap(m_keepaliveMinSec, m_keepaliveMaxSec);
+    m_offlineFailThreshold = clampInt(s.value("offline_fail_threshold", constants::OFFLINE_FAIL_THRESHOLD).toInt(),
+                                      constants::FAIL_THRESHOLD_MIN, constants::FAIL_THRESHOLD_MAX);
 
     // 仅在记住密码时从平台安全存储还原口令 / restore from secure store only when remembered.
     m_password = m_rememberPassword ? SecretStore::instance().read(QStringLiteral("password"))
@@ -80,6 +110,7 @@ void ConfigStore::load() {
     emit rememberPasswordChanged(); emit autoLoginChanged();
     emit langChanged(); emit hostChanged(); emit ipChanged(); emit nasipChanged();
     emit allowInsecureSslChanged();
+    emit keepaliveMinSecChanged(); emit keepaliveMaxSecChanged(); emit offlineFailThresholdChanged();
 }
 
 void ConfigStore::save() {
@@ -92,6 +123,9 @@ void ConfigStore::save() {
     s.setValue("ip", m_ip);
     s.setValue("nasip", m_nasip);
     s.setValue("allow_insecure_ssl", m_allowInsecureSsl);
+    s.setValue("keepalive_min_sec", m_keepaliveMinSec);
+    s.setValue("keepalive_max_sec", m_keepaliveMaxSec);
+    s.setValue("offline_fail_threshold", m_offlineFailThreshold);
     // 清理旧版本写入的混淆口令遗留键 / drop the legacy obfuscated password key.
     s.remove("password_ob");
 

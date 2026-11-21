@@ -39,6 +39,7 @@ private:
     Logger* m_log;
     QTimer* m_timer;
     bool m_running = false;
+    int m_failCount = 0;
 
     void scheduleNext();
     int randomIntervalSec() const;

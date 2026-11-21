@@ -7,6 +7,7 @@
 #define GDEI_CONFIG_STORE_HPP
 
 #include "core/Types.hpp"
+#include "core/Constants.hpp"
 
 #include <QObject>
 #include <QString>
@@ -25,6 +26,9 @@ class ConfigStore : public QObject {
     Q_PROPERTY(QString ip READ ip WRITE setIp NOTIFY ipChanged)
     Q_PROPERTY(QString nasip READ nasip WRITE setNasip NOTIFY nasipChanged)
     Q_PROPERTY(bool allowInsecureSsl READ allowInsecureSsl WRITE setAllowInsecureSsl NOTIFY allowInsecureSslChanged)
+    Q_PROPERTY(int keepaliveMinSec READ keepaliveMinSec WRITE setKeepaliveMinSec NOTIFY keepaliveMinSecChanged)
+    Q_PROPERTY(int keepaliveMaxSec READ keepaliveMaxSec WRITE setKeepaliveMaxSec NOTIFY keepaliveMaxSecChanged)
+    Q_PROPERTY(int offlineFailThreshold READ offlineFailThreshold WRITE setOfflineFailThreshold NOTIFY offlineFailThresholdChanged)
 
 public:
     explicit ConfigStore(QObject* parent = nullptr);
@@ -38,6 +42,9 @@ public:
     QString ip() const;
     QString nasip() const;
     bool allowInsecureSsl() const;
+    int keepaliveMinSec() const;
+    int keepaliveMaxSec() const;
+    int offlineFailThreshold() const;
 
     void setUsername(const QString& v);
     void setPassword(const QString& v);
@@ -48,6 +55,9 @@ public:
     void setIp(const QString& v);
     void setNasip(const QString& v);
     void setAllowInsecureSsl(bool v);
+    void setKeepaliveMinSec(int v);
+    void setKeepaliveMaxSec(int v);
+    void setOfflineFailThreshold(int v);
 
     Q_INVOKABLE void load();
     Q_INVOKABLE void save();
@@ -62,6 +72,9 @@ signals:
     void ipChanged();
     void nasipChanged();
     void allowInsecureSslChanged();
+    void keepaliveMinSecChanged();
+    void keepaliveMaxSecChanged();
+    void offlineFailThresholdChanged();
 
 private:
     QString m_username;
@@ -73,6 +86,9 @@ private:
     QString m_host;
     QString m_ip;
     QString m_nasip;
+    int m_keepaliveMinSec = constants::KEEPALIVE_MIN_SEC;
+    int m_keepaliveMaxSec = constants::KEEPALIVE_MAX_SEC;
+    int m_offlineFailThreshold = constants::OFFLINE_FAIL_THRESHOLD;
 };
 
 } // namespace gdei

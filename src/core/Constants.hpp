@@ -75,10 +75,18 @@ inline const QString DEFAULT_ASSIGN_IP     = "0";
 // ---- 超时与保活退避 / Timeouts & keep-alive backoff ----
 inline constexpr int CONNECT_TIMEOUT_MS   = 10000;
 inline constexpr int PROBE_TIMEOUT_MS     = 6000;
-// 随机间隔区间（秒），避免固定频率被 Nginx 限流 403。
-// Random jitter range to avoid Nginx rate-limit 403.
-inline constexpr int KEEPALIVE_MIN_SEC    = 45;
-inline constexpr int KEEPALIVE_MAX_SEC    = 90;
+// 随机间隔区间（秒）：基线默认 3 分钟 ±30s（150–210 秒），避免固定频率被 Nginx 限流 403。
+// Random jitter range: baseline 3 min ±30s (150–210s) to avoid Nginx rate-limit 403.
+inline constexpr int KEEPALIVE_MIN_SEC    = 150;
+inline constexpr int KEEPALIVE_MAX_SEC    = 210;
+// 连续探测失败达到该次数才判定掉线并重登；单次失败只记警告。
+// Consecutive failed probes before declaring offline and re-authenticating.
+inline constexpr int OFFLINE_FAIL_THRESHOLD = 3;
+// 可配置区间的硬边界 / Hard bounds for configurable keep-alive interval.
+inline constexpr int KEEPALIVE_MIN_BOUND_SEC = 30;
+inline constexpr int KEEPALIVE_MAX_BOUND_SEC = 600;
+inline constexpr int FAIL_THRESHOLD_MIN = 1;
+inline constexpr int FAIL_THRESHOLD_MAX = 10;
 
 } // namespace gdei::constants
 
