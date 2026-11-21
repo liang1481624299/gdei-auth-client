@@ -430,7 +430,7 @@ void DevicePortalClient::clearSession() {
     m_viewState.clear();
     m_iceWindow.clear();
     m_iceView.clear();
-    m_jar->setCookies(QList<QNetworkCookie>());
+    m_jar->clear();
     setMessage(QString());
 }
 

@@ -10,4 +10,8 @@ QList<QNetworkCookie> SessionCookieJar::list() const {
     return allCookies();
 }
 
+void SessionCookieJar::clear() {
+    setCookies(QList<QNetworkCookie>());
+}
+
 } // namespace gdei

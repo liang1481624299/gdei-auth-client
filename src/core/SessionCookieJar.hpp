@@ -17,6 +17,9 @@ public:
 
     // 当前保存的全部 Cookie（调试/日志用）/ all cookies for debugging.
     QList<QNetworkCookie> list() const;
+
+    // 清空全部 Cookie / drop all stored cookies.
+    void clear();
 };
 
 } // namespace gdei
