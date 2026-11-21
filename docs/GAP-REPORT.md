@@ -46,45 +46,44 @@
 
 ## 二、P1 — 核心业务与可靠性
 
-### P1-1 掉线判定无连续失败阈值 ❌
+### P1-1 掉线判定无连续失败阈值 ✅
 - 规格：连续多次失败才判定掉线，仅掉线时触发登录；禁止单次失败即重登。
-- 现状：`src/core/KeepAlive.cpp:58-63`，`online == false` 立即 `m_portal->login()`；无失败计数、无退避。
-- 建议：引入连续失败阈值（如 2~3 次，可配置），计数器在成功探测后清零；阈值内只记录警告，达到阈值才进入重登。
+- 现状：`KeepAlive` 维护连续失败计数，成功探测清零；阈值（默认 3，可配置 1–10）内仅记警告，达到阈值才调用 `login()`。
+- 遗留：暂无指数退避；手动注销后 KeepAlive 仍可能在阈值后触发重登，待区分主动离线与探测离线。
 
-### P1-2 探测间隔与基线不符 🟡
+### P1-2 探测间隔与基线不符 ✅
 - 规格：检测间隔默认 **3 分钟，±30 秒随机抖动**（即 150–210 秒），防 Nginx 限流 403。
-- 现状：`Constants.hpp:80-81` `KEEPALIVE_MIN_SEC=45`、`KEEPALIVE_MAX_SEC=90`，45–90 秒，频率高于规格要求。
-- 建议：常量改为 150 / 210，并纳入可配置项。
+- 现状：常量默认 150–210 秒随机抖动；上下限纳入 `ConfigStore` 持久化，边界 30–600 秒，min/max 倒置时自动交换。
 
 ### P1-3 登录成功判定过于单一 🟡
 - 规格：结合状态码、跳转目标、页面特征综合判定；不能仅凭 POST 返回 200 判定成功。
-- 现状：`PortalClient.cpp:146-171` `parsePayload` 仅 Base64+URL 解码后看 JSON `errorNumber=="1"`；未检查 HTTP 状态码、重定向目标、页面特征串。
-- 建议：成功条件叠加：状态码 2xx、返回体特征（JSON 字段 / 页面关键字）、必要时跟随重定向后的落点；空响应与错误文案分别归类。
+- 现状：登录与探测已叠加 2xx 状态码、空响应归类、NCSI 特征串与 JSON `errorNumber=="1"`；非 2xx / 空体单独归为失败。
+- 遗留：未专门校验重定向落点目标页特征；JSON 解析失败仍回退展示原始报文。
 
-### P1-4 通信编码未做动态探测 ❌
+### P1-4 通信编码未做动态探测 🟡
 - 规格：编码探测优先级 HTTP `Content-Type` charset → HTML meta charset → 自动猜测；POST 表单使用探测到的服务端编码，并在 `Content-Type` 带对应 charset；允许集合 UTF-8 / GBK / GB2312 / Windows-1252 / ISO-8859-1。
-- 现状：`PortalClient.cpp:75` 固定 `charset=UTF-8`；读取全部 `fromUtf8`，表单 `toUtf8`；无 meta 解析、无编码猜测、无 GBK 等分支。
-- 建议：在 PortalClient 增加编码探测环节（响应头 → `<meta charset>` → 猜测），保存当前编码供回写表单与解码使用。
+- 现状：`PortalClient` 实现响应头 charset → `<meta charset>` 探测；UTF-8 / Windows-1252 / ISO-8859-1 经 `QStringDecoder` 解码。
+- 遗留：GBK/GB2312 需接入 Qt5Compat `QTextCodec`（当前回退 UTF-8 并告警）；POST 表单仍按 UTF-8 编码，未按探测编码回写。
 
-### P1-5 日志缺少敏感信息统一脱敏层 ❌
+### P1-5 日志缺少敏感信息统一脱敏层 ✅
 - 规格：密码、Cookie、token、MAC、IP 等敏感信息必须脱敏，禁止明文打印。
-- 现状：`Logger.cpp` 只做级别分级与落盘，无脱敏过滤器；当前消息体未主动带入口令/Cookie，但缺少防护层，后续接口（设备列表等）容易回归出明文。
-- 建议：Logger 写入前统一过 `sanitize()`，对密码、Cookie 值、token、MAC、IPv4/IPv6 做掩码；脱敏规则集中在常量配置。
+- 现状：`Logger::sanitize()` 在写入缓冲 / 面板 / 持久文件 / 导出前统一掩码：口令与 token 键值对、Cookie 头、MAC 地址、IPv4 后两段；规则集中在 Logger。
+- 遗留：IPv6、Bearer 票据等模式未单独覆盖；脱敏规则未抽为常量配置。
 
 ### P1-6 桌面托盘 / 后台保活、Android 前台服务未实现 ❌ / ⚠️
 - 规格：Windows/macOS/Linux 系统托盘 + 后台静默保活；Android 前台服务、常驻通知、引导关闭电池优化。
-- 现状：源码无 `QSystemTrayIcon`、无托盘菜单、无后台驻留入口；无 Android 服务 / 通知 / 电池优化引导代码。README `:36`、`docs/COMPATIBILITY.md:31/38/45/53` 已宣称上述能力。
-- 建议：桌面侧补托盘图标、显示/隐藏主窗口、退出、状态气泡；Android 侧补前台服务与通知渠道、电池优化引导页；文档先降级为规划项。
+- 现状：源码无托盘菜单、无后台驻留入口；无 Android 服务 / 通知 / 电池优化引导代码。README、`docs/COMPATIBILITY.md` 已将这些标注为规划项。
+- 遗留与权衡：Qt6 桌面托盘 API `QSystemTrayIcon` 位于 QtWidgets，与基线“主界面不用 Widgets”存在冲突，落地前需先确认是否允许仅为托盘壳引入 QtWidgets；Android 前台服务待移动构建链。
 
 ### P1-7 设备管理门户扩展功能未实现 ❌
 - 规格（扩展）：读取本人在线设备列表（设备名 / MAC / IP / 在线时长 / 绑定状态）、当前在线状态与设备数量、剩余可登录设备数；仅在用户手动确认后下线本账号单台设备；禁止批量踢设备 / 绕过多端限制 / 访问他人数据。
-- 现状：`HEALTH_URL`（`macList.xhtml`）仅在 `Constants.hpp:30-31` 定义，`PortalClient` 未请求该门户；无设备数据模型、无设备列表 QML 组件、无下线确认流程。
-- 建议：新增 `DevicePortalClient`（复用会话 Cookie）+ `DeviceInfo` 模型 + `DeviceItem.qml`；字段缺失 / 页面改版 / 结构变化时降级展示“设备状态暂不可用”，不影响核心登录保活；下线动作必须二次确认。
+- 现状：`HEALTH_URL`（`macList.xhtml`）仅作为配置地址保留，`PortalClient` 未请求该门户；无设备数据模型、无设备列表 QML 组件、无下线确认流程。
+- 建议：先抓包确认 `macList.xhtml` 的会话机制与页面 / 数据结构，再新增 `DevicePortalClient`（复用会话 Cookie）+ `DeviceInfo` 模型 + `DeviceItem.qml`；字段缺失 / 改版时降级“设备状态暂不可用”；下线必须二次确认。
 
-### P1-8 关键配置项未外置 ❌
+### P1-8 关键配置项未外置 🟡
 - 规格：登录地址、门户地址、检测地址、轮询间隔、超时时间、证书放行策略等集中管理、可配置，不散落硬编码。
-- 现状：`ConfigStore` 仅持久化 username / password / remember / autoLogin / lang / host / ip / nasip；超时（`CONNECT_TIMEOUT_MS` 10000、`PROBE_TIMEOUT_MS` 6000）、保活间隔、证书策略、NCSI/健康地址均为编译期常量，界面与配置文件不可调。
-- 建议：ConfigStore 增补超时、间隔、抖动范围、证书放行、探测地址等字段，带默认值与边界校验。
+- 现状：`ConfigStore` 已持久化主机 / IP / NASIP、证书放行、保活上下限、失败阈值、连接 / 探测超时、NCSI 与健康检查地址，带默认值与边界校验。
+- 遗留：高级配置暂无 QML 界面入口（仅配置文件 / 属性层可调）；部分系统级地址仍以常量为默认值。
 
 ---
 
