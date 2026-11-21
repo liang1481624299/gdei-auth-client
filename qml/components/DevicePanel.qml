@@ -7,7 +7,6 @@ import "."
 
 Card {
     id: root
-    Theme { id: th }
 
     property string codeText: ""
 
@@ -25,7 +24,7 @@ Card {
             spacing: 10
             Label {
                 text: app.i18n.lang, app.i18n.text("devices.title")
-                color: th.text
+                color: theme.text
                 font.bold: true
                 font.pixelSize: 15
                 anchors.verticalCenter: parent.verticalCenter
@@ -33,7 +32,7 @@ Card {
             Item { width: 1; height: 1; anchors.verticalCenter: parent.verticalCenter }
             PrimaryButton {
                 text: app.i18n.text("devices.refresh")
-                bg: th.muted
+                bg: theme.muted
                 implicitHeight: 34
                 padding: 12
                 enabled: app.devices.authenticated && !app.devices.busy
@@ -41,7 +40,7 @@ Card {
             }
             PrimaryButton {
                 text: app.i18n.text("devices.logout")
-                bg: th.danger
+                bg: theme.danger
                 implicitHeight: 34
                 padding: 12
                 visible: app.devices.authenticated
@@ -69,9 +68,9 @@ Card {
                     anchors.verticalCenter: parent.verticalCenter
                     Rectangle {
                         anchors.fill: parent
-                        radius: th.radiusSmall
+                        radius: theme.radiusSmall
                         border.width: 1
-                        border.color: th.border
+                        border.color: theme.border
                         visible: captchaImg.status !== Image.Ready
                     }
                 }
@@ -120,7 +119,7 @@ Card {
                 Label {
                     anchors.centerIn: parent
                     text: app.i18n.text("devices.empty")
-                    color: th.muted
+                    color: theme.muted
                     font.pixelSize: 13
                     visible: deviceList.count === 0
                 }
@@ -130,7 +129,7 @@ Card {
         Label {
             width: parent.width
             text: app.devices.lastMessage
-            color: th.muted
+            color: theme.muted
             font.pixelSize: 12
             wrapMode: Text.Wrap
             visible: text.length > 0
@@ -139,7 +138,7 @@ Card {
         Label {
             width: parent.width
             text: app.i18n.text("devices.unsupported")
-            color: th.warning
+            color: theme.warning
             font.pixelSize: 11
             wrapMode: Text.Wrap
         }
