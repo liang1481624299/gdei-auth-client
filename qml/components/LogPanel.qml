@@ -7,7 +7,6 @@ import "."
 
 Card {
     id: root
-    Theme { id: th }
 
     property int panelHeight: 220
 
@@ -19,7 +18,7 @@ Card {
             spacing: 12
             Label {
                 text: app.i18n.lang, app.i18n.text("log.title")
-                color: th.text
+                color: theme.text
                 font.bold: true
                 font.pixelSize: 15
                 anchors.verticalCenter: parent.verticalCenter
@@ -27,7 +26,7 @@ Card {
             Item { width: 1; height: 1; anchors.verticalCenter: parent.verticalCenter }
             PrimaryButton {
                 text: app.i18n.lang, app.i18n.text("log.export")
-                bg: th.muted
+                bg: theme.muted
                 implicitHeight: 34
                 padding: 12
                 onClicked: app.logs.exportLog("")
@@ -48,7 +47,7 @@ Card {
 
                 Label {
                     text: model.time
-                    color: th.muted
+                    color: theme.muted
                     font.pixelSize: 12
                     verticalAlignment: Text.AlignTop
                 }
@@ -59,16 +58,16 @@ Card {
                     verticalAlignment: Text.AlignTop
                     color: {
                         switch (model.level) {
-                            case 1: return th.primary;
-                            case 2: return th.warning;
-                            case 3: return th.danger;
-                            default: return th.muted;
+                            case 1: return theme.primary;
+                            case 2: return theme.warning;
+                            case 3: return theme.danger;
+                            default: return theme.muted;
                         }
                     }
                 }
                 Label {
                     text: model.message
-                    color: th.text
+                    color: theme.text
                     font.pixelSize: 12
                     width: listView.width - 150
                     wrapMode: Text.Wrap
