@@ -75,12 +75,6 @@ target_link_libraries(gdei-connect PRIVATE
     Qt6::Svg
 )
 
-# ---- 平台宏 / Platform macros ----
-target_compile_definitions(gdei-connect PRIVATE
-    QT_NO_CAST_FROM_ASCII
-    QT_NO_CAST_TO_ASCII
-)
-
 # ---- 安装 / Install ----
 install(TARGETS gdei-connect
     BUNDLE DESTINATION .

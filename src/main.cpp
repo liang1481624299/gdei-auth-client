@@ -17,8 +17,8 @@ using namespace gdei;
 
 int main(int argc, char* argv[]) {
     QGuiApplication app(argc, argv);
-    app.setApplicationName("gdei-connect");
-    app.setOrganizationName("GDEI");
+    app.setApplicationName(QStringLiteral("gdei-connect"));
+    app.setOrganizationName(QStringLiteral("GDEI"));
 
     // 持久化配置 / Persistent settings.
     ConfigStore config;
@@ -36,11 +36,11 @@ int main(int argc, char* argv[]) {
     AppController controller(&config, &logger, &i18n, &auth, &logs);
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("app", &controller);
+    engine.rootContext()->setContextProperty(QStringLiteral("app"), &controller);
 
-    const QUrl url(u"qrc:/qt/qml/GdeiConnect/Main.qml"_qs);
+    const QUrl url(QStringLiteral("qrc:/qt/qml/GdeiConnect/Main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
-                     &app, [](QObject*) { QGuiApplication::exit(-1); });
+                     &app, []() { QGuiApplication::exit(-1); });
     engine.load(url);
 
     // 自动登录 / Auto login when enabled and credentials are present.
