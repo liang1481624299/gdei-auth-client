@@ -130,7 +130,7 @@ install(TARGETS gdei-connect
 
 # ---- 打包 / Packaging (deb / rpm / Arch tar.zst / macOS dmg / Windows exe) ----
 set(CPACK_PACKAGE_NAME "gdei-connect")
-set(CPACK_PACKAGE_VERSION "0.1.0")
+set(CPACK_PACKAGE_VERSION "0.1.1")
 set(CPACK_PACKAGE_VENDOR "GDEI")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GDEI campus network auto-auth client")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
