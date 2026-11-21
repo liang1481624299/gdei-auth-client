@@ -430,7 +430,12 @@ void DevicePortalClient::clearSession() {
     m_viewState.clear();
     m_iceWindow.clear();
     m_iceView.clear();
-    m_jar->clear();
+    // 基类未暴露清空接口；直接更换全新 Jar 丢弃旧会话 Cookie。
+    // Base exposes no clear API; swap in a fresh jar to drop old cookies.
+    SessionCookieJar* oldJar = m_jar;
+    m_jar = new SessionCookieJar(this);
+    m_nam->setCookieJar(m_jar);
+    if (oldJar) oldJar->deleteLater();
     setMessage(QString());
 }
 
