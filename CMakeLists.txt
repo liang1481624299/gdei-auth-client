@@ -17,6 +17,22 @@ find_package(Qt6 REQUIRED COMPONENTS
     Core Quick QuickControls2 Network Qml Svg
 )
 
+# ---- macOS: strip removed AGL framework ----
+# AGL was removed from the macOS 14+ SDK; Qt 6.5's WrapOpenGL still references it.
+# Strip the stale framework from the Qt link interface so modern SDKs link cleanly.
+if(APPLE)
+    foreach(_agl_tgt WrapOpenGL::WrapOpenGL Qt6::Gui Qt6::Core Qt6::Quick Qt6::Qml Qt6::Svg)
+        if(TARGET ${_agl_tgt})
+            get_property(_agl_libs TARGET ${_agl_tgt} PROPERTY INTERFACE_LINK_LIBRARIES)
+            if(_agl_libs)
+                list(REMOVE_ITEM _agl_libs "-framework AGL")
+                list(REMOVE_ITEM _agl_libs "AGL")
+                set_property(TARGET ${_agl_tgt} PROPERTY INTERFACE_LINK_LIBRARIES "${_agl_libs}")
+            endif()
+        endif()
+    endforeach()
+endif()
+
 # ---- 源码 / Sources ----
 set(APP_SOURCES
     src/main.cpp
