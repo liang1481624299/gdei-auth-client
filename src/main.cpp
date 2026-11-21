@@ -40,12 +40,14 @@ int main(int argc, char* argv[]) {
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("app"), &controller);
 
-    // 按模块 URI + 组件名加载入口，避免手写 qrc 路径受资源前缀 / 目录层级影响。
-    // Load the entry by module URI and element name instead of a hand-written qrc path,
-    // so the entry is not sensitive to the resource prefix or directory layout.
+    // 入口 QML 位于编译期资源中；路径由 qt_add_qml_module 的资源前缀与文件相对位置决定。
+    // The entry QML lives in the compiled resource; the path follows the module's
+    // resource prefix plus the file's relative position. load(QUrl) is used to stay
+    // compatible with Qt 6.4 (Debian bookworm), which lacks loadFromModule (6.5+).
+    const QUrl url(QStringLiteral("qrc:/GdeiConnect/qml/Main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
                      &app, []() { QGuiApplication::exit(-1); });
-    engine.loadFromModule(QStringLiteral("GdeiConnect"), QStringLiteral("Main"));
+    engine.load(url);
 
     // 自动登录 / Auto login when enabled and credentials are present.
     if (config.autoLogin() && !config.username().isEmpty() &&
