@@ -48,6 +48,7 @@ private:
     void append(Entry entry);
     static QString levelText(LogLevel level);
     static QString timestamp(qint64 ms);
+    static QString sanitize(const QString& message);
 };
 
 } // namespace gdei
