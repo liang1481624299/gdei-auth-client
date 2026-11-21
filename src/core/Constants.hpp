@@ -75,6 +75,9 @@ inline const QString DEFAULT_ASSIGN_IP     = "0";
 // ---- 超时与保活退避 / Timeouts & keep-alive backoff ----
 inline constexpr int CONNECT_TIMEOUT_MS   = 10000;
 inline constexpr int PROBE_TIMEOUT_MS     = 6000;
+// 超时可配置边界（毫秒）/ Bounds for configurable timeouts (ms).
+inline constexpr int TIMEOUT_MIN_MS       = 1000;
+inline constexpr int TIMEOUT_MAX_MS       = 60000;
 // 随机间隔区间（秒）：基线默认 3 分钟 ±30s（150–210 秒），避免固定频率被 Nginx 限流 403。
 // Random jitter range: baseline 3 min ±30s (150–210s) to avoid Nginx rate-limit 403.
 inline constexpr int KEEPALIVE_MIN_SEC    = 150;

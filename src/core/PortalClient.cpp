@@ -78,7 +78,7 @@ QNetworkReply* PortalClient::sendRequest(const QString& method,
     req.setRawHeader("Referer",
         QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, m_cfg->host(),
             constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
-    req.setTransferTimeout(constants::CONNECT_TIMEOUT_MS);
+    req.setTransferTimeout(m_cfg->connectTimeoutMs());
 
     if (!body.isEmpty()) {
         req.setHeader(QNetworkRequest::ContentTypeHeader,
@@ -263,9 +263,12 @@ void PortalClient::logout() {
 }
 
 void PortalClient::refreshStatus() {
-    // NCSI 是外网地址，不走门户直连 IP，单独用普通 GET。
-    // External NCSI probe: plain GET, not through the portal direct IP.
-    QNetworkReply* reply = m_nam->get(QNetworkRequest(QUrl(constants::NCSI_URL)));
+    // NCSI 是外网地址，不走门户直连 IP，单独用普通 GET；地址与超时可配置。
+    // External NCSI probe: plain GET, not through the portal direct IP; URL and
+    // timeout are configurable.
+    QNetworkRequest probeReq(QUrl(m_cfg->probeUrl()));
+    probeReq.setTransferTimeout(m_cfg->probeTimeoutMs());
+    QNetworkReply* reply = m_nam->get(probeReq);
     reply->setProperty("action", "probe");
     connect(reply, &QNetworkReply::finished, this, &PortalClient::onProbeReply);
 }

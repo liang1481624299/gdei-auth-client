@@ -29,6 +29,10 @@ class ConfigStore : public QObject {
     Q_PROPERTY(int keepaliveMinSec READ keepaliveMinSec WRITE setKeepaliveMinSec NOTIFY keepaliveMinSecChanged)
     Q_PROPERTY(int keepaliveMaxSec READ keepaliveMaxSec WRITE setKeepaliveMaxSec NOTIFY keepaliveMaxSecChanged)
     Q_PROPERTY(int offlineFailThreshold READ offlineFailThreshold WRITE setOfflineFailThreshold NOTIFY offlineFailThresholdChanged)
+    Q_PROPERTY(int connectTimeoutMs READ connectTimeoutMs WRITE setConnectTimeoutMs NOTIFY connectTimeoutMsChanged)
+    Q_PROPERTY(int probeTimeoutMs READ probeTimeoutMs WRITE setProbeTimeoutMs NOTIFY probeTimeoutMsChanged)
+    Q_PROPERTY(QString probeUrl READ probeUrl WRITE setProbeUrl NOTIFY probeUrlChanged)
+    Q_PROPERTY(QString healthUrl READ healthUrl WRITE setHealthUrl NOTIFY healthUrlChanged)
 
 public:
     explicit ConfigStore(QObject* parent = nullptr);
@@ -45,6 +49,10 @@ public:
     int keepaliveMinSec() const;
     int keepaliveMaxSec() const;
     int offlineFailThreshold() const;
+    int connectTimeoutMs() const;
+    int probeTimeoutMs() const;
+    QString probeUrl() const;
+    QString healthUrl() const;
 
     void setUsername(const QString& v);
     void setPassword(const QString& v);
@@ -58,6 +66,10 @@ public:
     void setKeepaliveMinSec(int v);
     void setKeepaliveMaxSec(int v);
     void setOfflineFailThreshold(int v);
+    void setConnectTimeoutMs(int v);
+    void setProbeTimeoutMs(int v);
+    void setProbeUrl(const QString& v);
+    void setHealthUrl(const QString& v);
 
     Q_INVOKABLE void load();
     Q_INVOKABLE void save();
@@ -75,6 +87,10 @@ signals:
     void keepaliveMinSecChanged();
     void keepaliveMaxSecChanged();
     void offlineFailThresholdChanged();
+    void connectTimeoutMsChanged();
+    void probeTimeoutMsChanged();
+    void probeUrlChanged();
+    void healthUrlChanged();
 
 private:
     QString m_username;
@@ -89,6 +105,10 @@ private:
     int m_keepaliveMinSec = constants::KEEPALIVE_MIN_SEC;
     int m_keepaliveMaxSec = constants::KEEPALIVE_MAX_SEC;
     int m_offlineFailThreshold = constants::OFFLINE_FAIL_THRESHOLD;
+    int m_connectTimeoutMs = constants::CONNECT_TIMEOUT_MS;
+    int m_probeTimeoutMs = constants::PROBE_TIMEOUT_MS;
+    QString m_probeUrl = constants::NCSI_URL;
+    QString m_healthUrl = constants::HEALTH_URL;
 };
 
 } // namespace gdei

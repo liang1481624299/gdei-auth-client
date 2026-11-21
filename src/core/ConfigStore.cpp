@@ -26,6 +26,10 @@ bool ConfigStore::allowInsecureSsl() const { return m_allowInsecureSsl; }
 int ConfigStore::keepaliveMinSec() const { return m_keepaliveMinSec; }
 int ConfigStore::keepaliveMaxSec() const { return m_keepaliveMaxSec; }
 int ConfigStore::offlineFailThreshold() const { return m_offlineFailThreshold; }
+int ConfigStore::connectTimeoutMs() const { return m_connectTimeoutMs; }
+int ConfigStore::probeTimeoutMs() const { return m_probeTimeoutMs; }
+QString ConfigStore::probeUrl() const { return m_probeUrl; }
+QString ConfigStore::healthUrl() const { return m_healthUrl; }
 
 namespace {
 int clampInt(int v, int lo, int hi) { return qBound(lo, v, hi); }
@@ -83,6 +87,26 @@ void ConfigStore::setOfflineFailThreshold(int v) {
     if (m_offlineFailThreshold == c) return;
     m_offlineFailThreshold = c; emit offlineFailThresholdChanged();
 }
+void ConfigStore::setConnectTimeoutMs(int v) {
+    const int c = clampInt(v, constants::TIMEOUT_MIN_MS, constants::TIMEOUT_MAX_MS);
+    if (m_connectTimeoutMs == c) return;
+    m_connectTimeoutMs = c; emit connectTimeoutMsChanged();
+}
+void ConfigStore::setProbeTimeoutMs(int v) {
+    const int c = clampInt(v, constants::TIMEOUT_MIN_MS, constants::TIMEOUT_MAX_MS);
+    if (m_probeTimeoutMs == c) return;
+    m_probeTimeoutMs = c; emit probeTimeoutMsChanged();
+}
+void ConfigStore::setProbeUrl(const QString& v) {
+    const QString c = v.trimmed().isEmpty() ? constants::NCSI_URL : v.trimmed();
+    if (m_probeUrl == c) return;
+    m_probeUrl = c; emit probeUrlChanged();
+}
+void ConfigStore::setHealthUrl(const QString& v) {
+    const QString c = v.trimmed().isEmpty() ? constants::HEALTH_URL : v.trimmed();
+    if (m_healthUrl == c) return;
+    m_healthUrl = c; emit healthUrlChanged();
+}
 
 void ConfigStore::load() {
     QSettings s(constants::ORG_NAME, constants::APP_NAME);
@@ -101,6 +125,14 @@ void ConfigStore::load() {
     if (m_keepaliveMaxSec < m_keepaliveMinSec) std::swap(m_keepaliveMinSec, m_keepaliveMaxSec);
     m_offlineFailThreshold = clampInt(s.value("offline_fail_threshold", constants::OFFLINE_FAIL_THRESHOLD).toInt(),
                                       constants::FAIL_THRESHOLD_MIN, constants::FAIL_THRESHOLD_MAX);
+    m_connectTimeoutMs = clampInt(s.value("connect_timeout_ms", constants::CONNECT_TIMEOUT_MS).toInt(),
+                                  constants::TIMEOUT_MIN_MS, constants::TIMEOUT_MAX_MS);
+    m_probeTimeoutMs = clampInt(s.value("probe_timeout_ms", constants::PROBE_TIMEOUT_MS).toInt(),
+                                constants::TIMEOUT_MIN_MS, constants::TIMEOUT_MAX_MS);
+    m_probeUrl = s.value("probe_url", constants::NCSI_URL).toString().trimmed();
+    if (m_probeUrl.isEmpty()) m_probeUrl = constants::NCSI_URL;
+    m_healthUrl = s.value("health_url", constants::HEALTH_URL).toString().trimmed();
+    if (m_healthUrl.isEmpty()) m_healthUrl = constants::HEALTH_URL;
 
     // 仅在记住密码时从平台安全存储还原口令 / restore from secure store only when remembered.
     m_password = m_rememberPassword ? SecretStore::instance().read(QStringLiteral("password"))
@@ -111,6 +143,8 @@ void ConfigStore::load() {
     emit langChanged(); emit hostChanged(); emit ipChanged(); emit nasipChanged();
     emit allowInsecureSslChanged();
     emit keepaliveMinSecChanged(); emit keepaliveMaxSecChanged(); emit offlineFailThresholdChanged();
+    emit connectTimeoutMsChanged(); emit probeTimeoutMsChanged();
+    emit probeUrlChanged(); emit healthUrlChanged();
 }
 
 void ConfigStore::save() {
@@ -126,6 +160,10 @@ void ConfigStore::save() {
     s.setValue("keepalive_min_sec", m_keepaliveMinSec);
     s.setValue("keepalive_max_sec", m_keepaliveMaxSec);
     s.setValue("offline_fail_threshold", m_offlineFailThreshold);
+    s.setValue("connect_timeout_ms", m_connectTimeoutMs);
+    s.setValue("probe_timeout_ms", m_probeTimeoutMs);
+    s.setValue("probe_url", m_probeUrl);
+    s.setValue("health_url", m_healthUrl);
     // 清理旧版本写入的混淆口令遗留键 / drop the legacy obfuscated password key.
     s.remove("password_ob");
 
