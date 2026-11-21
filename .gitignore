@@ -1,0 +1,23 @@
+# 构建产物 / build output
+build/
+cmake-build-*/
+*.o
+*.obj
+*.exe
+*.out
+*.a
+*.lib
+*.so
+*.dylib
+
+# 含口令的本地配置 / local config with credentials
+config.json
+
+# Qt 自动生成 / Qt generated
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# 系统垃圾 / OS junk
+Thumbs.db
+.DS_Store
