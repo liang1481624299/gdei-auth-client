@@ -32,6 +32,7 @@
 - 现状（本轮已对齐部分）：
   - 已新建 `packaging/` 目录：`windows/deploy.ps1`（windeployqt 收集后 zip）、`macos/deploy.sh`（macdeployqt + hdiutil 出 dmg）、`linux/deploy.sh`（二进制 tar.gz）；`release.yml` 改为调用这些脚本。
   - README / COMPATIBILITY 已区分“目标产物”与“当前 CI 产物”，去除超前声明。
+  - 部署脚本已在三平台干净 Runner 经 `workflow_dispatch` 冒烟通过：Windows zip、macOS dmg、Linux tar.gz 均产出并归档为工作流产物（未做安装后启动冒烟）。
 - 遗留差距：
   - 构建输出仍固定 `build/`，未按 `build/<platform>/<arch>` 分层。
   - Windows 仍为 zip，未出 NSIS exe；Linux 仍为裸二进制 tar.gz，未出 deb / rpm / Arch zst；无 Android APK。
