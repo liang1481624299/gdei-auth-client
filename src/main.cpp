@@ -5,6 +5,12 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QFile>
+#include <QDir>
+#include <QTextStream>
+#include <QStandardPaths>
+#include <QDateTime>
+#include <QMessageLogContext>
 
 #include "app/AppController.hpp"
 #include "app/AuthController.hpp"
@@ -16,7 +22,28 @@
 
 using namespace gdei;
 
+// TEMP diagnostic: dump Qt/QML warnings and errors to a file for offline inspection.
+// 临时诊断：把 Qt/QML 警告与错误落盘，便于离线定位根对象创建失败点。
+static void gcDiagnosticHandler(QtMsgType type, const QMessageLogContext*, const QString& msg) {
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dir);
+    QFile file(QDir(dir).filePath("gdei-qml-debug.log"));
+    if (file.open(QIODevice::Append | QIODevice::Text)) {
+        QTextStream ts(&file);
+        const char* level = "?";
+        switch (type) {
+        case QtDebugMsg:    level = "DEBUG"; break;
+        case QtWarningMsg:  level = "WARN";  break;
+        case QtCriticalMsg: level = "CRIT";  break;
+        case QtFatalMsg:    level = "FATAL"; break;
+        default: break;
+        }
+        ts << QDateTime::currentDateTime().toString("HH:mm:ss.zzz") << " [" << level << "] " << msg << "\n";
+    }
+}
+
 int main(int argc, char* argv[]) {
+    qInstallMessageHandler(gcDiagnosticHandler);
     QGuiApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("gdei-connect"));
     app.setOrganizationName(QStringLiteral("GDEI"));
