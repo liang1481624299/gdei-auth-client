@@ -8,8 +8,10 @@
 |---|---|---|---|---|
 | Windows | x86 / x64 / ARM64 | Windows 10 1509 ~ Windows 11 25H2 | NSIS exe 安装包 | windeployqt 收集后的 zip |
 | macOS | x64 / ARM64 | macOS 10.15 Catalina 及以上 | DragNDrop dmg（签名 / 公证待补） | macdeployqt + hdiutil 生成的 dmg |
-| Android | ARM / ARM64 / x86 / x64 | Android 8.0（API 26）及以上 | apk（前台服务） | 暂无 |
-| Linux | x86 / x64 / ARM | 内核 5.0 及以上 | deb / rpm / Arch `pkg.tar.zst` | 裸二进制 tar.gz |
+| Android | ARM / ARM64 / x86 / x64 | Android 8.0（API 26）及以上 | apk（前台服务） | 实验性工具链脚手架，暂无 apk |
+| Debian | x64 | bookworm（内核 6.1）及以上 | deb | 容器内 CPack 生成 `.deb` |
+| Arch Linux | x64 | 滚动发行，内核 5.0 及以上 | `pkg.tar.zst` | 容器内裸二进制 tar.gz |
+| 其他 Linux | x86 / x64 / ARM | 内核 5.0 及以上 | rpm / 通用 tar.gz | 暂未在对应发行版容器出包 |
 
 > 说明：“目标产物”是产品交付基线；“当前 CI 产物”是托管 Runner 现阶段实际产出，明细见 [`packaging/README.md`](../packaging/README.md)。Qt6 官方支持矩阵在个别旧底线上可能更严；标注为“底线”的系统需在对应工具链上实机构建验证，见第 4 节待办。
 
@@ -43,20 +45,21 @@
 - 构建：Qt for Android 套件 + NDK + JDK + Gradle，版本与所用 Qt6 官方要求对齐。
 - 最低 SDK：API 26（Android 8.0）。
 - 后台能力：前台服务保活；首次运行引导用户关闭电池优化（规划中，尚未实现）。
-- 产物：目标 apk，当前流水线未构建。
+- 产物：目标 apk；当前 CI 仅搭好 JDK / Android SDK / Qt Android 套件的实验性脚手架（`continue-on-error`），尚未产出可安装 apk，待工具链与真机验证。
 
 ### Linux
 
 - 工具链：GCC 11+ / Clang 13+，内核 5.0+。
-- 打包：目标 CPack 生成 deb / rpm；Arch `pkg.tar.zst` 由打包脚本基于 tar 产物压缩生成；当前 Runner 仅产出裸二进制 tar.gz。
+- CI 在 `debian:bookworm` 与 `archlinux:latest` 容器内使用系统 Qt 构建，不在容器内重复下载整套 Qt SDK。
+- 打包：Debian 由 CPack 生成 `.deb`（`dpkg-shlibdeps` 声明动态依赖）；Arch 当前产出裸二进制 tar.gz，`pkg.tar.zst` 待补 PKGBUILD；rpm 暂未纳入目标容器。
 - 注意不要在更新的 glibc 上编译后拷贝到老系统（符号兼容）。
 - 后台能力：系统托盘 + 静默保活（规划中，尚未实现）。
 
 ## 4. 待办 / Open Items
 
 - [ ] 在各底线系统 / 架构上实机编译验证（当前仓库为源码基准，本机无 Qt 与编译器，未本地构建）。
-- [ ] Android apk 签名、前台服务与电池优化引导的真机验证。
-- [ ] Linux deb / rpm / Arch 包在对应发行版上安装验证。
+- [ ] Android apk 签名、前台服务与电池优化引导的真机验证；CI 脚手架转为正式出包流水线。
+- [ ] Debian `.deb`、Arch `pkg.tar.zst`（待 PKGBUILD）在对应发行版上安装验证。
 - [ ] 系统托盘与后台保活在桌面三平台的实机行为验证。
 
 ## 参考 / References

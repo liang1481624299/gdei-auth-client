@@ -31,15 +31,15 @@
 - 规格产物：Windows exe 安装包、macOS dmg、Android apk、Linux deb / rpm / Arch `pkg.tar.zst`；打包脚本统一放 `packaging/`；CMake 输出按 `build/<platform>/<arch>` 组织；应用级运行依赖随包分发，OpenSSL 运行库随 Windows 包提供。
 - 现状（本轮已对齐部分）：
   - 已新建 `packaging/` 目录：`windows/deploy.ps1`（windeployqt 收集后 zip）、`macos/deploy.sh`（macdeployqt + hdiutil 出 dmg）、`linux/deploy.sh`（二进制 tar.gz）；`release.yml` 改为调用这些脚本。
+  - CI 矩阵扩为 Windows / macOS 原生 + Debian bookworm / Arch 容器；容器使用系统 Qt，Debian 由 CPack 出 `.deb`，Arch 出 tar.gz；Android 为 `continue-on-error` 实验性脚手架。
   - README / COMPATIBILITY 已区分“目标产物”与“当前 CI 产物”，去除超前声明。
-  - 部署脚本已在三平台干净 Runner 经 `workflow_dispatch` 冒烟通过：Windows zip、macOS dmg、Linux tar.gz 均产出并归档为工作流产物（未做安装后启动冒烟）。
 - 遗留差距：
   - 构建输出仍固定 `build/`，未按 `build/<platform>/<arch>` 分层。
-  - Windows 仍为 zip，未出 NSIS exe；Linux 仍为裸二进制 tar.gz，未出 deb / rpm / Arch zst；无 Android APK。
+  - Windows 仍为 zip，未出 NSIS exe；Arch 未出 `pkg.tar.zst`（待 PKGBUILD）；rpm 未纳入容器；Android 仅脚手架，无可安装 apk。
   - 流水线未收集 OpenSSL 运行库；未做干净环境启动验证；macOS 未签名 / 未公证。
 - 建议：
-  1. release.yml 接入 CPack（NSIS / DragNDrop / DEB;RPM），在带对应工具链的 Runner 上出安装包；Android 接入 androiddeployqt / Gradle。
-  2. Linux 包在对应发行版容器内生成，声明系统级依赖；应用级 Qt 库随包或合法分发。
+  1. release.yml 接入 CPack NSIS；Android 接入 androiddeployqt / Gradle 出正式 apk。
+  2. Arch 补 PKGBUILD 出 `pkg.tar.zst`；Linux 包在对应发行版容器内生成，声明系统级依赖；应用级 Qt 库随包或合法分发。
   3. 补 OpenSSL 运行库收集步骤（Windows）与干净环境冒烟验证。
 
 ---

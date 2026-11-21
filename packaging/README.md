@@ -8,7 +8,7 @@
 packaging/
 ├── windows/deploy.ps1   # windeployqt 收集 Qt 运行库 / 插件 / QML，归档 zip
 ├── macos/deploy.sh      # macdeployqt 收编框架，hdiutil 制作 dmg
-└── linux/deploy.sh      # 二进制 tar.gz 归档（deb / rpm / Arch 在对应容器内生成）
+└── linux/deploy.sh      # 二进制 tar.gz 归档（Arch 用；deb 由 Debian 容器内 CPack 生成）
 ```
 
 ## 产物现状与目标 / Current vs Target
@@ -17,8 +17,9 @@ packaging/
 |---|---|---|---|
 | Windows | NSIS exe 安装包 | `gdei-connect-windows-x64.zip` | 已用 windeployqt 收集依赖；NSIS 安装包待 CPack 在带 NSIS 工具链的 Runner 上生成 |
 | macOS | dmg | `gdei-connect-macos.dmg` | macdeployqt 收编后 hdiutil 打包；未签名 / 未公证，待补 |
-| Linux | deb / rpm / Arch `pkg.tar.zst` | `gdei-connect-linux-x64.tar.gz` | 需在对应发行版容器内生成；系统级依赖不静态打包 |
-| Android | apk | 暂无 | 待 Qt for Android + NDK / Gradle 工具链接入 |
+| Debian (bookworm) | deb | CPack 生成的 `.deb` | 容器内系统 Qt 构建，`dpkg-shlibdeps` 声明动态依赖；rpm 不在 Debian 目标内 |
+| Arch Linux | `pkg.tar.zst` | `gdei-connect-linux-x64.tar.gz` | 容器内系统 Qt 构建；`pkg.tar.zst` 待补 PKGBUILD |
+| Android | apk | 实验性脚手架，暂无 apk | Qt for Android + NDK / Gradle 工具链与真机验证待补，CI 中 `continue-on-error` 不阻塞主线 |
 
 ## 依赖分发原则
 

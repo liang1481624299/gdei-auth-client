@@ -1,5 +1,5 @@
-# CI：在 Linux / Windows / macOS 上配置并构建 Qt6/QML 工程。
-# CI: configure & build the Qt6/QML project on Linux / Windows / macOS.
+# CI：在 Windows / macOS / Debian / Arch 上配置并构建 Qt6/QML 工程；Android 为实验性脚手架。
+# CI: configure & build on Windows / macOS / Debian / Arch; Android is an experimental scaffold.
 name: CI
 
 on:
@@ -9,12 +9,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  # ---- 原生 Runner：Windows / macOS，Qt 由 install-qt-action 缓存复用 ----
+  # Native runners: Qt cached via install-qt-action.
+  native:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        target: [windows, macos]
+        include:
+          - target: windows
+            runner: windows-latest
+          - target: macos
+            runner: macos-latest
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout
@@ -35,6 +42,86 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gdei-connect-${{ matrix.os }}
+          name: gdei-connect-${{ matrix.target }}
           path: build
           retention-days: 14
+
+  # ---- 发行版容器：使用系统 Qt，避免在容器内重复下载整套 Qt ----
+  # Distro containers: use system Qt packages instead of re-downloading the Qt SDK.
+  linux-distro:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [debian, arch]
+        include:
+          - target: debian
+            image: debian:bookworm
+          - target: arch
+            image: archlinux:latest
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Debian dependencies
+        if: matrix.target == 'debian'
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git build-essential cmake ninja-build dpkg-dev file \
+            qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-tools-dev \
+            qml6-module-qtquick-controls qml6-module-qtquick-layouts \
+            qml6-module-qtquick-window
+
+      - name: Install Arch dependencies
+        if: matrix.target == 'arch'
+        run: |
+          pacman -Syu --noconfirm --needed \
+            git base-devel cmake ninja \
+            qt6-base qt6-declarative qt6-svg qt6-tools
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdei-connect-${{ matrix.target }}
+          path: build
+          retention-days: 14
+
+  # ---- Android：实验性工具链脚手架，暂不阻塞主线（APK 打包待真机 / 工具链验证）----
+  # Android: experimental toolchain scaffold, non-blocking until APK packaging is verified.
+  android:
+    name: Android (experimental)
+    continue-on-error: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Qt6 for Android
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.5.3'
+          cache: true
+          arch: android_arm64_v8a
+          modules: qtbase qtdeclarative qtsvg
+
+      - name: Configure (Android kit, experimental)
+        run: cmake -B build-android -DCMAKE_BUILD_TYPE=Release -DQT_ANDROID_ABIS=arm64-v8a

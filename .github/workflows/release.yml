@@ -1,5 +1,5 @@
-# Release：推送 v* 标签时，按平台调用 packaging/ 脚本打包并挂到 GitHub Release。
-# Release: on a v* tag, run the per-platform packaging/ scripts and attach artifacts.
+# Release：推送 v* 标签时按平台调用 packaging/ 脚本打包并挂到 GitHub Release。
+# Release: on a v* tag, run per-platform packaging/ scripts and attach artifacts.
 name: Release
 
 on:
@@ -11,12 +11,19 @@ permissions:
   contents: write
 
 jobs:
-  package:
+  # ---- 原生 Runner：Windows zip / macOS dmg，Qt 缓存复用 ----
+  # Native runners: Windows zip / macOS dmg, cached Qt.
+  package-native:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        target: [windows, macos]
+        include:
+          - target: windows
+            runner: windows-latest
+          - target: macos
+            runner: macos-latest
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout
@@ -34,36 +41,25 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      # ---- Windows: windeployqt 收集依赖并归档 zip ----
       - name: Stage Windows package
-        if: runner.os == 'Windows'
+        if: matrix.target == 'windows'
         shell: pwsh
         run: pwsh -File packaging/windows/deploy.ps1 -BuildDir build -DistDir dist -QmlDir qml
 
-      # ---- macOS: macdeployqt 收编框架并制作 dmg ----
       - name: Stage macOS package
-        if: runner.os == 'macOS'
+        if: matrix.target == 'macos'
         shell: bash
         run: bash packaging/macos/deploy.sh build dist
 
-      # ---- Linux: 归档二进制 tar.gz（deb/rpm/Arch 在对应容器内生成） ----
-      - name: Stage Linux package
-        if: runner.os == 'Linux'
-        shell: bash
-        run: bash packaging/linux/deploy.sh build dist
-
       # 非标签触发（workflow_dispatch 冒烟）：产物作为工作流归档，不挂 Release。
-      # Non-tag smoke dispatch: keep artifacts as workflow artifacts, not a Release.
       - name: Upload workflow artifacts
         if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ matrix.os }}
+          name: dist-${{ matrix.target }}
           path: dist/
           retention-days: 7
 
-      # 仅 v* 标签触发时把产物挂到 GitHub Release。
-      # Attach artifacts to the GitHub Release only on v* tag pushes.
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
@@ -71,6 +67,109 @@ jobs:
           files: |
             dist/*.zip
             dist/*.dmg
-            dist/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---- 发行版容器：Debian 出 deb，Arch 出 tar.gz；使用系统 Qt ----
+  # Distro containers: Debian deb, Arch tar.gz; system Qt packages.
+  package-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [debian, arch]
+        include:
+          - target: debian
+            image: debian:bookworm
+          - target: arch
+            image: archlinux:latest
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Debian dependencies
+        if: matrix.target == 'debian'
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git build-essential cmake ninja-build dpkg-dev file \
+            qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-tools-dev \
+            qml6-module-qtquick-controls qml6-module-qtquick-layouts \
+            qml6-module-qtquick-window
+
+      - name: Install Arch dependencies
+        if: matrix.target == 'arch'
+        run: |
+          pacman -Syu --noconfirm --needed \
+            git base-devel cmake ninja \
+            qt6-base qt6-declarative qt6-svg qt6-tools
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package Debian DEB
+        if: matrix.target == 'debian'
+        run: |
+          cmake -E make_directory dist
+          cd build && cpack -G DEB -C Release
+          mv *.deb ../dist/ 2>/dev/null || true
+
+      - name: Package Arch tarball
+        if: matrix.target == 'arch'
+        shell: bash
+        run: bash packaging/linux/deploy.sh build dist
+
+      - name: Upload workflow artifacts
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.target }}
+          path: dist/
+          retention-days: 7
+
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.deb
+            dist/*.tar.gz
+            dist/*.pkg.tar.zst
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---- Android：实验性脚手架，暂不打包 Release；APK 待工具链与真机验证 ----
+  # Android: experimental scaffold, not attached to Release until verified.
+  package-android:
+    name: Android (experimental)
+    continue-on-error: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Qt6 for Android
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.5.3'
+          cache: true
+          arch: android_arm64_v8a
+          modules: qtbase qtdeclarative qtsvg
+
+      - name: Configure (Android kit, experimental)
+        run: cmake -B build-android -DCMAKE_BUILD_TYPE=Release -DQT_ANDROID_ABIS=arm64-v8a

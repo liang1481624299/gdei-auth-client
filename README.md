@@ -147,8 +147,9 @@ cpack -G <generator>
 |---|---|---|---|
 | Windows | x86 / x64 / ARM64 | Windows 10 1509 ~ Windows 11 25H2 | NSIS 安装包；ARM64 需对应工具链交叉编译 |
 | macOS | x64 / ARM64 | macOS 10.15 Catalina 及以上 | dmg 打包 |
-| Android | ARM / ARM64 / x86 / x64 | Android 8.0（API 26）及以上 | 前台服务 + 电池优化引导；apk 打包 |
-| Linux | x86 / x64 / ARM | 内核 5.0 及以上 | deb / rpm / Arch `pkg.tar.zst` |
+| Android | ARM / ARM64 / x86 / x64 | Android 8.0（API 26）及以上 | 前台服务 + 电池优化引导；apk 打包（CI 脚手架实验性，待出包） |
+| Debian | x64 | bookworm 及以上 | 容器内 CPack 出 `.deb` |
+| Arch Linux | x64 | 滚动发行，内核 5.0+ | 容器内 tar.gz；`pkg.tar.zst` 待 PKGBUILD |
 
 详细工具链与打包说明见 [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md)。
 
@@ -156,17 +157,17 @@ cpack -G <generator>
 
 流水线定义在 `.github/workflows/`：
 
-- **`ci.yml`**：推送到 `main` 或 Pull Request 时，在 Linux / Windows / macOS 上配置并构建 Qt6/QML 工程，产物作为 Actions 构件保留 14 天。
-- **`release.yml`**：推送 `v*` 标签时，按平台调用 [`packaging/`](packaging/README.md) 脚本打包，并自动挂到对应 **GitHub Release** 供下载。
+- **`ci.yml`**：推送到 `main` 或 Pull Request 时，在 Windows / macOS 原生 Runner 与 Debian / Arch 容器内配置并构建 Qt6/QML 工程；Android 为实验性脚手架（`continue-on-error`）。产物作为 Actions 构件保留 14 天。
+- **`release.yml`**：推送 `v*` 标签时，按平台调用 [`packaging/`](packaging/README.md) 脚本打包（Windows zip / macOS dmg / Debian deb / Arch tar.gz），并自动挂到对应 **GitHub Release** 供下载。
 
 发版 / Cut a release：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
-> 托管 Runner 默认构建 x64 桌面产物；Android apk、ARM64 与各发行版包需在对应工具链或扩展 Runner 上打包。
+> 原生 Runner 用缓存 Qt SDK；Debian / Arch 容器使用系统 Qt 以减少重复下载。Android apk、ARM64 与 Arch `pkg.tar.zst` 仍需对应工具链或扩展 Runner 出包。
 
 ## 保活机制 / Keep-alive
 
