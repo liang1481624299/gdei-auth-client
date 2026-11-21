@@ -1,5 +1,5 @@
 // qml/components/Card.qml
-// 卡片容器 / Card container: rounded surface, soft shadow, uniform padding.
+// 卡片容器 / Card container: rounded surface, uniform padding.
 import QtQuick
 import "../theme"
 
@@ -18,15 +18,6 @@ Rectangle {
 
     implicitWidth: column.implicitWidth + margins * 2
     implicitHeight: column.implicitHeight + margins * 2
-
-    DropShadow {
-        anchors.fill: parent
-        radius: 18
-        samples: 12
-        color: th.shadowColor
-        offset.y: 2
-        visible: true
-    }
 
     Column {
         id: column
