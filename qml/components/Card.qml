@@ -9,6 +9,9 @@ Rectangle {
 
     Theme { id: th }
 
+    // Expose design tokens to components that embed a Card. / 向内嵌 Card 的组件暴露配色令牌。
+    readonly property Theme theme: th
+
     property int margins: 18
 
     color: th.card
