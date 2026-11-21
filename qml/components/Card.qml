@@ -1,7 +1,6 @@
-// qml/components/Card.qml
-// 卡片容器 / Card container: rounded surface, soft shadow, uniform padding.
 import QtQuick
 import "../theme"
+import "."
 
 Rectangle {
     id: root
@@ -9,29 +8,37 @@ Rectangle {
 
     Theme { id: th }
 
-    property int margins: 18
+    property int margins: 20
+    property real shadowStrength: cardHover.hovered ? th.shadowOpacityCard * 1.5
+                                                     : th.shadowOpacityCard
 
     color: th.card
     radius: th.radius
     border.width: 1
-    border.color: th.border
-
+    border.color: th.separator
     implicitWidth: column.implicitWidth + margins * 2
     implicitHeight: column.implicitHeight + margins * 2
 
-    DropShadow {
+    Behavior on color { ColorAnimation { duration: th.durationNormal } }
+    Behavior on shadowStrength { NumberAnimation { duration: th.durationNormal } }
+
+    HoverHandler { id: cardHover }
+
+    SoftShadow {
+        z: -1
         anchors.fill: parent
-        radius: 18
-        samples: 12
-        color: th.shadowColor
-        offset.y: 2
-        visible: true
+        corner: root.radius
+        strength: root.shadowStrength
+        blur: 12
+        offsetY: 2
+        visible: root.shadowStrength > 0
     }
 
     Column {
         id: column
-        anchors.fill: parent
-        anchors.margins: root.margins
-        spacing: 12
+        x: root.margins
+        y: root.margins
+        width: Math.max(0, parent.width - root.margins * 2)
+        spacing: th.sp6
     }
 }

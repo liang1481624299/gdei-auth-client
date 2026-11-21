@@ -7,6 +7,19 @@
 #include "core/PortalClient.hpp"
 
 namespace gdei {
+namespace {
+
+QString localizedMessage(const I18n* i18n, const QString& message) {
+    if (!i18n) return message;
+    if (message == QLatin1String("encoding.nonAscii") ||
+        message == QLatin1String("encoding.unmappable") ||
+        message == QLatin1String("encoding.invalidForm")) {
+        return i18n->text(message);
+    }
+    return message;
+}
+
+} // namespace
 
 AuthController::AuthController(ConfigStore* config, Logger* logger, I18n* i18n,
                                QObject* parent)
@@ -19,15 +32,18 @@ AuthController::AuthController(ConfigStore* config, Logger* logger, I18n* i18n,
     connect(m_portal, &PortalClient::loginFinished, this,
             [this](bool ok, const QString& message) {
                 setMessage(message);
-                if (m_log) m_log->log(ok ? LogLevel::Info : LogLevel::Warning, message);
+                if (m_log) m_log->log(ok ? LogLevel::Info : LogLevel::Warning, lastMessage());
             });
     connect(m_keep, &KeepAlive::runningChanged, this, &AuthController::keepAliveRunningChanged);
+    if (m_i18n) {
+        connect(m_i18n, &I18n::langChanged, this, &AuthController::lastMessageChanged);
+    }
 }
 
 int AuthController::state() const { return m_portal->state(); }
 bool AuthController::online() const { return m_portal->online(); }
 bool AuthController::keepAliveRunning() const { return m_keep->running(); }
-QString AuthController::lastMessage() const { return m_lastMessage; }
+QString AuthController::lastMessage() const { return localizedMessage(m_i18n, m_lastMessage); }
 
 void AuthController::setMessage(const QString& message) {
     if (m_lastMessage == message) return;

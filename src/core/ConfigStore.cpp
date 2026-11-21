@@ -30,9 +30,19 @@ int ConfigStore::connectTimeoutMs() const { return m_connectTimeoutMs; }
 int ConfigStore::probeTimeoutMs() const { return m_probeTimeoutMs; }
 QString ConfigStore::probeUrl() const { return m_probeUrl; }
 QString ConfigStore::healthUrl() const { return m_healthUrl; }
+QString ConfigStore::requestEncoding() const { return m_requestEncoding; }
 
 namespace {
 int clampInt(int v, int lo, int hi) { return qBound(lo, v, hi); }
+
+QString normalizeRequestEncoding(const QString& value) {
+    QString normalized = value.trimmed().toUpper();
+    normalized.remove(QLatin1Char('-'));
+    if (normalized == "ASCII") return QStringLiteral("ASCII");
+    if (normalized == "GBK") return QStringLiteral("GBK");
+    if (normalized == "UTF8") return QStringLiteral("UTF-8");
+    return QStringLiteral("UTF-8");
+}
 } // namespace
 
 void ConfigStore::setUsername(const QString& v) {
@@ -107,6 +117,11 @@ void ConfigStore::setHealthUrl(const QString& v) {
     if (m_healthUrl == c) return;
     m_healthUrl = c; emit healthUrlChanged();
 }
+void ConfigStore::setRequestEncoding(const QString& v) {
+    const QString c = normalizeRequestEncoding(v);
+    if (m_requestEncoding == c) return;
+    m_requestEncoding = c; emit requestEncodingChanged();
+}
 
 void ConfigStore::load() {
     QSettings s(constants::ORG_NAME, constants::APP_NAME);
@@ -133,6 +148,7 @@ void ConfigStore::load() {
     if (m_probeUrl.isEmpty()) m_probeUrl = constants::NCSI_URL;
     m_healthUrl = s.value("health_url", constants::HEALTH_URL).toString().trimmed();
     if (m_healthUrl.isEmpty()) m_healthUrl = constants::HEALTH_URL;
+    m_requestEncoding = normalizeRequestEncoding(s.value("request_encoding", "UTF-8").toString());
 
     // 仅在记住密码时从平台安全存储还原口令 / restore from secure store only when remembered.
     m_password = m_rememberPassword ? SecretStore::instance().read(QStringLiteral("password"))
@@ -144,7 +160,7 @@ void ConfigStore::load() {
     emit allowInsecureSslChanged();
     emit keepaliveMinSecChanged(); emit keepaliveMaxSecChanged(); emit offlineFailThresholdChanged();
     emit connectTimeoutMsChanged(); emit probeTimeoutMsChanged();
-    emit probeUrlChanged(); emit healthUrlChanged();
+    emit probeUrlChanged(); emit healthUrlChanged(); emit requestEncodingChanged();
 }
 
 void ConfigStore::save() {
@@ -164,6 +180,7 @@ void ConfigStore::save() {
     s.setValue("probe_timeout_ms", m_probeTimeoutMs);
     s.setValue("probe_url", m_probeUrl);
     s.setValue("health_url", m_healthUrl);
+    s.setValue("request_encoding", m_requestEncoding);
     // 清理旧版本写入的混淆口令遗留键 / drop the legacy obfuscated password key.
     s.remove("password_ob");
 

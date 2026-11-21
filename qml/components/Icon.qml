@@ -1,0 +1,28 @@
+import QtQuick
+import QtQuick.Controls.impl
+
+Item {
+    id: root
+
+    property string name: ""
+    property int iconSize: 22
+    property color tint: "#1C1C1E"
+    property real lineWidth: 1.75
+
+    implicitWidth: iconSize
+    implicitHeight: iconSize
+    width: iconSize
+    height: iconSize
+
+    IconImage {
+        anchors.centerIn: parent
+        width: root.iconSize
+        height: root.iconSize
+        source: root.name.length > 0 ? Qt.resolvedUrl("../icons/" + root.name + ".svg") : ""
+        sourceSize: Qt.size(root.iconSize, root.iconSize)
+        color: root.tint
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+        visible: root.name.length > 0
+    }
+}

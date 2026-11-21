@@ -1,29 +1,56 @@
-// qml/components/Switch.qml
-// 可复用开关 / Reusable toggle switch.
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as QQC
 import "../theme"
+import "."
 
-Switch {
+QQC.Switch {
     id: control
     Theme { id: th }
 
-    implicitHeight: 32
-    implicitWidth: 52
+    readonly property real trackWidth: 46
+    readonly property real trackHeight: 26
 
-    background: Rectangle {
-        radius: 16
-        color: control.checked ? th.primary : th.border
+    implicitWidth: 54
+    implicitHeight: th.touchTarget
+    padding: 0
+    spacing: 0
+    opacity: enabled ? 1 : th.disabledOpacity
+
+    background: Item {
+        implicitWidth: control.implicitWidth
+        implicitHeight: th.touchTarget
+
+        Rectangle {
+            width: control.trackWidth
+            height: control.trackHeight
+            anchors.centerIn: parent
+            radius: height / 2
+            color: control.checked ? th.green : th.controlPressed
+            border.width: control.activeFocus ? 2 : 0
+            border.color: th.focusRing
+            Behavior on color { ColorAnimation { duration: th.durationNormal } }
+        }
     }
 
     indicator: Rectangle {
-        x: control.checked ? control.width - width - 3 : 3
+        width: 20
+        height: 20
+        radius: 10
+        color: "#FFFFFF"
+        x: (control.width - control.trackWidth) / 2
+           + (control.checked ? control.trackWidth - width - 3 : 3)
         y: (control.height - height) / 2
-        width: 26
-        height: 26
-        radius: 13
-        color: "white"
-        border.width: 1
-        border.color: th.border
+        Behavior on x {
+            SpringAnimation { spring: 3.2; damping: 0.68; epsilon: 0.01 }
+        }
+
+        SoftShadow {
+            z: -1
+            anchors.fill: parent
+            corner: parent.radius
+            strength: 0.16
+            blur: 3
+            offsetY: 1
+        }
     }
 }

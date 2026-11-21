@@ -2,8 +2,15 @@
 // 程序入口 / Application entry point.
 // 装配核心对象并注入 QML 根上下文；业务逻辑全部在 C++，QML 只做交互。
 // Wire up core objects and inject them into the QML root context.
+#include <QtGlobal>
+#ifdef Q_OS_WIN
+#include <QApplication>
+#include <QQuickWindow>
+#else
 #include <QGuiApplication>
+#endif
 #include <QQmlApplicationEngine>
+#include <QQuickStyle>
 #include <QQmlContext>
 #include <QFile>
 #include <QDir>
@@ -11,6 +18,7 @@
 #include <QStandardPaths>
 #include <QDateTime>
 #include <QMessageLogContext>
+#include <QStringConverter>
 
 #include "app/AppController.hpp"
 #include "app/AuthController.hpp"
@@ -19,8 +27,17 @@
 #include "core/ConfigStore.hpp"
 #include "core/I18n.hpp"
 #include "core/Logger.hpp"
+#ifdef Q_OS_WIN
+#include "platform/TrayController.hpp"
+#endif
 
 using namespace gdei;
+
+#ifdef Q_OS_WIN
+using GdeiApplication = QApplication;
+#else
+using GdeiApplication = QGuiApplication;
+#endif
 
 // TEMP diagnostic: append stage trace to a plain TEMP file (no QStandardPaths/Org dependency).
 // 临时诊断：把阶段轨迹写到 TEMP 下的纯文件，避免早期路径解析问题。
@@ -28,6 +45,7 @@ static void gcStage(const QString& msg) {
     QFile file(QDir::tempPath() + QStringLiteral("/gdei-stage.log"));
     if (file.open(QIODevice::Append | QIODevice::Text)) {
         QTextStream ts(&file);
+        ts.setEncoding(QStringConverter::Utf8);
         ts << QDateTime::currentDateTime().toString("HH:mm:ss.zzz") << " " << msg << "\n";
     }
 }
@@ -47,10 +65,15 @@ static void gcDiagnosticHandler(QtMsgType type, const QMessageLogContext&, const
 int main(int argc, char* argv[]) {
     qInstallMessageHandler(gcDiagnosticHandler);
     gcStage(QStringLiteral("=== main entered ==="));
-    QGuiApplication app(argc, argv);
+    GdeiApplication app(argc, argv);
     gcStage(QStringLiteral("app created"));
     app.setApplicationName(QStringLiteral("gdei-connect"));
     app.setOrganizationName(QStringLiteral("GDEI"));
+
+    // 强制 Basic 样式：本项目深度自定义了控件的 background / contentItem / indicator，
+    // 只有非原生样式（Basic/Fusion/Material）才允许这些定制；原生样式会忽略定制，
+    // 导致全平台（Windows/macOS/Linux/Android）UI 不按设计渲染。在 engine.load 前设置。
+    QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     // 持久化配置 / Persistent settings.
     ConfigStore config;
@@ -65,7 +88,7 @@ int main(int argc, char* argv[]) {
 
     AuthController auth(&config, &logger, &i18n);
     LogController logs(&logger);
-    DeviceController devices(&config, &logger);
+    DeviceController devices(&config, &logger, &i18n);
     AppController controller(&config, &logger, &i18n, &auth, &logs, &devices);
     gcStage(QStringLiteral("controller ready"));
 
@@ -82,6 +105,13 @@ int main(int argc, char* argv[]) {
     gcStage(QStringLiteral("loading ") + url.toString());
     engine.load(url);
     gcStage(QStringLiteral("loaded, rootObjects=%1").arg(engine.rootObjects().size()));
+
+#ifdef Q_OS_WIN
+    // Windows 托盘只转发窗口与认证指令，不持有网络或配置业务逻辑。
+    if (auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().value(0))) {
+        new TrayController(window, &auth, &i18n, &app);
+    }
+#endif
 
     // 自动登录 / Auto login when enabled and credentials are present.
     if (config.autoLogin() && !config.username().isEmpty() &&

@@ -33,6 +33,7 @@ class ConfigStore : public QObject {
     Q_PROPERTY(int probeTimeoutMs READ probeTimeoutMs WRITE setProbeTimeoutMs NOTIFY probeTimeoutMsChanged)
     Q_PROPERTY(QString probeUrl READ probeUrl WRITE setProbeUrl NOTIFY probeUrlChanged)
     Q_PROPERTY(QString healthUrl READ healthUrl WRITE setHealthUrl NOTIFY healthUrlChanged)
+    Q_PROPERTY(QString requestEncoding READ requestEncoding WRITE setRequestEncoding NOTIFY requestEncodingChanged)
 
 public:
     explicit ConfigStore(QObject* parent = nullptr);
@@ -53,6 +54,7 @@ public:
     int probeTimeoutMs() const;
     QString probeUrl() const;
     QString healthUrl() const;
+    QString requestEncoding() const;
 
     void setUsername(const QString& v);
     void setPassword(const QString& v);
@@ -70,6 +72,7 @@ public:
     void setProbeTimeoutMs(int v);
     void setProbeUrl(const QString& v);
     void setHealthUrl(const QString& v);
+    void setRequestEncoding(const QString& v);
 
     Q_INVOKABLE void load();
     Q_INVOKABLE void save();
@@ -91,6 +94,7 @@ signals:
     void probeTimeoutMsChanged();
     void probeUrlChanged();
     void healthUrlChanged();
+    void requestEncodingChanged();
 
 private:
     QString m_username;
@@ -109,6 +113,7 @@ private:
     int m_probeTimeoutMs = constants::PROBE_TIMEOUT_MS;
     QString m_probeUrl = constants::NCSI_URL;
     QString m_healthUrl = constants::HEALTH_URL;
+    QString m_requestEncoding = QStringLiteral("UTF-8");
 };
 
 } // namespace gdei

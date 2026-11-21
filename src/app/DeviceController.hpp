@@ -11,6 +11,7 @@ namespace gdei {
 
 class ConfigStore;
 class Logger;
+class I18n;
 class DevicePortalClient;
 
 class DeviceController : public QObject {
@@ -22,7 +23,8 @@ class DeviceController : public QObject {
     Q_PROPERTY(QString lastMessage READ lastMessage NOTIFY lastMessageChanged)
 
 public:
-    DeviceController(ConfigStore* config, Logger* logger, QObject* parent = nullptr);
+    DeviceController(ConfigStore* config, Logger* logger, I18n* i18n,
+                     QObject* parent = nullptr);
 
     bool authenticated() const;
     bool busy() const;
@@ -44,6 +46,7 @@ signals:
 
 private:
     DevicePortalClient* m_dev;
+    I18n* m_i18n;
 };
 
 } // namespace gdei

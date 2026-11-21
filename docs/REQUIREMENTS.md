@@ -1,6 +1,6 @@
 # gdei-connect 基线需求清单（合并版）/ Merged Requirements
 
-最后核对：2026-11-21，对应提交 `ad660a1`。
+最后核对：2026-11-22；基线提交 `ad660a1`，并包含当前工作区改动。
 本文合并上传的开发规格与仓库现状，作为后续开发与验收的统一基准。状态含义：✅ 已实现 / 🟡 部分实现 / ❌ 未实现。详细差距与证据见 [GAP-REPORT.md](GAP-REPORT.md)。
 
 ## 1. 兼容平台与工程形态
@@ -9,7 +9,7 @@
 |---|---|---|---|
 | 1.1 | Windows 10 1509 ~ Win11 25H2，x86 / x64 / ARM64 | 🟡 | CI 仅出 x64；x86 / ARM64 待交叉工具链与实机验证 |
 | 1.2 | macOS 10.15 Catalina 及以上 | 🟡 | Runner 构建 arm64；未签名 / 未公证，未出通用二进制 |
-| 1.3 | Android 8.0（API 26）及以上 | ❌ | 无 Android 构建配置、服务与 APK 产物 |
+| 1.3 | Android 8.0（API 26）及以上 | 🟡 | 本地已产出 arm64-v8a Debug APK，当前 minSdk 28（Android 9）；API 26/27、其他 ABI 与真机运行待验证，前台服务未实现 |
 | 1.4 | Linux 内核 5.0 及以上 | 🟡 | CI x64 构建通过；未在旧内核 / 发行版实机验证 |
 | 1.5 | 同一套源码、单一 CMake 构建，不做 Qt 版本分支、不维护两套工程 | ✅ | 单一 `CMakeLists.txt`，固定 Qt6 / C++20 |
 
@@ -19,12 +19,12 @@
 |---|---|---|---|
 | 2.1 | Windows exe 安装包 | ❌ | release.yml 产出 zip，未走 NSIS |
 | 2.2 | macOS dmg | 🟡 | macdeployqt + hdiutil 生成 dmg；未签名 / 未公证 |
-| 2.3 | Android apk | ❌ | 未构建 |
+| 2.3 | Android apk | ✅ | 本地已产出 `dist/Android/gdei-connect-android-arm64-v8a-debug.apk`；包信息、依赖、权限及 v2 Debug 签名已检查，真机安装与 CI 正式出包待验证 |
 | 2.4 | Linux deb / rpm / Arch `pkg.tar.zst` | ❌ | 仅裸二进制 tar.gz；未在对应发行版容器打包 |
 | 2.5 | 打包脚本统一放 `packaging/` 目录 | ✅ | `packaging/windows|macos|linux/` 脚本收口，release.yml 调用 |
 | 2.6 | CMake 输出按 `build/<platform>/<arch>` 组织 | ❌ | 固定 `build/` 目录 |
 | 2.7 | 应用级运行依赖随安装包分发，用户无需手动装 Qt / OpenSSL / 第三方应用库 | 🟡 | Windows 经 windeployqt 收集 Qt/QML；OpenSSL 运行库未收集；Linux 未捆绑 Qt 库 |
-| 2.8 | 官方部署工具收集依赖（windeployqt / macdeployqt / androiddeployqt） | 🟡 | Windows / macOS 已用对应工具；Android 未接入 |
+| 2.8 | 官方部署工具收集依赖（windeployqt / macdeployqt / androiddeployqt） | ✅ | Windows / macOS / Android 构建均已接入对应官方部署工具；Android APK 已检查 Qt、QML、SVG 与平台插件 |
 | 2.9 | 系统底层依赖不强行静态打包（glibc / X11 / Wayland / dbus / Cocoa / 系统运行时） | ✅ | 当前未做系统库静态打包 |
 | 2.10 | 无法随包分发的系统级依赖须在 README / 发布说明列明，不得宣称“完全零依赖” | 🟡 | README 未列系统级依赖清单；存在超前产物声明 |
 | 2.11 | 打包后干净环境验证：无 Qt 环境的 Win/macOS 可启动；Android 干净设备可装可启动；Linux 包依赖声明完整 | ❌ | 尚未做干净环境冒烟验证 |
@@ -38,7 +38,7 @@
 | 3.2 | UI：Qt Quick QML + Quick Controls 2 | ✅ | `qml/`，无 Widgets 主界面 |
 | 3.3 | 构建系统 CMake，固定 Qt6，禁止 Qt5 | ✅ | — |
 | 3.4 | 网络优先 QNAM（HTTP/1.1、HTTP/2）；预留 libcurl / HTTP/3 扩展接口，上层业务不改 | 🟡 | 使用 QNAM；无后端抽象接口，libcurl 预留仅停留在文档 |
-| 3.5 | UI 简约现代卡片风（对标 shadcn/ui）：圆角、柔和阴影、渐变、hover/press 过渡；原生锚定布局 | 🟡 | 卡片 / 圆角 / 主题令牌已具备；阴影、渐变、交互动画不完整 |
+| 3.5 | UI 简约现代卡片风（对标 shadcn/ui）：圆角、柔和阴影、渐变、hover/press 过渡；原生锚定布局 | 🟡 | 共享卡片 / 主题令牌 / 柔和阴影 / hover / press / Spring 动画已实现；已完成 Windows 多尺寸、四语言与模拟 125% / 150% / 200% 缩放回归；物理 DPI、Android / Linux 实机视觉待验证 |
 
 ## 4. 业务需求
 
@@ -61,7 +61,7 @@
 
 | # | 需求 | 状态 | 现状 / 备注 |
 |---|---|---|---|
-| 4.3.1 | Windows / macOS / Linux 系统托盘 + 后台静默保活 | ❌ | 无 `QSystemTrayIcon` 与托盘菜单 |
+| 4.3.1 | Windows / macOS / Linux 系统托盘 + 后台静默保活 | 🟡 | Windows 已有 `QSystemTrayIcon`、最小化隐藏、显示 / 上线 / 下线 / 退出菜单及在线状态图标；macOS / Linux 尚未实现 |
 | 4.3.2 | Android 前台服务、常驻通知、引导关闭电池优化 | ❌ | 未实现 |
 
 ### 4.4 存储与安全
@@ -107,9 +107,9 @@
 | # | 需求 | 状态 | 现状 / 备注 |
 |---|---|---|---|
 | 7.1 | 内部 QString / QML / 内存文本统一 Unicode，与系统 locale 解耦 | ✅ | 未使用本地编码转换 API |
-| 7.2 | 禁止 fromLocal8Bit / toLocal8Bit；字节流与字符串互转显式指定编码（UTF-8 / GBK / GB2312 / Windows-1252 / ISO-8859-1） | 🟡 | 无本地转换函数；已覆盖 UTF-8 / Windows-1252 / ISO-8859-1，GBK/GB2312 待 Core5Compat |
+| 7.2 | 禁止 fromLocal8Bit / toLocal8Bit；字节流与字符串互转显式指定编码（UTF-8 / GBK / GB2312 / Windows-1252 / ISO-8859-1） | 🟡 | 无本地转换函数；已覆盖 UTF-8 / GBK / Windows-1252 / ISO-8859-1，GB2312 未单列选项 |
 | 7.3 | 配置文件 / 导出日志 QTextStream 强制 UTF-8，不跟随系统 locale | ✅ | 日志写入与导出显式 `setEncoding(Utf8)` |
-| 7.4 | 服务端通信编码动态探测：响应头 charset → meta charset → 猜测；POST 用探测编码并带对应 charset | 🟡 | 已实现头 → meta 探测与响应解码；POST 表单仍按 UTF-8，GBK 编码待补 |
+| 7.4 | 响应按响应头 charset → meta charset 探测解码；POST 表单按高级设置使用 ASCII / GBK / UTF-8，并带对应 charset | ✅ | UTF-8 默认保持原字节路径；GBK 使用 Core5Compat 转码后按字节百分号编码，不自动猜测学校平台编码 |
 | 7.5 | i18n 走 lupdate/lrelease；QML 用 qsTr()，C++ 用 tr()，不硬编码界面字面量 | 🟡 | 自定义字典；未用 qsTr / .ts 流程 |
 | 7.6 | 系统原生 API 优先宽字符 W 版本 | ✅ | 经 Qt 封装层，未直接调用 ANSI A 版本 |
 | 7.7 | 只产出一份安装包，不按 locale / 编码出多版本 | ✅ | 单包策略 |
@@ -119,12 +119,12 @@
 | # | 需求 | 状态 | 现状 / 备注 |
 |---|---|---|---|
 | 8.1 | C++ 负责业务 / 网络 / 底层系统能力；QML 只做交互，业务不写在 QML；QML 不直接持有 NAM | ✅ | QML 经 `app.*` 调用 C++ 接口 |
-| 8.2 | 平台差异仅用 Qt 跨平台宏收敛，平台专属代码不分散 | 🟡 | 目前几乎无平台分支；托盘 / 密钥等平台能力落地时需按此约束组织 |
+| 8.2 | 平台差异仅用 Qt 跨平台宏收敛，平台专属代码不分散 | 🟡 | Windows 托盘集中于 `src/platform/TrayController.*`，入口以 `Q_OS_WIN` 装配；密钥平台分支集中于 `secretstore_*` |
 | 8.3 | 注释中英双语，便于学校信息中心 Java 团队维护 | ✅ | 现有注释双语 |
 | 8.4 | 谨慎引入第三方依赖；新增依赖记录许可；不引入强传染协议组件 | ✅ | 当前无第三方依赖 |
 | 8.5 | 禁止重型 GUI 框架 / CEF / WebView / Node.js，不打包浏览器内核 | ✅ | grep 无命中 |
 | 8.6 | 命名清晰，避免魔法数字 / 字符串；表单参数、接口地址抽成常量 | ✅ | 集中于 `Constants.hpp` |
-| 8.7 | 配置项（登录地址、门户地址、检测地址、轮询间隔、超时、证书策略等）集中管理、不散落硬编码 | 🟡 | 地址 / 间隔 / 失败阈值 / 超时 / 探测地址 / 证书策略已外置并持久化；高级项暂无界面入口 |
+| 8.7 | 配置项（登录地址、门户地址、检测地址、轮询间隔、超时、证书策略等）集中管理、不散落硬编码 | 🟡 | 地址 / 间隔 / 失败阈值 / 超时 / 探测地址 / 证书策略 / POST 编码已外置并持久化；常用高级项已有折叠设置入口，其余检测参数暂未全部暴露到界面 |
 
 ## 9. 禁止事项核对
 
@@ -147,5 +147,5 @@
 | # | 需求 | 状态 | 现状 / 备注 |
 |---|---|---|---|
 | 10.1 | 代码附简短说明；CMake 片段可直接并入；QML 组件可复用；新增模块同步更新 CMake 依赖 | ✅ | 现有模块已在 CMake 清单登记 |
-| 10.2 | 优先产出可复用组件：卡片 / 输入框 / 按钮 / 开关 / 下拉 / 设备列表项 | 🟡 | 前五类已有；缺 `DeviceItem.qml` |
+| 10.2 | 优先产出可复用组件：卡片 / 输入框 / 按钮 / 开关 / 下拉 / 设备列表项 | ✅ | 六类组件均具备，并共用 Theme 令牌与响应式布局参数 |
 | 10.3 | Windows 发布用对应套件 windeployqt 收集依赖，自动生成 platforms / qml 插件目录；禁止手动零散复制 dll | 🟡 | 已调 windeployqt；仍存在从 exe 目录手动复制 dll / qml 的步骤，需规范化 |

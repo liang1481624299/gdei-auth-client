@@ -14,8 +14,11 @@ set(CMAKE_AUTORCC ON)
 
 # ---- Qt6 固定依赖 / Fixed Qt6 dependencies ----
 find_package(Qt6 REQUIRED COMPONENTS
-    Core Quick QuickControls2 Network Qml Svg
+    Core Quick QuickControls2 Network Qml Svg Core5Compat
 )
+if(WIN32)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+endif()
 
 # ---- macOS: drop the removed AGL.framework from Qt's link interface ----
 # AGL.framework was removed from modern macOS SDKs. Qt 6.5's FindWrapOpenGL still
@@ -63,6 +66,7 @@ set(APP_SOURCES
     src/core/secretstore_mac.cpp
     src/core/secretstore_fallback.cpp
     src/core/ConfigStore.cpp
+    src/core/FormEncoding.cpp
     src/core/SessionCookieJar.cpp
     src/core/PortalClient.cpp
     src/core/DevicePortalClient.cpp
@@ -80,6 +84,7 @@ set(APP_HEADERS
     src/core/Logger.hpp
     src/core/SecretStore.hpp
     src/core/ConfigStore.hpp
+    src/core/FormEncoding.hpp
     src/core/SessionCookieJar.hpp
     src/core/PortalClient.hpp
     src/core/DevicePortalClient.hpp
@@ -91,6 +96,10 @@ set(APP_HEADERS
     src/app/AppController.hpp
     src/core/msvc_stdext_compat.hpp
 )
+if(WIN32)
+    list(APPEND APP_SOURCES src/platform/TrayController.cpp)
+    list(APPEND APP_HEADERS src/platform/TrayController.hpp)
+endif()
 
 qt_add_executable(gdei-connect WIN32 MACOSX_BUNDLE ${APP_SOURCES} ${APP_HEADERS})
 
@@ -111,6 +120,38 @@ qt_add_qml_module(gdei-connect
         qml/components/DeviceItem.qml
         qml/components/DevicePanel.qml
         qml/components/LogPanel.qml
+        qml/components/Icon.qml
+        qml/components/SoftShadow.qml
+        qml/components/DisclosureGroup.qml
+        qml/components/AppDialog.qml
+        qml/components/SettingRow.qml
+        qml/components/StatusBadge.qml
+    RESOURCES
+        qml/icons/person.svg
+        qml/icons/lock.svg
+        qml/icons/globe.svg
+        qml/icons/power.svg
+        qml/icons/refresh.svg
+        qml/icons/check.svg
+        qml/icons/download.svg
+        qml/icons/chevronDown.svg
+        qml/icons/wifi.svg
+        qml/icons/wifiOff.svg
+        qml/icons/trash.svg
+        qml/icons/list.svg
+        qml/icons/server.svg
+        qml/icons/bolt.svg
+        qml/icons/plus.svg
+        qml/icons/info.svg
+        qml/icons/clock.svg
+        qml/icons/shield.svg
+        qml/icons/ellipsis.svg
+        qml/icons/xmark.svg
+        qml/icons/slider.svg
+        qml/icons/eye.svg
+        qml/icons/eyeOff.svg
+        qml/icons/trayOnline.svg
+        qml/icons/trayOffline.svg
 )
 
 target_link_libraries(gdei-connect PRIVATE
@@ -120,12 +161,13 @@ target_link_libraries(gdei-connect PRIVATE
     Qt6::Network
     Qt6::Qml
     Qt6::Svg
+    Qt6::Core5Compat
 )
 
 # ---- Platform secure-storage libraries ----
 # Windows DPAPI (Crypt32) / macOS Keychain (Security framework).
 if(WIN32)
-    target_link_libraries(gdei-connect PRIVATE crypt32)
+    target_link_libraries(gdei-connect PRIVATE crypt32 Qt6::Widgets)
 elseif(APPLE)
     target_link_libraries(gdei-connect PRIVATE "-framework Security")
 endif()
@@ -135,7 +177,60 @@ endif()
 # references it on MSVC, so pull in the compat header before any Qt header.
 if(MSVC)
     target_compile_options(gdei-connect PRIVATE
-        "/FI${CMAKE_CURRENT_SOURCE_DIR}/src/core/msvc_stdext_compat.hpp")
+        "/FI${CMAKE_CURRENT_SOURCE_DIR}/src/core/msvc_stdext_compat.hpp"
+        /utf-8)
+elseif(MINGW)
+    target_compile_options(gdei-connect PRIVATE
+        -finput-charset=UTF-8 -fexec-charset=UTF-8)
+endif()
+
+# ---- Android 包与自适应配置 / Android package and rotation support ----
+if(ANDROID)
+    set_target_properties(gdei-connect PROPERTIES
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android"
+        QT_ANDROID_PACKAGE_NAME "org.gdei.connect"
+        QT_ANDROID_MIN_SDK_VERSION 28
+        QT_ANDROID_TARGET_SDK_VERSION 35
+        QT_ANDROID_VERSION_CODE 1
+        QT_ANDROID_VERSION_NAME "0.2.0")
+endif()
+
+# ---- Qt 运行时自动部署 / Auto-deploy Qt runtime ----
+# 修复"Windows 双击打不开"：构建后立即把所有 Qt 依赖（DLL / 插件 / QML 模块）
+# 拷贝到可执行文件旁，保证产物自包含、双击即跑。windeployqt / macdeployqt 等
+# 由 Qt 官方提供，比手拷依赖闭包更可靠。
+if(WIN32)
+    find_program(WINDEPLOYQT_EXECUTABLE
+        NAMES windeployqt
+        HINTS "${QT6_INSTALL_PREFIX}/bin" "${QT6_HOST_INFO_PREFIX}/bin")
+    if(WINDEPLOYQT_EXECUTABLE)
+        add_custom_command(TARGET gdei-connect POST_BUILD
+            COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+                    --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/qml"
+                    --no-translations
+                    "$<TARGET_FILE:gdei-connect>"
+            COMMENT "windeployqt: 部署 Qt 运行时依赖到输出目录 (auto-bundle)"
+            VERBATIM)
+    else()
+        message(WARNING "windeployqt not found -> build will NOT auto-bundle Qt deps. "
+                        "Install a complete Qt6 (with the MinGW or MSVC kit matching your compiler).")
+    endif()
+endif()
+
+# CPack / `cmake --install` 路径的桌面部署（Windows / macOS / Linux 通用）。
+# Android 由 apk target 调用 androiddeployqt，不支持此桌面部署函数。
+set(_gc_deploy_script "")
+if(COMMAND qt_generate_deploy_qml_app_script AND NOT ANDROID)
+    if(APPLE)
+        qt_generate_deploy_qml_app_script(
+            TARGET gdei-connect
+            OUTPUT_SCRIPT _gc_deploy_script
+            MACOS_BUNDLE_POST_PROCESSING)
+    else()
+        qt_generate_deploy_qml_app_script(
+            TARGET gdei-connect
+            OUTPUT_SCRIPT _gc_deploy_script)
+    endif()
 endif()
 
 # ---- 安装 / Install ----
@@ -144,6 +239,9 @@ install(TARGETS gdei-connect
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
 )
+if(_gc_deploy_script)
+    install(SCRIPT "${_gc_deploy_script}")
+endif()
 
 # ---- 打包 / Packaging (deb / rpm / Arch tar.zst / macOS dmg / Windows exe) ----
 set(CPACK_PACKAGE_NAME "gdei-connect")

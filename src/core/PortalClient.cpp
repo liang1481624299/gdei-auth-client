@@ -2,6 +2,7 @@
 #include "core/PortalClient.hpp"
 #include "core/ConfigStore.hpp"
 #include "core/Constants.hpp"
+#include "core/FormEncoding.hpp"
 #include "core/Logger.hpp"
 #include "core/SessionCookieJar.hpp"
 
@@ -93,6 +94,32 @@ QNetworkReply* PortalClient::sendRequest(const QString& method,
         reply = m_nam->get(req);
     }
     return reply;
+}
+
+QNetworkReply* PortalClient::postConfiguredForm(const QString& path, const QString& body) {
+    const FormEncoding::Result encoded = FormEncoding::encode(body, m_cfg->requestEncoding());
+    if (encoded.error != FormEncoding::Error::None) {
+        m_busy = false;
+        setState(AuthState::Error);
+        emit loginFinished(false, encoded.errorKey);
+        return nullptr;
+    }
+
+    if (encoded.charset == "UTF-8") {
+        return sendRequest("POST", path, body);
+    }
+
+    QNetworkRequest req(urlFor(path));
+    req.setHeader(QNetworkRequest::UserAgentHeader, constants::USER_AGENT);
+    req.setRawHeader("Host", m_cfg->host().toUtf8());
+    req.setRawHeader("Referer",
+        QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, m_cfg->host(),
+            constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
+    req.setTransferTimeout(m_cfg->connectTimeoutMs());
+    req.setHeader(QNetworkRequest::ContentTypeHeader,
+        QString("application/x-www-form-urlencoded; charset=%1").arg(encoded.charset));
+    req.setRawHeader("X-Requested-With", "XMLHttpRequest");
+    return m_nam->post(req, encoded.body);
 }
 
 QString PortalClient::extractCsrf(const QString& html) const {
@@ -257,7 +284,8 @@ void PortalClient::logout() {
     if (m_busy) return;
     m_busy = true;
     const QString body = buildForm(m_cfg->username(), m_cfg->password());
-    QNetworkReply* reply = sendRequest("POST", constants::LOGOUT_ACTION_PATH, body);
+    QNetworkReply* reply = postConfiguredForm(constants::LOGOUT_ACTION_PATH, body);
+    if (!reply) return;
     reply->setProperty("action", "logout");
     connect(reply, &QNetworkReply::finished, this, &PortalClient::onLogoutReply);
 }
@@ -285,7 +313,8 @@ void PortalClient::onPageReply() {
     if (!m_csrf.isEmpty()) log(LogLevel::Debug, tr("CSRF token extracted"));
 
     const QString body = buildForm(m_cfg->username(), m_cfg->password());
-    QNetworkReply* next = sendRequest("POST", constants::LOGIN_ACTION_PATH, body);
+    QNetworkReply* next = postConfiguredForm(constants::LOGIN_ACTION_PATH, body);
+    if (!next) return;
     next->setProperty("action", "login");
     connect(next, &QNetworkReply::finished, this, &PortalClient::onLoginReply);
 }

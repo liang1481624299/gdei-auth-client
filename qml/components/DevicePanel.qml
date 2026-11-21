@@ -1,95 +1,120 @@
-// qml/components/DevicePanel.qml
-// 设备面板 / Device panel: self-service sign-in with captcha + read-only lists.
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as QQC
+import QtQuick.Layouts
 import "../theme"
 import "."
 
 Card {
     id: root
-    Theme { id: th }
+    readonly property Theme th: Theme {}
 
     property string codeText: ""
+    property real availableListHeight: 240
+    readonly property bool compact: width < 440
 
     Component.onCompleted: {
         if (!app.devices.authenticated) app.devices.fetchCaptcha();
     }
 
-    Column {
-        spacing: 12
+    ColumnLayout {
         width: parent.width
+        spacing: th.sp6
 
-        // ---- 标题栏 / Header ----
-        Row {
-            width: parent.width
-            spacing: 10
-            Label {
-                text: app.i18n.lang, app.i18n.text("devices.title")
-                color: th.text
-                font.bold: true
-                font.pixelSize: 15
-                anchors.verticalCenter: parent.verticalCenter
+        ColumnLayout {
+            spacing: th.sp4
+            Layout.fillWidth: true
+
+            RowLayout {
+                spacing: th.sp4
+                Layout.fillWidth: true
+                Icon { name: "server"; iconSize: 18; tint: th.primary; Layout.alignment: Qt.AlignVCenter }
+                QQC.Label {
+                    text: (app.i18n.lang, app.i18n.text("devices.title"))
+                    color: th.text
+                    font.weight: th.weightSemibold
+                    font.pixelSize: th.fontHeadline
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                }
             }
-            Item { width: 1; height: 1; anchors.verticalCenter: parent.verticalCenter }
-            PrimaryButton {
-                text: app.i18n.text("devices.refresh")
-                bg: th.muted
-                implicitHeight: 34
-                padding: 12
-                enabled: app.devices.authenticated && !app.devices.busy
-                onClicked: app.devices.refreshDevices()
-            }
-            PrimaryButton {
-                text: app.i18n.text("devices.logout")
-                bg: th.danger
-                implicitHeight: 34
-                padding: 12
+
+            RowLayout {
+                spacing: th.sp4
                 visible: app.devices.authenticated
-                onClicked: app.devices.clearSession()
+                Layout.fillWidth: true
+
+                PrimaryButton {
+                    text: (app.i18n.lang, app.i18n.text("devices.refresh"))
+                    variant: "secondary"
+                    leadingIcon: "refresh"
+                    busy: app.devices.busy
+                    enabled: app.devices.authenticated && !app.devices.busy
+                    Layout.fillWidth: true
+                    onClicked: app.devices.refreshDevices()
+                }
+                PrimaryButton {
+                    text: (app.i18n.lang, app.i18n.text("devices.logout"))
+                    variant: "danger"
+                    bg: "transparent"
+                    leadingIcon: "power"
+                    Layout.fillWidth: true
+                    onClicked: app.devices.clearSession()
+                }
             }
         }
 
-        // ---- 未登录：验证码 / Signed-out: captcha ----
-        Column {
-            width: parent.width
-            spacing: 8
+        ColumnLayout {
+            spacing: th.sp5
             visible: !app.devices.authenticated
+            Layout.fillWidth: true
 
-            Row {
-                width: parent.width
-                spacing: 12
-                anchors.verticalCenter: parent.verticalCenter
+            GridLayout {
+                columns: root.compact ? 1 : 2
+                columnSpacing: th.sp5
+                rowSpacing: th.sp5
+                Layout.fillWidth: true
 
-                Image {
-                    id: captchaImg
-                    width: 120
-                    height: 44
-                    fillMode: Image.PreserveAspectFit
-                    source: app.devices.captchaImage
-                    anchors.verticalCenter: parent.verticalCenter
-                    Rectangle {
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: root.compact ? -1 : 120
+                    Layout.preferredHeight: 52
+                    Layout.maximumWidth: root.compact ? Infinity : 140
+                    radius: th.radiusSmall
+                    color: "white"
+                    border.width: 1
+                    border.color: th.separator
+                    clip: true
+                    Accessible.name: (app.i18n.lang, app.i18n.text("devices.code"))
+
+                    Image {
                         anchors.fill: parent
-                        radius: th.radiusSmall
-                        border.width: 1
-                        border.color: th.border
-                        visible: captchaImg.status !== Image.Ready
+                        anchors.margins: 3
+                        fillMode: Image.PreserveAspectFit
+                        source: app.devices.captchaImage
+                        smooth: true
+                        asynchronous: true
                     }
                 }
 
                 TextField {
-                    width: parent.width - 132
-                    placeholderText: app.i18n.text("devices.code")
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    placeholderText: (app.i18n.lang, app.i18n.text("devices.code"))
+                    leadingIcon: "shield"
                     text: root.codeText
                     onTextChanged: root.codeText = text
-                    anchors.verticalCenter: parent.verticalCenter
-                    enterPressed: app.devices.loginWithCode(root.codeText)
+                    onAccepted: app.devices.loginWithCode(root.codeText)
                 }
             }
 
             PrimaryButton {
-                width: parent.width
-                text: app.i18n.text("devices.login")
+                text: (app.i18n.lang, app.i18n.text("devices.login"))
+                variant: "primary"
+                leadingIcon: "power"
+                busy: app.devices.busy
                 enabled: !app.devices.busy
+                Layout.fillWidth: true
                 onClicked: {
                     app.devices.loginWithCode(root.codeText);
                     root.codeText = "";
@@ -97,51 +122,65 @@ Card {
             }
         }
 
-        // ---- 已登录：设备列表 / Signed-in: device list ----
-        Column {
-            width: parent.width
-            spacing: 8
+        ListView {
+            id: deviceList
             visible: app.devices.authenticated
+            clip: true
+            spacing: th.sp4
+            model: app.devices.devices
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+            Layout.fillWidth: true
+            Layout.preferredHeight: count === 0 ? 120 : Math.max(88, Math.min(root.availableListHeight, contentHeight))
 
-            ListView {
-                id: deviceList
-                width: parent.width
-                height: 200
-                clip: true
-                spacing: 8
-                model: app.devices.devices
-                interactive: count > 0
+            delegate: DeviceItem {
+                required property var modelData
+                width: deviceList.width
+                device: modelData
+            }
 
-                delegate: DeviceItem {
-                    width: deviceList.width
-                    device: modelData
-                }
-
-                Label {
-                    anchors.centerIn: parent
-                    text: app.i18n.text("devices.empty")
-                    color: th.muted
-                    font.pixelSize: 13
-                    visible: deviceList.count === 0
-                }
+            QQC.Label {
+                anchors.centerIn: parent
+                width: parent.width - th.sp8
+                text: (app.i18n.lang, app.i18n.text("devices.empty"))
+                color: th.tertiaryLabel
+                font.pixelSize: th.fontSubhead
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+                visible: deviceList.count === 0
             }
         }
 
-        Label {
-            width: parent.width
+        QQC.Label {
             text: app.devices.lastMessage
             color: th.muted
-            font.pixelSize: 12
-            wrapMode: Text.Wrap
+            font.pixelSize: th.fontFootnote
+            wrapMode: Text.WrapAnywhere
             visible: text.length > 0
+            Layout.fillWidth: true
         }
 
-        Label {
-            width: parent.width
-            text: app.i18n.text("devices.unsupported")
-            color: th.warning
-            font.pixelSize: 11
-            wrapMode: Text.Wrap
+        RowLayout {
+            spacing: th.sp4
+            visible: app.devices.authenticated
+            Layout.fillWidth: true
+
+            Rectangle {
+                Layout.preferredWidth: 24
+                Layout.preferredHeight: 24
+                Layout.alignment: Qt.AlignTop
+                radius: 12
+                color: th.orangeFill
+                Icon { name: "info"; iconSize: 14; tint: th.warning; anchors.centerIn: parent }
+            }
+            QQC.Label {
+                text: (app.i18n.lang, app.i18n.text("devices.unsupported"))
+                color: th.muted
+                font.pixelSize: th.fontFootnote
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignTop
+            }
         }
     }
 }

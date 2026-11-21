@@ -31,6 +31,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.5.3'
+          modules: qt5compat
           cache: true
 
       - name: Configure
@@ -72,7 +73,7 @@ jobs:
           apt-get install -y --no-install-recommends \
             git build-essential cmake ninja-build dpkg-dev file \
             qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-tools-dev \
-            qml6-module-qtquick-controls qml6-module-qtquick-layouts \
+            libqt6core5compat6-dev qml6-module-qtquick-controls qml6-module-qtquick-layouts \
             qml6-module-qtquick-window
 
       - name: Install Arch dependencies
@@ -80,7 +81,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed \
             git base-devel cmake ninja \
-            qt6-base qt6-declarative qt6-svg qt6-tools
+            qt6-base qt6-declarative qt6-svg qt6-tools qt6-5compat
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -95,8 +96,8 @@ jobs:
           path: build
           retention-days: 14
 
-  # ---- Android：实验性工具链脚手架，暂不阻塞主线（APK 打包待真机 / 工具链验证）----
-  # Android: experimental toolchain scaffold, non-blocking until APK packaging is verified.
+  # ---- Android：实验性工具链，暂不阻塞主线（APK 待真机 / 工具链验证）----
+  # Android: experimental toolchain, non-blocking until APK packaging is verified.
   android:
     name: Android (experimental)
     continue-on-error: true
@@ -115,13 +116,55 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Qt6 for Android
+      - name: Install Qt 6.8.3 host tools
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.5.3'
+          version: '6.8.3'
+          target: desktop
+          arch: gcc_64
+          modules: qt5compat
+          dir: ${{ runner.temp }}/qt-host
           cache: true
-          arch: android_arm64_v8a
-          modules: qtbase qtdeclarative qtsvg
+          set-env: false
 
-      - name: Configure (Android kit, experimental)
-        run: cmake -B build-android -DCMAKE_BUILD_TYPE=Release -DQT_ANDROID_ABIS=arm64-v8a
+      - name: Install Qt 6.8.3 for Android
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          target: android
+          arch: android_arm64_v8a
+          modules: qt5compat
+          dir: ${{ runner.temp }}/qt-android
+          cache: true
+          set-env: false
+
+      - name: Install Android SDK packages and NDK r26b
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;26.1.10909125"
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
+
+      - name: Configure (Android arm64-v8a Debug, experimental)
+        run: |
+          cmake -S . -B build-android -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/qt-android/6.8.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DQT_HOST_PATH="$RUNNER_TEMP/qt-host/6.8.3/gcc_64" \
+            -DQT_ANDROID_SIGN_APK=OFF \
+            -DANDROID_ABI=arm64-v8a \
+            -DQT_ANDROID_ABIS=arm64-v8a \
+            -DANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
+            -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
+            -DANDROID_NDK_HOST=linux-x86_64 \
+            -DJAVA_HOME="$JAVA_HOME"
+
+      - name: Build APK (experimental)
+        run: cmake --build build-android --target apk
+
+      - name: Upload Android Debug APK (experimental)
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdei-connect-android-arm64-v8a-debug
+          path: build-android/android-build/gdei-connect.apk
+          if-no-files-found: error
+          retention-days: 14

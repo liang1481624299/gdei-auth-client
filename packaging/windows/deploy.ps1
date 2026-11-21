@@ -1,4 +1,4 @@
-# packaging/windows/deploy.ps1
+﻿# packaging/windows/deploy.ps1
 # Windows 部署打包：windeployqt 收集 Qt 运行库 / 插件 / QML，再归档 zip。
 # Windows packaging: windeployqt collects Qt runtime, plugins and QML, then zips.
 param(

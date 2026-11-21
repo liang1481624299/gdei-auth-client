@@ -65,6 +65,7 @@ private:
     QUrl urlFor(const QString& path) const;
     QNetworkReply* sendRequest(const QString& method, const QString& path,
                                const QString& body = QString());
+    QNetworkReply* postConfiguredForm(const QString& path, const QString& body);
     QString extractCsrf(const QString& html) const;
     QString buildForm(const QString& user, const QString& pass) const;
     QString detectCharset(const QByteArray& contentType, const QByteArray& body) const;

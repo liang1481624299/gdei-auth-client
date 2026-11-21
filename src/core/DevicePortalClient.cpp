@@ -2,6 +2,7 @@
 #include "core/DevicePortalClient.hpp"
 #include "core/ConfigStore.hpp"
 #include "core/Constants.hpp"
+#include "core/FormEncoding.hpp"
 #include "core/Logger.hpp"
 #include "core/SessionCookieJar.hpp"
 
@@ -296,6 +297,13 @@ void DevicePortalClient::loginWithCode(const QString& code) {
     fields << "j_id_h_SUBMIT=1";
     fields << "javax.faces.ViewState=" + enc(m_viewState);
     const QString body = fields.join("&");
+    const FormEncoding::Result encoded = FormEncoding::encode(body, m_cfg->requestEncoding());
+    if (encoded.error != FormEncoding::Error::None) {
+        setBusy(false);
+        setMessage(encoded.errorKey);
+        emit loginFinished(false, encoded.errorKey);
+        return;
+    }
 
     QUrl url = selfUrl(constants::SELF_LOGIN_PATH);
     if (!m_jsessionid.isEmpty()) {
@@ -305,11 +313,11 @@ void DevicePortalClient::loginWithCode(const QString& code) {
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader, constants::USER_AGENT);
     req.setHeader(QNetworkRequest::ContentTypeHeader,
-                  "application/x-www-form-urlencoded; charset=UTF-8");
+                  QString("application/x-www-form-urlencoded; charset=%1").arg(encoded.charset));
     req.setRawHeader("Referer", selfUrl(constants::SELF_LOGIN_PATH).toString().toUtf8());
     req.setTransferTimeout(m_cfg->connectTimeoutMs());
 
-    QNetworkReply* reply = m_nam->post(req, body.toUtf8());
+    QNetworkReply* reply = m_nam->post(req, encoded.body);
     reply->setProperty("stage", static_cast<int>(Stage::Login));
     connect(reply, &QNetworkReply::finished, this, &DevicePortalClient::onLoginReply);
 }
