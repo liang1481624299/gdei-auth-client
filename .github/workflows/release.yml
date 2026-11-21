@@ -1,5 +1,5 @@
-# Release：推送 v* 标签时，构建各平台 Qt6 产物并挂到 GitHub Release 供下载。
-# Release: on a v* tag, build per-OS Qt6 artifacts and attach them to the GitHub Release.
+# Release：推送 v* 标签时，按平台调用 packaging/ 脚本打包并挂到 GitHub Release。
+# Release: on a v* tag, run the per-platform packaging/ scripts and attach artifacts.
 name: Release
 
 on:
@@ -34,52 +34,30 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      # ---- Windows: windeployqt 收集运行时与 QML 依赖 ----
+      # ---- Windows: windeployqt 收集依赖并归档 zip ----
       - name: Stage Windows package
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $exe = Get-ChildItem -Recurse build -Filter 'gdei-connect.exe' | Select-Object -First 1
-          New-Item -ItemType Directory -Force dist
-          windeployqt --release --qmldir qml $exe.FullName
-          Copy-Item $exe.FullName dist/
-          $exeDir = $exe.DirectoryName
-          Get-ChildItem $exeDir -Filter '*.dll' | Copy-Item -Destination dist/
-          if (Test-Path "$exeDir/qml") { Copy-Item "$exeDir/qml" -Destination dist/ -Recurse }
-          Compress-Archive -Path dist/* -DestinationPath dist/gdei-connect-windows-x64.zip
+        run: pwsh -File packaging/windows/deploy.ps1 -BuildDir build -DistDir dist -QmlDir qml
 
-      # ---- macOS: macdeployqt 处理 .app（若生成 bundle），否则打包二进制 ----
+      # ---- macOS: macdeployqt 收编框架并制作 dmg ----
       - name: Stage macOS package
         if: runner.os == 'macOS'
         shell: bash
-        run: |
-          mkdir -p dist
-          app=$(find build -name 'gdei-connect.app' -maxdepth 4 | head -1)
-          if [ -n "$app" ]; then
-            macdeployqt "$app"
-            cp -R "$app" dist/
-            cd dist && tar -czf gdei-connect-macos.tar.gz gdei-connect.app
-          else
-            bin=$(find build -type f -name 'gdei-connect' | head -1)
-            cp "$bin" dist/gdei-connect
-            cd dist && tar -czf gdei-connect-macos.tar.gz gdei-connect
-          fi
+        run: bash packaging/macos/deploy.sh build dist
 
-      # ---- Linux: 打包二进制；deb/rpm/Arch 包建议在对应发行版容器内用 CPack 生成 ----
+      # ---- Linux: 归档二进制 tar.gz（deb/rpm/Arch 在对应容器内生成） ----
       - name: Stage Linux package
         if: runner.os == 'Linux'
         shell: bash
-        run: |
-          mkdir -p dist
-          bin=$(find build -type f -name 'gdei-connect' | head -1)
-          cp "$bin" dist/gdei-connect
-          cd dist && tar -czf gdei-connect-linux-x64.tar.gz gdei-connect
+        run: bash packaging/linux/deploy.sh build dist
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.zip
+            dist/*.dmg
             dist/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

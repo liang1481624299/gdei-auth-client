@@ -32,9 +32,9 @@
 
 - 上线 / 下线 / 状态查询，登录流程：GET 登录页 → 解析 HTML 提取 CSRF token → 带 UA / Referer / Cookie POST 表单
 - **完整 CookieJar 会话管理**，匹配 Nginx 会话校验与 IP 绑定机制
-- **自动保活**：定时探测外网连通性，仅掉线时才触发登录；探测间隔带随机抖动（45–90 秒），避免固定高频轮询被 Nginx 限流 403
-- 桌面端系统托盘 / 后台静默保活；Android 前台服务（引导关闭电池优化）
-- 账号密码加密（可逆混淆）本地持久化，支持记住密码、自动登录开关
+- **自动保活**：定时探测外网连通性，仅掉线时才触发登录；探测间隔带随机抖动，避免固定高频轮询被 Nginx 限流 403
+- 桌面端系统托盘 / 后台静默保活、Android 前台服务与电池优化引导：**规划中，尚未实现**
+- 账号密码经平台安全存储（Windows DPAPI / macOS Keychain）持久化，支持记住密码、自动登录开关；Linux / Android 为明确标注的后备实现
 - 内置分级日志面板（DEBUG / INFO / WARN / ERROR），支持导出日志文件
 - **四语言界面**：简体中文、繁體中文、English (UK)、日本語，顶部下拉即时切换
 - 错误处理覆盖网络超时、403 限流、登录失败、证书异常与权限异常，并给出友好提示
@@ -51,7 +51,7 @@ gdei-auth-client/
 │   │   ├── Constants.hpp     #   门户地址、表单字段、默认值、超时与退避常量
 │   │   ├── Types.hpp         #   日志级别 / 认证状态 / 语言枚举
 │   │   ├── Logger.*          #   分级日志：内存缓冲 + 文件持久化 + 导出
-│   │   ├── Crypto.*          #   本地口令可逆混淆（后续可换系统钥匙串）
+│   │   ├── SecretStore.*     #   平台安全存储：Windows DPAPI / macOS Keychain（Linux/Android 后备）
 │   │   ├── ConfigStore.*     #   QSettings 持久化配置
 │   │   ├── SessionCookieJar.*#   完整 Cookie 会话管理
 │   │   ├── PortalClient.*    #   QNAM 门户认证客户端（CSRF / 表单 / 解码）
@@ -96,21 +96,21 @@ cmake --build build --config Release
 
 ### 打包产物
 
-CMake 已接入 CPack，按平台生成对应安装包：
+打包脚本收口在 [`packaging/`](packaging/README.md)。下表区分**目标产物**与**当前 CI 实际产出**：
 
-| 平台 | 产物 |
-|---|---|
-| Windows | NSIS exe 安装包 |
-| macOS | DragNDrop dmg |
-| Linux | deb / rpm / tgz（Arch `pkg.tar.zst` 由打包脚本基于 tar 产物生成） |
-| Android | apk（Qt for Android 套件 + NDK 构建） |
+| 平台 | 目标产物 | 当前 CI 产物 |
+|---|---|---|
+| Windows | NSIS exe 安装包 | `gdei-connect-windows-x64.zip`（windeployqt 收集依赖） |
+| macOS | DragNDrop dmg（签名 / 公证待补） | `gdei-connect-macos.dmg`（macdeployqt + hdiutil） |
+| Linux | deb / rpm / Arch `pkg.tar.zst` | `gdei-connect-linux-x64.tar.gz`（裸二进制归档） |
+| Android | apk（Qt for Android + NDK） | 暂无 |
 
 ```bash
 cd build
 cpack -G <generator>
 ```
 
-> 本仓库在无 Qt / 编译器的 Windows 沙箱中生成源码基准，未在本地编译验证；请在目标工具链上构建。
+> 本仓库在无 Qt / 编译器的 Windows 沙箱中生成源码基准，未在本地编译验证；请在目标工具链上构建。Linux 包需在对应发行版容器内生成，系统级依赖（glibc / X11 / Wayland / dbus 等）由目标设备提供。
 
 ## 配置
 
@@ -157,7 +157,7 @@ cpack -G <generator>
 流水线定义在 `.github/workflows/`：
 
 - **`ci.yml`**：推送到 `main` 或 Pull Request 时，在 Linux / Windows / macOS 上配置并构建 Qt6/QML 工程，产物作为 Actions 构件保留 14 天。
-- **`release.yml`**：推送 `v*` 标签时，构建各平台安装包并自动挂到对应 **GitHub Release** 供下载。
+- **`release.yml`**：推送 `v*` 标签时，按平台调用 [`packaging/`](packaging/README.md) 脚本打包，并自动挂到对应 **GitHub Release** 供下载。
 
 发版 / Cut a release：
 
@@ -170,15 +170,15 @@ git push origin v0.1.0
 
 ## 保活机制 / Keep-alive
 
-1. 按随机间隔（45–90 秒抖动）访问 NCSI 探测地址，返回体含 `Microsoft` 判定在线；
+1. 按随机抖动间隔访问 NCSI 探测地址，返回体含 `Microsoft` 判定在线（当前 45–90 秒；基线目标 3 分钟 ±30 秒，待调整）；
 2. 探测离线时才触发重新认证，不做无脑高频 POST；
-3. 桌面端托盘 / 后台静默运行；Android 以前台服务保活。
+3. 桌面端托盘 / 后台静默运行、Android 前台服务保活为规划中能力，尚未实现。
 
 ## 安全说明 / Security
 
-- 本地口令为**可逆混淆**（XOR + Base64），仅避免明文落在配置文件里，**不是强加密**；后续可替换为 Windows Credential Manager / macOS Keychain / Android Keystore。
-- 真实账号口令不得提交仓库；仓库内不保存任何明文凭据。
-- 网络层默认忽略 SSL 证书异常以适配校园网自签场景，正式发布前应按信息中心要求收紧证书校验。
+- 本地口令经平台安全存储落盘：Windows 走 DPAPI，macOS 走 Keychain；Linux / Android 暂为明确标注的后备实现（Secret Service / Keystore 待接入）。代码不使用硬编码固定密钥。
+- 真实账号口令不得提交仓库；仓库内不保存任何明文凭据或 token。
+- 网络层**默认严格校验服务器证书**；仅在设置中显式开启“跳过证书校验”时才放行自签等异常，并写入警告日志留痕。
 
 ## 排障 / Troubleshooting
 
