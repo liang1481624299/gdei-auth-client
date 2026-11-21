@@ -24,7 +24,7 @@ using namespace gdei;
 
 // TEMP diagnostic: dump Qt/QML warnings and errors to a file for offline inspection.
 // 临时诊断：把 Qt/QML 警告与错误落盘，便于离线定位根对象创建失败点。
-static void gcDiagnosticHandler(QtMsgType type, const QMessageLogContext*, const QString& msg) {
+static void gcDiagnosticHandler(QtMsgType type, const QMessageLogContext&, const QString& msg) {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(dir);
     QFile file(QDir(dir).filePath("gdei-qml-debug.log"));
