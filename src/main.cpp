@@ -22,29 +22,33 @@
 
 using namespace gdei;
 
-// TEMP diagnostic: dump Qt/QML warnings and errors to a file for offline inspection.
-// 临时诊断：把 Qt/QML 警告与错误落盘，便于离线定位根对象创建失败点。
-static void gcDiagnosticHandler(QtMsgType type, const QMessageLogContext&, const QString& msg) {
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(dir);
-    QFile file(QDir(dir).filePath("gdei-qml-debug.log"));
+// TEMP diagnostic: append stage trace to a plain TEMP file (no QStandardPaths/Org dependency).
+// 临时诊断：把阶段轨迹写到 TEMP 下的纯文件，避免早期路径解析问题。
+static void gcStage(const QString& msg) {
+    QFile file(QDir::tempPath() + QStringLiteral("/gdei-stage.log"));
     if (file.open(QIODevice::Append | QIODevice::Text)) {
         QTextStream ts(&file);
-        const char* level = "?";
-        switch (type) {
-        case QtDebugMsg:    level = "DEBUG"; break;
-        case QtWarningMsg:  level = "WARN";  break;
-        case QtCriticalMsg: level = "CRIT";  break;
-        case QtFatalMsg:    level = "FATAL"; break;
-        default: break;
-        }
-        ts << QDateTime::currentDateTime().toString("HH:mm:ss.zzz") << " [" << level << "] " << msg << "\n";
+        ts << QDateTime::currentDateTime().toString("HH:mm:ss.zzz") << " " << msg << "\n";
     }
+}
+
+static void gcDiagnosticHandler(QtMsgType type, const QMessageLogContext&, const QString& msg) {
+    const char* level = "?";
+    switch (type) {
+    case QtDebugMsg:    level = "DEBUG"; break;
+    case QtWarningMsg:  level = "WARN";  break;
+    case QtCriticalMsg: level = "CRIT";  break;
+    case QtFatalMsg:    level = "FATAL"; break;
+    default: break;
+    }
+    gcStage(QStringLiteral("[%1] %2").arg(QString::fromLatin1(level), msg));
 }
 
 int main(int argc, char* argv[]) {
     qInstallMessageHandler(gcDiagnosticHandler);
+    gcStage(QStringLiteral("=== main entered ==="));
     QGuiApplication app(argc, argv);
+    gcStage(QStringLiteral("app created"));
     app.setApplicationName(QStringLiteral("gdei-connect"));
     app.setOrganizationName(QStringLiteral("GDEI"));
 
@@ -63,6 +67,7 @@ int main(int argc, char* argv[]) {
     LogController logs(&logger);
     DeviceController devices(&config, &logger);
     AppController controller(&config, &logger, &i18n, &auth, &logs, &devices);
+    gcStage(QStringLiteral("controller ready"));
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("app"), &controller);
@@ -73,8 +78,10 @@ int main(int argc, char* argv[]) {
     // compatible with Qt 6.4 (Debian bookworm), which lacks loadFromModule (6.5+).
     const QUrl url(QStringLiteral("qrc:/GdeiConnect/qml/Main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
-                     &app, []() { QGuiApplication::exit(-1); });
+                     &app, []() { gcStage(QStringLiteral("!!! objectCreationFailed")); QGuiApplication::exit(-1); });
+    gcStage(QStringLiteral("loading ") + url.toString());
     engine.load(url);
+    gcStage(QStringLiteral("loaded, rootObjects=%1").arg(engine.rootObjects().size()));
 
     // 自动登录 / Auto login when enabled and credentials are present.
     if (config.autoLogin() && !config.username().isEmpty() &&
