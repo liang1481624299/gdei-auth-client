@@ -65,9 +65,11 @@ set(APP_SOURCES
     src/core/ConfigStore.cpp
     src/core/SessionCookieJar.cpp
     src/core/PortalClient.cpp
+    src/core/DevicePortalClient.cpp
     src/core/KeepAlive.cpp
     src/core/I18n.cpp
     src/app/AuthController.cpp
+    src/app/DeviceController.cpp
     src/app/LogController.cpp
     src/app/AppController.cpp
 )
@@ -80,9 +82,11 @@ set(APP_HEADERS
     src/core/ConfigStore.hpp
     src/core/SessionCookieJar.hpp
     src/core/PortalClient.hpp
+    src/core/DevicePortalClient.hpp
     src/core/KeepAlive.hpp
     src/core/I18n.hpp
     src/app/AuthController.hpp
+    src/app/DeviceController.hpp
     src/app/LogController.hpp
     src/app/AppController.hpp
     src/core/msvc_stdext_compat.hpp
@@ -104,6 +108,8 @@ qt_add_qml_module(gdei-connect
         qml/components/PrimaryButton.qml
         qml/components/Switch.qml
         qml/components/LangSelector.qml
+        qml/components/DeviceItem.qml
+        qml/components/DevicePanel.qml
         qml/components/LogPanel.qml
 )
 

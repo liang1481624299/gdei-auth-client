@@ -33,6 +33,14 @@ inline const QString HEALTH_URL =
 inline const QString NCSI_URL =
     "http://www.msftconnecttest.com/connecttest.txt";
 
+// ---- 自助服务门户 / Self-service portal (:8080, 独立会话) ----
+inline const QString SELF_SERVICE_SCHEME = "http";
+inline constexpr int SELF_SERVICE_PORT = 8080;
+inline const QString SELF_LOGIN_PATH    = "/mselfservice/login.jsf";
+inline const QString SELF_HOME_PATH     = "/mselfservice/user/index.jsf";
+inline const QString SELF_MAC_LIST_PATH = "/mselfservice/snac/macList.xhtml";
+inline const QString SELF_CAPTCHA_PATH  = "/mselfservice/Kaptcha.jpg";
+
 inline const QString USER_AGENT =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";

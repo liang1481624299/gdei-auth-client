@@ -8,6 +8,7 @@
 
 #include "app/AppController.hpp"
 #include "app/AuthController.hpp"
+#include "app/DeviceController.hpp"
 #include "app/LogController.hpp"
 #include "core/ConfigStore.hpp"
 #include "core/I18n.hpp"
@@ -33,7 +34,8 @@ int main(int argc, char* argv[]) {
 
     AuthController auth(&config, &logger, &i18n);
     LogController logs(&logger);
-    AppController controller(&config, &logger, &i18n, &auth, &logs);
+    DeviceController devices(&config, &logger);
+    AppController controller(&config, &logger, &i18n, &auth, &logs, &devices);
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("app"), &controller);

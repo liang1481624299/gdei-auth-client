@@ -78,6 +78,16 @@ void I18n::buildDictionaries() {
     zhCN["log.title"] = "日志";
     zhCN["log.export"] = "导出日志";
     zhCN["err.request"] = "请求异常";
+    zhCN["devices.title"] = "我的设备";
+    zhCN["devices.refresh"] = "刷新";
+    zhCN["devices.login"] = "登录门户";
+    zhCN["devices.logout"] = "退出";
+    zhCN["devices.code"] = "验证码";
+    zhCN["devices.cat.online"] = "在线";
+    zhCN["devices.cat.history"] = "历史";
+    zhCN["devices.cat.bound"] = "绑定";
+    zhCN["devices.empty"] = "暂无设备记录";
+    zhCN["devices.unsupported"] = "设备删除 / 开关等操作暂未支持；如需下线本机，请使用上方下线按钮。";
     m_dict[Lang::ZhCN] = zhCN;
 
     QMap<QString, QString> zhTW;
@@ -111,6 +121,16 @@ void I18n::buildDictionaries() {
     zhTW["log.title"] = "日誌";
     zhTW["log.export"] = "匯出日誌";
     zhTW["err.request"] = "請求異常";
+    zhTW["devices.title"] = "我的裝置";
+    zhTW["devices.refresh"] = "重新整理";
+    zhTW["devices.login"] = "登入入口";
+    zhTW["devices.logout"] = "登出";
+    zhTW["devices.code"] = "驗證碼";
+    zhTW["devices.cat.online"] = "線上";
+    zhTW["devices.cat.history"] = "紀錄";
+    zhTW["devices.cat.bound"] = "綁定";
+    zhTW["devices.empty"] = "暫無裝置紀錄";
+    zhTW["devices.unsupported"] = "裝置刪除 / 開關等操作暫不支援；如需下線本機，請使用上方下線按鈕。";
     m_dict[Lang::ZhTW] = zhTW;
 
     QMap<QString, QString> enGB;
@@ -144,6 +164,16 @@ void I18n::buildDictionaries() {
     enGB["log.title"] = "Log";
     enGB["log.export"] = "Export log";
     enGB["err.request"] = "Request error";
+    enGB["devices.title"] = "My devices";
+    enGB["devices.refresh"] = "Refresh";
+    enGB["devices.login"] = "Sign in";
+    enGB["devices.logout"] = "Sign out";
+    enGB["devices.code"] = "Captcha";
+    enGB["devices.cat.online"] = "Online";
+    enGB["devices.cat.history"] = "History";
+    enGB["devices.cat.bound"] = "Bound";
+    enGB["devices.empty"] = "No device records";
+    enGB["devices.unsupported"] = "Delete/toggle actions are not supported yet. To disconnect this machine, use the logout button above.";
     m_dict[Lang::EnGB] = enGB;
 
     QMap<QString, QString> ja;
@@ -177,6 +207,16 @@ void I18n::buildDictionaries() {
     ja["log.title"] = "ログ";
     ja["log.export"] = "ログ出力";
     ja["err.request"] = "リクエストエラー";
+    ja["devices.title"] = "マイデバイス";
+    ja["devices.refresh"] = "更新";
+    ja["devices.login"] = "ログイン";
+    ja["devices.logout"] = "ログアウト";
+    ja["devices.code"] = "認証コード";
+    ja["devices.cat.online"] = "オンライン";
+    ja["devices.cat.history"] = "履歴";
+    ja["devices.cat.bound"] = "登録";
+    ja["devices.empty"] = "デバイス記録がありません";
+    ja["devices.unsupported"] = "削除・切り替え操作は未対応です。この端末を切断するには上のログアウトボタンを使ってください。";
     m_dict[Lang::Ja] = ja;
 }
 

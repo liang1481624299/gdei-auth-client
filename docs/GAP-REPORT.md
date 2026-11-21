@@ -75,14 +75,14 @@
 - 现状：源码无托盘菜单、无后台驻留入口；无 Android 服务 / 通知 / 电池优化引导代码。README、`docs/COMPATIBILITY.md` 已将这些标注为规划项。
 - 遗留与权衡：Qt6 桌面托盘 API `QSystemTrayIcon` 位于 QtWidgets，与基线“主界面不用 Widgets”存在冲突，落地前需先确认是否允许仅为托盘壳引入 QtWidgets；Android 前台服务待移动构建链。
 
-### P1-7 设备管理门户：协议已抓包，功能未实现 🟡
+### P1-7 设备管理门户：只读列表已实现，写操作未支持 🟡
 - 规格（扩展）：读取本人在线设备列表（设备名 / MAC / IP / 在线时长 / 绑定状态）、当前在线状态与设备数量、剩余可登录设备数；仅在用户手动确认后下线本账号单台设备；禁止批量踢设备 / 绕过多端限制 / 访问他人数据。
 - 抓包结论（2026-11-21，详见 `docs/PROTOCOL.md` 第 6 节）：
   - 自助门户与 captive portal 独立会话，登录需账号 + 口令 + 图形验证码 + 动态 ViewState；认证后 `GET /mselfservice/user/index.jsf` 直出在线用户 / 历史记录，`GET /mselfservice/snac/macList.xhtml` 为绑定终端列表，`/mselfservice/snac/macAdd.xhtml` 为增加终端页。
   - 在线 / 历史列表只读，字段含 时间、终端类型、MAC、IP、上网时长；绑定终端含 MAC、类型、操作系统、服务、绑定时间、无感知认证状态、终端状态。
   - **门户未提供在线会话踢线（强制下线）接口**；绑定终端的删除 / 开关 / 置丢失走 ICEfaces bridge 增量提交，手写标准 JSF ajax 无法触发，本期不实现。
-- 现状：`HEALTH_URL`（`macList.xhtml`）仅作为配置地址保留，`PortalClient` 未请求该门户；无设备数据模型、无设备列表 QML 组件、无下线确认流程。
-- 建议：先做只读 `DevicePortalClient` + `DeviceInfo` 模型 + `DeviceItem.qml`，按标签文本解析（不依赖 JSF 动态 id）；在线“单台下线”在本门户无对应接口，需回退为 captive `t=lo` 注销本机或在需求侧重新界定；写操作待录制 ICEfaces 回发报文后再定。
+- 现状：已新增 `DevicePortalClient` + `DeviceController` + `DeviceItem.qml` / `DevicePanel.qml`：独立会话、验证码登录、拉取在线 / 历史 / 绑定终端并按标签文本解析（不依赖 JSF 动态 id），列表只读展示；设备请求独立于核心登录保活。写操作（删除 / 开关 / 置丢失 / 增加）与在线踢线未实现；门户未提供设备名字段，在线数量统计与剩余可登录设备数未单独展示。
+- 建议：在线“单台下线”在本门户无对应接口，回退为 captive `t=lo` 注销本机或在需求侧重新界定；写操作待录制真实浏览器 ICEfaces 回发报文后再定；后续补在线数量与剩余额度展示。
 
 ### P1-8 关键配置项未外置 🟡
 - 规格：登录地址、门户地址、检测地址、轮询间隔、超时时间、证书放行策略等集中管理、可配置，不散落硬编码。

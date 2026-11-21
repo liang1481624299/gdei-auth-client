@@ -24,10 +24,15 @@ Window {
         return [th.muted, app.i18n.text("status.offline")];
     }
 
-    Column {
+    ScrollView {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 16
+        clip: true
+        contentWidth: viewport.width
+
+        Column {
+            width: parent.width
+            anchors.margins: 20
+            spacing: 16
 
         // ---- 头部 / Header ----
         Row {
@@ -174,6 +179,9 @@ Window {
             }
         }
 
+        // ---- 设备面板 / Device panel ----
+        DevicePanel { width: parent.width }
+
         // ---- 高级设置 / Advanced settings ----
         Card {
             width: parent.width
@@ -250,5 +258,6 @@ Window {
 
         // ---- 日志面板 / Log panel ----
         LogPanel { width: parent.width }
+        }
     }
 }
