@@ -40,10 +40,12 @@ int main(int argc, char* argv[]) {
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("app"), &controller);
 
-    const QUrl url(QStringLiteral("qrc:/qt/qml/GdeiConnect/Main.qml"));
+    // 按模块 URI + 组件名加载入口，避免手写 qrc 路径受资源前缀 / 目录层级影响。
+    // Load the entry by module URI and element name instead of a hand-written qrc path,
+    // so the entry is not sensitive to the resource prefix or directory layout.
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
                      &app, []() { QGuiApplication::exit(-1); });
-    engine.load(url);
+    engine.loadFromModule(QStringLiteral("GdeiConnect"), QStringLiteral("Main"));
 
     // 自动登录 / Auto login when enabled and credentials are present.
     if (config.autoLogin() && !config.username().isEmpty() &&
