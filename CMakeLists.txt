@@ -17,19 +17,40 @@ find_package(Qt6 REQUIRED COMPONENTS
     Core Quick QuickControls2 Network Qml Svg
 )
 
-# ---- macOS: strip removed AGL framework ----
-# AGL was removed from the macOS 14+ SDK; Qt 6.5's WrapOpenGL still references it.
-# Strip the stale framework from the Qt link interface so modern SDKs link cleanly.
+# ---- macOS: drop the removed AGL.framework from Qt's link interface ----
+# AGL.framework was removed from modern macOS SDKs. Qt 6.5's FindWrapOpenGL still
+# references it via WrapOpenGL::WrapOpenGL, transitively linked by Qt6::Gui.
+# Recursively strip any AGL reference from the imported targets' link interface.
 if(APPLE)
-    foreach(_agl_tgt WrapOpenGL::WrapOpenGL Qt6::Gui Qt6::Core Qt6::Quick Qt6::Qml Qt6::Svg)
-        if(TARGET ${_agl_tgt})
-            get_property(_agl_libs TARGET ${_agl_tgt} PROPERTY INTERFACE_LINK_LIBRARIES)
-            if(_agl_libs)
-                list(REMOVE_ITEM _agl_libs "-framework AGL")
-                list(REMOVE_ITEM _agl_libs "AGL")
-                set_property(TARGET ${_agl_tgt} PROPERTY INTERFACE_LINK_LIBRARIES "${_agl_libs}")
-            endif()
+    set_property(GLOBAL PROPERTY _gc_agl_seen "")
+    function(_gc_strip_agl _tgt)
+        if(NOT TARGET "${_tgt}")
+            return()
         endif()
+        get_property(_seen GLOBAL PROPERTY _gc_agl_seen)
+        if("${_tgt}" IN_LIST _seen)
+            return()
+        endif()
+        set_property(GLOBAL APPEND PROPERTY _gc_agl_seen "${_tgt}")
+        get_target_property(_libs "${_tgt}" INTERFACE_LINK_LIBRARIES)
+        if(_libs)
+            set(_filtered ${_libs})
+            list(FILTER _filtered EXCLUDE REGEX "AGL")
+            if(NOT "${_filtered}" STREQUAL "${_libs}")
+                set_target_properties("${_tgt}" PROPERTIES
+                    INTERFACE_LINK_LIBRARIES "${_filtered}")
+            endif()
+            foreach(_dep IN LISTS _libs)
+                _gc_strip_agl("${_dep}")
+            endforeach()
+        endif()
+    endfunction()
+    get_property(_gc_imported DIRECTORY PROPERTY IMPORTED_TARGETS)
+    foreach(_gc_t IN LISTS _gc_imported)
+        _gc_strip_agl("${_gc_t}")
+    endforeach()
+    foreach(_gc_qt_mod Qt6::Core Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Svg Qt6::Network WrapOpenGL::WrapOpenGL)
+        _gc_strip_agl("${_gc_qt_mod}")
     endforeach()
 endif()
 
@@ -61,6 +82,7 @@ set(APP_HEADERS
     src/app/AuthController.hpp
     src/app/LogController.hpp
     src/app/AppController.hpp
+    src/core/msvc_stdext_compat.hpp
 )
 
 qt_add_executable(gdei-connect WIN32 ${APP_SOURCES} ${APP_HEADERS})
@@ -90,6 +112,14 @@ target_link_libraries(gdei-connect PRIVATE
     Qt6::Qml
     Qt6::Svg
 )
+
+# ---- MSVC: force-include the stdext iterator polyfill ----
+# New MSVC toolsets removed stdext::make_checked_array_iterator; Qt 6.5 still
+# references it on MSVC, so pull in the compat header before any Qt header.
+if(MSVC)
+    target_compile_options(gdei-connect PRIVATE
+        "/FI${CMAKE_CURRENT_SOURCE_DIR}/src/core/msvc_stdext_compat.hpp")
+endif()
 
 # ---- 安装 / Install ----
 install(TARGETS gdei-connect
