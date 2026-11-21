@@ -117,9 +117,9 @@ target_link_libraries(gdei-connect PRIVATE
 )
 
 # ---- Platform secure-storage libraries ----
-# Windows DPAPI (advapi32) / macOS Keychain (Security framework).
+# Windows DPAPI (Crypt32) / macOS Keychain (Security framework).
 if(WIN32)
-    target_link_libraries(gdei-connect PRIVATE advapi32)
+    target_link_libraries(gdei-connect PRIVATE crypt32)
 elseif(APPLE)
     target_link_libraries(gdei-connect PRIVATE "-framework Security")
 endif()
