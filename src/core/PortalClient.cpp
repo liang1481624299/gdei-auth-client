@@ -10,6 +10,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QSslError>
 #include <QRegularExpression>
 #include <QUrl>
 
@@ -21,12 +22,20 @@ PortalClient::PortalClient(ConfigStore* config, Logger* logger, QObject* parent)
     m_jar = new SessionCookieJar(this);
     m_nam->setCookieJar(m_jar);
 
-    // 证书异常先记录，开发/校园网自签场景下放行。
-    // Log SSL errors; ignore them for campus self-signed deployments.
+    // 默认严格校验证书；仅当用户在设置中显式开启“跳过证书校验”时才放行，
+    // 并写入警告日志留痕。未开启时不忽略，握手错误经 reply->error() 上报。
+    // Strict certificate verification by default; ignore SSL errors only when
+    // the user explicitly enables the insecure toggle, and log a warning.
     connect(m_nam, &QNetworkAccessManager::sslErrors, this,
-            [](QNetworkReply* reply, const QList<QSslError>& errors) {
+            [this](QNetworkReply* reply, const QList<QSslError>& errors) {
                 Q_UNUSED(errors);
-                if (reply) reply->ignoreSslErrors();
+                if (!reply) return;
+                if (m_cfg->allowInsecureSsl()) {
+                    reply->ignoreSslErrors();
+                    if (m_log) {
+                        m_log->warning(tr("SSL verification skipped by config / 按配置跳过证书校验"));
+                    }
+                }
             });
 }
 

@@ -58,7 +58,10 @@ endif()
 set(APP_SOURCES
     src/main.cpp
     src/core/Logger.cpp
-    src/core/Crypto.cpp
+    src/core/SecretStore.cpp
+    src/core/secretstore_win.cpp
+    src/core/secretstore_mac.cpp
+    src/core/secretstore_fallback.cpp
     src/core/ConfigStore.cpp
     src/core/SessionCookieJar.cpp
     src/core/PortalClient.cpp
@@ -73,7 +76,7 @@ set(APP_HEADERS
     src/core/Constants.hpp
     src/core/Types.hpp
     src/core/Logger.hpp
-    src/core/Crypto.hpp
+    src/core/SecretStore.hpp
     src/core/ConfigStore.hpp
     src/core/SessionCookieJar.hpp
     src/core/PortalClient.hpp
@@ -112,6 +115,14 @@ target_link_libraries(gdei-connect PRIVATE
     Qt6::Qml
     Qt6::Svg
 )
+
+# ---- Platform secure-storage libraries ----
+# Windows DPAPI (advapi32) / macOS Keychain (Security framework).
+if(WIN32)
+    target_link_libraries(gdei-connect PRIVATE advapi32)
+elseif(APPLE)
+    target_link_libraries(gdei-connect PRIVATE "-framework Security")
+endif()
 
 # ---- MSVC: force-include the stdext iterator polyfill ----
 # New MSVC toolsets removed stdext::make_checked_array_iterator; Qt 6.5 still

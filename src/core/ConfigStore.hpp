@@ -1,7 +1,8 @@
 // src/core/ConfigStore.hpp
 // 配置持久化 / Persistent settings via QSettings.
-// 口令仅在“记住密码”开启时混淆保存，不明文落盘。
-// Password is obfuscated on disk only when "remember password" is on.
+// 口令仅在“记住密码”开启时经平台安全存储（SecretStore）保存，不明文写入 QSettings。
+// Passwords go through the platform secure store (SecretStore) only when
+// "remember password" is on; they are never written to QSettings in plaintext.
 #ifndef GDEI_CONFIG_STORE_HPP
 #define GDEI_CONFIG_STORE_HPP
 
@@ -23,6 +24,7 @@ class ConfigStore : public QObject {
     Q_PROPERTY(QString host READ host WRITE setHost NOTIFY hostChanged)
     Q_PROPERTY(QString ip READ ip WRITE setIp NOTIFY ipChanged)
     Q_PROPERTY(QString nasip READ nasip WRITE setNasip NOTIFY nasipChanged)
+    Q_PROPERTY(bool allowInsecureSsl READ allowInsecureSsl WRITE setAllowInsecureSsl NOTIFY allowInsecureSslChanged)
 
 public:
     explicit ConfigStore(QObject* parent = nullptr);
@@ -35,6 +37,7 @@ public:
     QString host() const;
     QString ip() const;
     QString nasip() const;
+    bool allowInsecureSsl() const;
 
     void setUsername(const QString& v);
     void setPassword(const QString& v);
@@ -44,6 +47,7 @@ public:
     void setHost(const QString& v);
     void setIp(const QString& v);
     void setNasip(const QString& v);
+    void setAllowInsecureSsl(bool v);
 
     Q_INVOKABLE void load();
     Q_INVOKABLE void save();
@@ -57,13 +61,14 @@ signals:
     void hostChanged();
     void ipChanged();
     void nasipChanged();
+    void allowInsecureSslChanged();
 
 private:
     QString m_username;
     QString m_password;        // 内存中的明文，不落盘 / plaintext in memory only
-    QString m_passwordOb;      // 磁盘上的混淆值 / obfuscated value on disk
     bool m_rememberPassword = false;
     bool m_autoLogin = false;
+    bool m_allowInsecureSsl = false;
     Lang m_lang = Lang::ZhCN;
     QString m_host;
     QString m_ip;

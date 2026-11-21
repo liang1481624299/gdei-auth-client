@@ -1,7 +1,7 @@
 // src/core/ConfigStore.cpp
 #include "core/ConfigStore.hpp"
 #include "core/Constants.hpp"
-#include "core/Crypto.hpp"
+#include "core/SecretStore.hpp"
 
 #include <QSettings>
 
@@ -21,6 +21,7 @@ int ConfigStore::lang() const { return static_cast<int>(m_lang); }
 QString ConfigStore::host() const { return m_host; }
 QString ConfigStore::ip() const { return m_ip; }
 QString ConfigStore::nasip() const { return m_nasip; }
+bool ConfigStore::allowInsecureSsl() const { return m_allowInsecureSsl; }
 
 void ConfigStore::setUsername(const QString& v) {
     if (m_username == v) return;
@@ -55,24 +56,30 @@ void ConfigStore::setNasip(const QString& v) {
     if (m_nasip == v) return;
     m_nasip = v; emit nasipChanged();
 }
+void ConfigStore::setAllowInsecureSsl(bool v) {
+    if (m_allowInsecureSsl == v) return;
+    m_allowInsecureSsl = v; emit allowInsecureSslChanged();
+}
 
 void ConfigStore::load() {
     QSettings s(constants::ORG_NAME, constants::APP_NAME);
     m_username   = s.value("username", "").toString();
-    m_passwordOb = s.value("password_ob", "").toString();
     m_rememberPassword = s.value("remember_password", false).toBool();
     m_autoLogin   = s.value("auto_login", false).toBool();
     m_lang        = static_cast<Lang>(s.value("lang", static_cast<int>(Lang::ZhCN)).toInt());
     m_host = s.value("host", constants::DEFAULT_HOST).toString();
     m_ip   = s.value("ip", constants::DEFAULT_IP).toString();
     m_nasip = s.value("nasip", constants::DEFAULT_NASIP).toString();
+    m_allowInsecureSsl = s.value("allow_insecure_ssl", false).toBool();
 
-    // 仅在记住密码时还原口令 / restore password only when remembered.
-    m_password = m_rememberPassword ? Crypto::deobfuscate(m_passwordOb) : QString();
+    // 仅在记住密码时从平台安全存储还原口令 / restore from secure store only when remembered.
+    m_password = m_rememberPassword ? SecretStore::instance().read(QStringLiteral("password"))
+                                    : QString();
 
     emit usernameChanged(); emit passwordChanged();
     emit rememberPasswordChanged(); emit autoLoginChanged();
     emit langChanged(); emit hostChanged(); emit ipChanged(); emit nasipChanged();
+    emit allowInsecureSslChanged();
 }
 
 void ConfigStore::save() {
@@ -84,13 +91,16 @@ void ConfigStore::save() {
     s.setValue("host", m_host);
     s.setValue("ip", m_ip);
     s.setValue("nasip", m_nasip);
+    s.setValue("allow_insecure_ssl", m_allowInsecureSsl);
+    // 清理旧版本写入的混淆口令遗留键 / drop the legacy obfuscated password key.
+    s.remove("password_ob");
 
+    // 口令走平台安全存储；未记住或为空时清除 / password via secure store; clear when not remembered.
     if (m_rememberPassword && !m_password.isEmpty()) {
-        m_passwordOb = Crypto::obfuscate(m_password);
+        SecretStore::instance().write(QStringLiteral("password"), m_password);
     } else {
-        m_passwordOb.clear();
+        SecretStore::instance().clear(QStringLiteral("password"));
     }
-    s.setValue("password_ob", m_passwordOb);
 }
 
 } // namespace gdei

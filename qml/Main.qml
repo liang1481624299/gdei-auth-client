@@ -226,6 +226,20 @@ Window {
                 }
             }
 
+            Row {
+                spacing: 20
+                Switch {
+                    checked: app.config.allowInsecureSsl
+                    onCheckedChanged: app.config.allowInsecureSsl = checked
+                }
+                Label {
+                    text: app.i18n.lang, app.i18n.text("action.insecureSsl")
+                    color: th.text
+                    font.pixelSize: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
             PrimaryButton {
                 width: parent.width
                 text: app.i18n.lang, app.i18n.text("btn.save")

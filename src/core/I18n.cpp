@@ -74,6 +74,7 @@ void I18n::buildDictionaries() {
     zhCN["label.interval"] = "保活间隔(秒)";
     zhCN["action.remember"] = "记住密码";
     zhCN["action.autoLogin"] = "自动登录";
+    zhCN["action.insecureSsl"] = "跳过证书校验(不推荐)";
     zhCN["log.title"] = "日志";
     zhCN["log.export"] = "导出日志";
     zhCN["err.request"] = "请求异常";
@@ -106,6 +107,7 @@ void I18n::buildDictionaries() {
     zhTW["label.interval"] = "保活間隔(秒)";
     zhTW["action.remember"] = "記住密碼";
     zhTW["action.autoLogin"] = "自動登入";
+    zhTW["action.insecureSsl"] = "略過憑證校驗(不建議)";
     zhTW["log.title"] = "日誌";
     zhTW["log.export"] = "匯出日誌";
     zhTW["err.request"] = "請求異常";
@@ -138,6 +140,7 @@ void I18n::buildDictionaries() {
     enGB["label.interval"] = "Interval (s)";
     enGB["action.remember"] = "Remember password";
     enGB["action.autoLogin"] = "Auto login";
+    enGB["action.insecureSsl"] = "Skip certificate verification (not recommended)";
     enGB["log.title"] = "Log";
     enGB["log.export"] = "Export log";
     enGB["err.request"] = "Request error";
@@ -170,6 +173,7 @@ void I18n::buildDictionaries() {
     ja["label.interval"] = "間隔(秒)";
     ja["action.remember"] = "パスワードを保存";
     ja["action.autoLogin"] = "自動ログイン";
+    ja["action.insecureSsl"] = "証明書検証をスキップ(非推奨)";
     ja["log.title"] = "ログ";
     ja["log.export"] = "ログ出力";
     ja["err.request"] = "リクエストエラー";
