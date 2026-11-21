@@ -91,7 +91,6 @@ Window {
         // ---- 凭据卡片 / Credentials card ----
         Card {
             width: parent.width
-            spacing: 12
 
             Column {
                 spacing: 6
@@ -185,7 +184,6 @@ Window {
         // ---- 高级设置 / Advanced settings ----
         Card {
             width: parent.width
-            spacing: 12
 
             Row {
                 spacing: 10
