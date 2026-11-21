@@ -81,7 +81,7 @@ Card {
                     text: root.codeText
                     onTextChanged: root.codeText = text
                     anchors.verticalCenter: parent.verticalCenter
-                    enterPressed: app.devices.loginWithCode(root.codeText)
+                    onAccepted: app.devices.loginWithCode(root.codeText)
                 }
             }
 
