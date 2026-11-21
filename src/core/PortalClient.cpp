@@ -237,7 +237,7 @@ void PortalClient::onLoginReply() {
     m_busy = false;
 
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    const QString body = QString::fromUtf8(reply->readAll());
+    const QByteArray raw = reply->readAll();
 
     if (reply->error() != QNetworkReply::NoError) {
         setState(AuthState::Error);
@@ -248,9 +248,29 @@ void PortalClient::onLoginReply() {
         return;
     }
 
+    // 成功判定叠加 HTTP 状态码：非 2xx 一律视为失败，不能仅凭返回 200 放行。
+    // Multi-condition success: a non-2xx status is a failure; 200 alone is not enough.
+    if (status > 0 && (status < 200 || status >= 300)) {
+        setState(AuthState::Offline);
+        const QString msg = tr("Unexpected HTTP status / 异常 HTTP 状态: %1").arg(status);
+        log(LogLevel::Warning, msg);
+        emit loginFinished(false, msg);
+        return;
+    }
+
+    // 空响应单独归类，避免被当作成功或误解析。
+    // An empty body is classified separately, not parsed as success.
+    if (raw.trimmed().isEmpty()) {
+        setState(AuthState::Offline);
+        const QString msg = tr("Empty response from portal / 门户返回为空");
+        log(LogLevel::Warning, msg);
+        emit loginFinished(false, msg);
+        return;
+    }
+
     bool ok = false;
     QString message;
-    parsePayload(body, ok, message);
+    parsePayload(QString::fromUtf8(raw), ok, message);
     if (ok) {
         setState(AuthState::Online);
         setOnline(true);
@@ -287,8 +307,15 @@ void PortalClient::onProbeReply() {
         setState(AuthState::Offline);
         return;
     }
-    const QString body = QString::fromUtf8(reply->readAll());
-    const bool online = body.contains("Microsoft", Qt::CaseInsensitive);
+
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const QByteArray raw = reply->readAll();
+    // 探测同样要求 2xx 且响应体含 NCSI 特征串；状态码异常或空体均判离线。
+    // Probe requires a 2xx status and the NCSI marker; bad status or empty body = offline.
+    const bool statusOk = (status == 0) || (status >= 200 && status < 300);
+    const QString body = QString::fromUtf8(raw);
+    const bool online = statusOk && !raw.trimmed().isEmpty() &&
+                        body.contains("Microsoft", Qt::CaseInsensitive);
     setOnline(online);
     setState(online ? AuthState::Online : AuthState::Offline);
 }
