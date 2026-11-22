@@ -45,7 +45,7 @@
 - 构建：本地已验证 Qt 6.8.3 for Android、NDK 26.1.10909125、JDK 17、Gradle 8.10 / AGP 8.6.0 与 build-tools 35.0.0。
 - 最低 SDK：API 28（Android 9），targetSdk / compileSdk 35；当前构建脚本仅接受 arm64-v8a。
 - 后台能力：前台服务保活；首次运行引导用户关闭电池优化（规划中，尚未实现）。
-- 产物：本地已产出 `dist/Android/gdei-connect-android-arm64-v8a-debug.apk`，包名 `org.gdei.connect`，versionName `0.2.0`；已通过 aapt 包信息 / 权限 / 资源依赖检查与 apksigner v2 Debug 签名校验。CI 仍为实验性脚手架（`continue-on-error`），真机安装与运行未验证。
+- 产物：本地已产出 `artifacts/android/gdei-connect-android-arm64-v8a-debug.apk`，包名 `org.gdei.connect`，versionName `0.2.0`；已通过 aapt 包信息 / 权限 / 资源依赖检查与 apksigner v2 Debug 签名校验。CI 仍为实验性脚手架（`continue-on-error`），真机安装与运行未验证。
 - 权限：仅申请 `INTERNET`、`ACCESS_NETWORK_STATE` 两个平台权限；Manifest 移除 Qt6Core 自动加入的旧式 `WRITE_EXTERNAL_STORAGE`。AndroidX 合并的应用自有 `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` 为 signature 级内部权限，不是共享存储或敏感运行时权限。
 
 ### Linux

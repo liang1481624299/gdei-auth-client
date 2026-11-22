@@ -3,7 +3,7 @@
 # Windows packaging: windeployqt collects Qt runtime, plugins and QML, then zips.
 param(
     [string]$BuildDir = "build",
-    [string]$DistDir  = "dist",
+    [string]$DistDir  = "artifacts/windows",
     [string]$QmlDir   = "qml"
 )
 

@@ -5,7 +5,7 @@
 #   2. Android SDK，以及 Qt 6.8.3 推荐的 NDK r26b（26.1.10909125）。
 #   3. JDK 17、CMake、Ninja。
 #
-# 默认产物：dist\Android\gdei-connect-android-arm64-v8a-debug.apk
+# 默认产物：artifacts\android\gdei-connect-android-arm64-v8a-debug.apk
 # Release 未配置签名，产物名会明确标记 release-unsigned。
 param(
     [ValidateSet("arm64-v8a")]
@@ -13,7 +13,7 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$BuildType = "Debug",
     [string]$BuildDir = "build-android",
-    [string]$DistDir = "dist/Android",
+    [string]$DistDir = "artifacts/android",
     [string]$QT_ANDROID = $env:QT_ANDROID,
     [string]$QT_HOST_PATH = $env:QT_HOST_PATH,
     [string]$ANDROID_SDK_ROOT = $env:ANDROID_SDK_ROOT,

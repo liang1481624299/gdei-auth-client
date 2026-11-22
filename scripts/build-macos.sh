@@ -9,8 +9,8 @@ set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="${BUILD_DIR:-$SRC/build-macos}"
-PREFIX="${PREFIX:-$SRC/dist/macos-staging}"
-DMG="$SRC/dist/gdei-connect-macos.dmg"
+PREFIX="${PREFIX:-$SRC/artifacts/macos/macos-staging}"
+DMG="$SRC/artifacts/macos/gdei-connect-macos.dmg"
 
 CMAKE_ARGS=(-S "$SRC" -B "$BUILD" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX")
 if [ -n "${QTDIR:-}" ]; then

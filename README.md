@@ -93,10 +93,10 @@ gdei-auth-client/
 
 | 平台 | 脚本 | 产物 |
 |---|---|---|
-| Windows | `scripts/build-windows.ps1` | `dist/Windows/gdei-connect/`（整个文件夹自包含）+ `dist/gdei-connect-windows-x64.zip` |
-| macOS | `scripts/build-macos.sh` | `dist/gdei-connect-macos.dmg` |
-| Linux（Debian / Arch） | `scripts/build-linux.sh` | `dist/gdei-connect-linux-x64/` + `.tar.gz`（自包含，目标机无需装 Qt） |
-| Android | `scripts/build-android.ps1` | `dist/Android/gdei-connect-android-arm64-v8a-debug.apk`（需提供 Qt for Android + SDK/NDK + JDK17 路径） |
+| Windows | `scripts/build-windows.ps1` | `artifacts/windows/gdei-connect/`（整个文件夹自包含）+ `artifacts/windows/gdei-connect-windows-x64.zip` |
+| macOS | `scripts/build-macos.sh` | `artifacts/macos/gdei-connect-macos.dmg` |
+| Linux（Debian / Arch） | `scripts/build-linux.sh` | `artifacts/arch/gdei-connect-linux-x64/` + `.tar.gz`（自包含，目标机无需装 Qt） |
+| Android | `scripts/build-android.ps1` | `artifacts/android/gdei-connect-android-arm64-v8a-debug.apk`（需提供 Qt for Android + SDK/NDK + JDK17 路径） |
 
 Windows 示例（在项目根目录，PowerShell）：
 
@@ -104,7 +104,7 @@ Windows 示例（在项目根目录，PowerShell）：
 powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1
 ```
 
-该脚本会把便携 Python / CMake / Ninja 装到 `%USERPROFILE%\.cache\gdei-toolchain`，用 aqt 拉取 Qt6 + MinGW，编译后自动运行 `windeployqt`。整个 `dist/Windows/gdei-connect` 文件夹拷到任何 Windows 机器都能直接双击运行，无需预装 Qt 或编译器。
+该脚本会把便携 Python / CMake / Ninja 装到 `%USERPROFILE%\.cache\gdei-toolchain`，用 aqt 拉取 Qt6 + MinGW，编译后自动运行 `windeployqt`。整个 `artifacts/windows/gdei-connect` 文件夹拷到任何 Windows 机器都能直接双击运行，无需预装 Qt 或编译器。
 
 > CMake 现已加入 **POST_BUILD 自动 windeployqt**（Windows）与跨平台 `qt_generate_deploy_qml_app_script`（install/打包路径），每次构建都会把 `platforms/qwindows.dll`、Qt DLL、QML 导入模块等完整依赖闭包拷到产物旁，不再产出“裸 exe”。
 
@@ -124,7 +124,7 @@ cmake --build build --config Release
 | Windows | NSIS exe 安装包 | `gdei-connect-windows-x64.zip`（windeployqt 收集依赖） |
 | macOS | DragNDrop dmg（签名 / 公证待补） | `gdei-connect-macos.dmg`（macdeployqt + hdiutil） |
 | Linux | deb / rpm / Arch `pkg.tar.zst` | `gdei-connect-linux-x64.tar.gz`（自包含：Qt 库 + 插件 + QML，见 `scripts/build-linux.sh`） |
-| Android | apk（Qt for Android + NDK） | CI 仍为实验性脚手架；本地已产出 `dist/Android/gdei-connect-android-arm64-v8a-debug.apk` |
+| Android | apk（Qt for Android + NDK） | CI 仍为实验性脚手架；本地已产出 `artifacts/android/gdei-connect-android-arm64-v8a-debug.apk` |
 
 ```bash
 cd build

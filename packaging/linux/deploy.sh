@@ -19,7 +19,7 @@
 set -euo pipefail
 
 BUILD_DIR="${1:-build}"
-DIST_DIR="${2:-dist}"
+DIST_DIR="${2:-artifacts/arch}"
 STAGING="$DIST_DIR/gdei-connect-linux-x64"
 ARCHIVE="$DIST_DIR/gdei-connect-linux-x64.tar.gz"
 

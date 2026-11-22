@@ -5,7 +5,7 @@
 set -euo pipefail
 
 BUILD_DIR="${1:-build}"
-DIST_DIR="${2:-dist}"
+DIST_DIR="${2:-artifacts/macos}"
 
 mkdir -p "$DIST_DIR"
 

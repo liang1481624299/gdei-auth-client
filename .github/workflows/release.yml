@@ -45,12 +45,12 @@ jobs:
       - name: Stage Windows package
         if: matrix.target == 'windows'
         shell: pwsh
-        run: pwsh -File packaging/windows/deploy.ps1 -BuildDir build -DistDir dist -QmlDir qml
+        run: pwsh -File packaging/windows/deploy.ps1 -BuildDir build -DistDir artifacts/windows -QmlDir qml
 
       - name: Stage macOS package
         if: matrix.target == 'macos'
         shell: bash
-        run: bash packaging/macos/deploy.sh build dist
+        run: bash packaging/macos/deploy.sh build artifacts/macos
 
       # 非标签触发（workflow_dispatch 冒烟）：产物作为工作流归档，不挂 Release。
       - name: Upload workflow artifacts
@@ -58,7 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.target }}
-          path: dist/
+          path: artifacts/${{ matrix.target }}/
           retention-days: 7
 
       - name: Upload to Release
@@ -66,8 +66,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/*.zip
-            dist/*.dmg
+            artifacts/windows/*.zip
+            artifacts/macos/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -116,21 +116,21 @@ jobs:
       - name: Package Debian DEB
         if: matrix.target == 'debian'
         run: |
-          cmake -E make_directory dist
+          cmake -E make_directory artifacts/debian
           cd build && cpack -G DEB -C Release
-          mv *.deb ../dist/ 2>/dev/null || true
+          mv *.deb ../artifacts/debian/ 2>/dev/null || true
 
       - name: Package Arch tarball
         if: matrix.target == 'arch'
         shell: bash
-        run: bash packaging/linux/deploy.sh build dist
+        run: bash packaging/linux/deploy.sh build artifacts/arch
 
       - name: Upload workflow artifacts
         if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.target }}
-          path: dist/
+          path: artifacts/${{ matrix.target }}/
           retention-days: 7
 
       - name: Upload to Release
@@ -138,9 +138,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/*.deb
-            dist/*.tar.gz
-            dist/*.pkg.tar.zst
+            artifacts/debian/*.deb
+            artifacts/arch/*.tar.gz
+            artifacts/arch/*.pkg.tar.zst
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -209,10 +209,16 @@ jobs:
       - name: Build APK (experimental)
         run: cmake --build build-android --target apk
 
+      - name: Stage unsigned Android Release APK (experimental)
+        run: |
+          cmake -E make_directory artifacts/android
+          cp build-android/android-build/gdei-connect.apk \
+            artifacts/android/gdei-connect-android-arm64-v8a-release-unsigned.apk
+
       - name: Upload unsigned Android Release APK (experimental)
         uses: actions/upload-artifact@v4
         with:
           name: gdei-connect-android-arm64-v8a-release-unsigned
-          path: build-android/android-build/gdei-connect.apk
+          path: artifacts/android/
           if-no-files-found: error
           retention-days: 7

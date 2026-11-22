@@ -8,20 +8,20 @@
 #   3) CMake 配置 + Ninja 编译；
 #   4) CMake 的 POST_BUILD 自动调用 windeployqt，把全部 Qt 依赖
 #      （DLL / platforms 插件 / QML 模块 / imageformats 等）拷到 exe 旁；
-#   5) 把自包含目录整理到 dist\Windows（剔除构建产物），刷新编译器运行库，
+#   5) 把自包含目录整理到 artifacts\windows（剔除构建产物），刷新编译器运行库，
 #      做一次 3 秒存活冒烟测试，最后输出 zip。
 #
-# 产物： dist\Windows\gdei-connect\gdei-connect.exe
+# 产物： artifacts\windows\gdei-connect\gdei-connect.exe
 #        整个文件夹拷到任何 Windows 都能直接双击运行（不依赖本机是否装了 Qt）。
 #
 # 用法（在项目根目录，PowerShell 5+）：
 #   powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1
-# 可选： -QtVersion 6.8.3  -Arch win64_mingw  -BuildDir build  -DistDir dist
+# 可选： -QtVersion 6.8.3  -Arch win64_mingw  -BuildDir build  -DistDir artifacts/windows
 param(
     [string]$QtVersion = "",   # 留空 = 自动选最新 6.x (仅在需 aqt 安装时生效)
     [string]$Arch      = "",   # 留空 = 自动选 mingw 套件 (仅在需 aqt 安装时生效)
     [string]$BuildDir  = "build",
-    [string]$DistDir   = "dist",
+    [string]$DistDir   = "artifacts/windows",
     [string]$Toolchain = ""
 )
 
@@ -202,7 +202,7 @@ Run $cmake.FullName @("-S", $SRC, "-B", $BuildDir, "-G", "Ninja",
 Write-Host "==> 编译（POST_BUILD 会自动运行 windeployqt 打包全部依赖）"
 Run $cmake.FullName @("--build", $BuildDir, "--config", "Release")
 
-# ---------- 5. 整理到 dist（剔除构建产物）、刷新运行库、冒烟测试、打包 ----------
+# ---------- 5. 整理到 artifacts\windows（剔除构建产物）、刷新运行库、冒烟测试、打包 ----------
 $exe = Get-ChildItem -Recurse $BuildDir -Filter "gdei-connect.exe" | Select-Object -First 1
 if (-not $exe) { Die "未找到 gdei-connect.exe" }
 $exeDir = $exe.DirectoryName
@@ -215,7 +215,7 @@ foreach ($f in $must) {
 }
 Write-Host "依赖自检通过：Qt DLL + qwindows.dll 均已就位。"
 
-$staging = Join-Path $DistDir "Windows\gdei-connect"
+$staging = Join-Path $DistDir "gdei-connect"
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
 New-Item -ItemType Directory -Force $staging | Out-Null
 # 用 robocopy 镜像拷贝，排除构建产物（只保留运行时文件）
@@ -245,7 +245,7 @@ if ($sp.HasExited) {
 $zip = Join-Path $DistDir "gdei-connect-windows-x64.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $DistDir "Windows"), $zip,
+[System.IO.Compression.ZipFile]::CreateFromDirectory($DistDir, $zip,
     [System.IO.Compression.CompressionLevel]::Optimal, $false)
 
 Write-Host ""

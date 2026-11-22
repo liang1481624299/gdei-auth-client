@@ -19,7 +19,7 @@
 |---|---|---|---|
 | 2.1 | Windows exe 安装包 | ❌ | release.yml 产出 zip，未走 NSIS |
 | 2.2 | macOS dmg | 🟡 | macdeployqt + hdiutil 生成 dmg；未签名 / 未公证 |
-| 2.3 | Android apk | ✅ | 本地已产出 `dist/Android/gdei-connect-android-arm64-v8a-debug.apk`；包信息、依赖、权限及 v2 Debug 签名已检查，真机安装与 CI 正式出包待验证 |
+| 2.3 | Android apk | ✅ | 本地已产出 `artifacts/android/gdei-connect-android-arm64-v8a-debug.apk`；包信息、依赖、权限及 v2 Debug 签名已检查，真机安装与 CI 正式出包待验证 |
 | 2.4 | Linux deb / rpm / Arch `pkg.tar.zst` | ❌ | 仅裸二进制 tar.gz；未在对应发行版容器打包 |
 | 2.5 | 打包脚本统一放 `packaging/` 目录 | ✅ | `packaging/windows|macos|linux/` 脚本收口，release.yml 调用 |
 | 2.6 | CMake 输出按 `build/<platform>/<arch>` 组织 | ❌ | 固定 `build/` 目录 |

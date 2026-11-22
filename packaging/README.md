@@ -11,6 +11,10 @@ packaging/
 └── linux/deploy.sh      # cmake --install 收编 Qt 运行时为自包含目录，归档 tar.gz（Debian / Arch 通用，目标机无需装 Qt）
 ```
 
+## 产物输出位置
+
+各平台最终分发包统一输出到仓库根 `artifacts/<平台>/`：`windows/`、`macos/`、`debian/`、`arch/`、`android/`；该目录内容被 `.gitignore` 忽略，仅保留骨架与 `artifacts/README.md`。中间编译目录为 `build/`、`build-android/`，不属于产物目录。
+
 ## 产物现状与目标 / Current vs Target
 
 | 平台 | 目标产物 | 当前 CI 产物 | 说明 |

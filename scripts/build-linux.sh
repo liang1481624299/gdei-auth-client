@@ -14,8 +14,8 @@ set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="${BUILD_DIR:-$SRC/build-linux}"
-PREFIX="${PREFIX:-$SRC/dist/gdei-connect-linux-x64}"
-ARCHIVE="$SRC/dist/gdei-connect-linux-x64.tar.gz"
+PREFIX="${PREFIX:-$SRC/artifacts/arch/gdei-connect-linux-x64}"
+ARCHIVE="$SRC/artifacts/arch/gdei-connect-linux-x64.tar.gz"
 
 CMAKE_ARGS=(-S "$SRC" -B "$BUILD" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX")
 if [ -n "${QTDIR:-}" ]; then
@@ -54,7 +54,7 @@ chmod +x "$PREFIX/gdei-connect.sh"
 
 echo "==> 归档 Archive"
 mkdir -p "$(dirname "$ARCHIVE")"
-tar -czf "$ARCHIVE" -C "$SRC/dist" "gdei-connect-linux-x64"
+tar -czf "$ARCHIVE" -C "$SRC/artifacts/arch" "gdei-connect-linux-x64"
 
 echo
 echo "完成。运行目录: $PREFIX"
