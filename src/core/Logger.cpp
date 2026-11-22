@@ -101,13 +101,21 @@ QString Logger::sanitize(const QString& message) {
     // Mask secret key=value pairs: password, token, CSRF, dynamic password.
     QRegularExpression kv(
         "\\b(userPwd|password|passwd|pwd|token|csrf_token|freeOTP_secret_hidden|"
-        "userDynamicPwddd|manualUrlEncryptKey)\\s*=\\s*([^\\s&;\"']+)",
+        "userDynamicPwddd|manualUrlEncryptKey|loginCodeInput)\\s*=\\s*([^\\s&;\"']+)",
         QRegularExpression::CaseInsensitiveOption);
     out.replace(kv, "\\1=***");
 
-    // Cookie / Set-Cookie 整行掩码 / Mask whole Cookie headers.
+    // JSON 形式的敏感字段 "password": "..." / JSON key-value secrets.
+    QRegularExpression jsonKv(
+        "(\"(?:userPwd|password|passwd|pwd|token|csrf_token|loginCodeInput)\"\\s*:\\s*)"
+        "\"[^\"]*\"",
+        QRegularExpression::CaseInsensitiveOption);
+    out.replace(jsonKv, "\\1\"***\"");
+
+    // Cookie / Set-Cookie 整行掩码（含分号分隔的多段）/ Mask full Cookie headers,
+    // including multiple semicolon-separated segments.
     QRegularExpression cookie(
-        "\\b(Cookie|Set-Cookie)\\s*:\\s*[^\\r\\n;]+",
+        "\\b(Cookie|Set-Cookie)\\s*:\\s*[^\\r\\n]+",
         QRegularExpression::CaseInsensitiveOption);
     out.replace(cookie, "\\1: ***");
 

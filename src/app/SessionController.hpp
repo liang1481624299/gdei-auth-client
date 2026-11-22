@@ -10,6 +10,7 @@
 namespace gdei {
 
 class AuthController;
+class I18n;
 
 class SessionController : public QObject {
     Q_OBJECT
@@ -32,7 +33,8 @@ public:
     };
     Q_ENUM(Operation)
 
-    explicit SessionController(AuthController* auth, QObject* parent = nullptr);
+    explicit SessionController(AuthController* auth, I18n* i18n = nullptr,
+                               QObject* parent = nullptr);
 
     bool loggedIn() const;
     bool busy() const;
@@ -77,6 +79,7 @@ private:
     static QString reasonForMessage(const QString& message);
 
     AuthController* m_auth;
+    I18n* m_i18n;
     bool m_loggedIn = false;
     bool m_busy = false;
     bool m_loginPromptOpen = false;

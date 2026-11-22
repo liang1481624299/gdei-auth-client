@@ -83,7 +83,9 @@ void EventBridge::forward(int level, const QString& source, const QString& title
 }
 
 void EventBridge::onPortalDevicesFinished(bool ok, const QString& message) {
-    const bool expired = message.contains(QLatin1String("Session expired"));
+    // 会话过期现在以 i18n key 传递（key|arg 协议的 key 段），不再依赖英文原文匹配。
+    // Session expiry now arrives as an i18n key; no English text matching.
+    const bool expired = message == QLatin1String("portalDevices.sessionExpired");
     const bool encoding = message == QLatin1String("encoding.nonAscii") ||
                           message == QLatin1String("encoding.unmappable") ||
                           message == QLatin1String("encoding.invalidForm");

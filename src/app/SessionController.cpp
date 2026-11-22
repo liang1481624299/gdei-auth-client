@@ -1,13 +1,14 @@
 #include "app/SessionController.hpp"
 #include "app/AuthController.hpp"
+#include "core/I18n.hpp"
 #include "core/Types.hpp"
 
 #include <QLatin1String>
 
 namespace gdei {
 
-SessionController::SessionController(AuthController* auth, QObject* parent)
-    : QObject(parent), m_auth(auth) {
+SessionController::SessionController(AuthController* auth, I18n* i18n, QObject* parent)
+    : QObject(parent), m_auth(auth), m_i18n(i18n) {
     // 登录态由真变假（会话失效）时自动弹登录层，符合"登录失效切回登录"约束。
     // Auto prompt when the session becomes invalid, without touching explicit logout.
     connect(this, &SessionController::loggedInChanged, this, [this] {
@@ -19,6 +20,11 @@ SessionController::SessionController(AuthController* auth, QObject* parent)
         if (m_auth->state() == static_cast<int>(AuthState::Authenticating)) emit busyChanged();
         else if (!m_busy) emit busyChanged();
     });
+    if (m_i18n) {
+        // 切换语言后刷新已本地化的错误原因，避免停留在旧语言。
+        // Refresh localized errors when language changes.
+        connect(m_i18n, &I18n::langChanged, this, &SessionController::lastErrorChanged);
+    }
     connect(m_auth, &AuthController::loginFinished, this,
             [this](bool ok, const QString& message) {
                 const Operation completed = m_operation;
@@ -50,7 +56,9 @@ bool SessionController::busy() const {
 bool SessionController::loginPromptOpen() const { return m_loginPromptOpen; }
 QString SessionController::route() const { return m_loggedIn ? QStringLiteral("main")
                                                               : QStringLiteral("login"); }
-QString SessionController::lastError() const { return m_lastError; }
+QString SessionController::lastError() const {
+    return m_i18n ? m_i18n->localize(m_lastError) : m_lastError;
+}
 int SessionController::operation() const { return static_cast<int>(m_operation); }
 
 void SessionController::login() { begin(ManualLogin); }
@@ -170,10 +178,11 @@ void SessionController::setLastError(const QString& value) {
 }
 
 QString SessionController::reasonForMessage(const QString& message) {
-    // 已是 i18n key（含点号、无空格）的消息直接透传，避免二次包裹。
-    // Messages already carrying an i18n key pass through unchanged.
-    if (message.contains(QLatin1Char('.')) && !message.contains(QLatin1Char(' '))) {
-        return message;
+    // 已是 i18n key 的消息直接透传（含 key|arg 协议时只取 key 段），避免二次包裹。
+    // Messages already carrying an i18n key pass through (key segment only for key|arg).
+    const QString keyPart = message.section(QLatin1Char('|'), 0, 0);
+    if (keyPart.contains(QLatin1Char('.')) && !keyPart.contains(QLatin1Char(' '))) {
+        return keyPart;
     }
     // 精确短语匹配，避免 contains("403") 把任意含 403 的文本误判为服务端拒绝。
     // Exact phrase matching avoids misclassifying any text that merely contains "403".

@@ -222,7 +222,7 @@ void DevicePortalClient::onCaptchaPageReply() {
 
     if (reply->error() != QNetworkReply::NoError || html.isEmpty()) {
         setBusy(false);
-        setMessage(tr("Self-service portal unreachable / 自助门户无法访问"));
+        setMessage(QStringLiteral("portalDevices.unreachable"));
         log(LogLevel::Warning, tr("Self-service captcha page error / 验证码页面请求异常"));
         emit loginFinished(false, m_lastMessage);
         return;
@@ -261,7 +261,7 @@ void DevicePortalClient::onCaptchaImageReply() {
     const QByteArray bytes = reply->readAll();
     if (reply->error() != QNetworkReply::NoError || bytes.isEmpty()) {
         setBusy(false);
-        setMessage(tr("Captcha unavailable / 验证码获取失败"));
+        setMessage(QStringLiteral("portalDevices.captchaUnavailable"));
         emit loginFinished(false, m_lastMessage);
         return;
     }
@@ -274,11 +274,11 @@ void DevicePortalClient::loginWithCode(const QString& code) {
     const QString user = m_cfg->username();
     const QString pass = m_cfg->password();
     if (user.isEmpty() || pass.isEmpty()) {
-        setMessage(tr("Username or password not set / 未配置账号或密码"));
+        setMessage(QStringLiteral("auth.reasonMissingCredentials"));
         return;
     }
     if (code.trimmed().isEmpty()) {
-        setMessage(tr("Enter captcha / 请输入验证码"));
+        setMessage(QStringLiteral("portalDevices.enterCaptcha"));
         return;
     }
     if (m_busy) return;
@@ -340,7 +340,7 @@ void DevicePortalClient::onLoginReply() {
     if (!ok) {
         setAuthenticated(false);
         setBusy(false);
-        setMessage(tr("Self-service login failed, check captcha / 自助门户登录失败，请核对验证码"));
+        setMessage(QStringLiteral("portalDevices.loginFailed"));
         log(LogLevel::Warning, tr("Self-service login rejected / 自助门户登录被拒绝"));
         emit loginFinished(false, m_lastMessage);
         fetchCaptcha(); // 刷新验证码供重试 / Refresh captcha for retry.
@@ -361,7 +361,7 @@ void DevicePortalClient::onLoginReply() {
 
 void DevicePortalClient::refreshDevices() {
     if (!m_authenticated) {
-        setMessage(tr("Sign in to self-service portal first / 请先登录自助门户"));
+        setMessage(QStringLiteral("portalDevices.loginRequired"));
         return;
     }
     if (m_busy) return;
@@ -388,7 +388,7 @@ void DevicePortalClient::onHomeReply() {
         m_homeHtml.contains(QStringLiteral("loginCodeInput"))) {
         setBusy(false);
         setAuthenticated(false);
-        setMessage(tr("Session expired, sign in again / 会话已过期，请重新登录"));
+        setMessage(QStringLiteral("portalDevices.sessionExpired"));
         emit loginFinished(false, m_lastMessage);
         fetchCaptcha();
         return;
@@ -420,9 +420,9 @@ void DevicePortalClient::onMacListReply() {
     setBusy(false);
 
     if (devices.isEmpty()) {
-        setMessage(tr("No device records / 暂无设备记录"));
+        setMessage(QStringLiteral("portalDevices.noDevices"));
     } else {
-        setMessage(tr("Loaded %1 device(s) / 已加载 %1 台设备").arg(devices.size()));
+        setMessage(QStringLiteral("portalDevices.loaded|%1").arg(devices.size()));
     }
     emit loginFinished(true, m_lastMessage);
 }

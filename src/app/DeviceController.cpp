@@ -6,19 +6,6 @@
 #include "core/Logger.hpp"
 
 namespace gdei {
-namespace {
-
-QString localizedMessage(const I18n* i18n, const QString& message) {
-    if (!i18n) return message;
-    if (message == QLatin1String("encoding.nonAscii") ||
-        message == QLatin1String("encoding.unmappable") ||
-        message == QLatin1String("encoding.invalidForm")) {
-        return i18n->text(message);
-    }
-    return message;
-}
-
-} // namespace
 
 DeviceController::DeviceController(ConfigStore* config, Logger* logger, I18n* i18n,
                                    QObject* parent)
@@ -45,7 +32,7 @@ bool DeviceController::busy() const { return m_dev->busy(); }
 QVariantList DeviceController::devices() const { return m_dev->devices(); }
 QString DeviceController::captchaImage() const { return m_dev->captchaImage(); }
 QString DeviceController::lastMessage() const {
-    return localizedMessage(m_i18n, m_dev->lastMessage());
+    return m_i18n ? m_i18n->localize(m_dev->lastMessage()) : m_dev->lastMessage();
 }
 
 void DeviceController::fetchCaptcha() { m_dev->fetchCaptcha(); }

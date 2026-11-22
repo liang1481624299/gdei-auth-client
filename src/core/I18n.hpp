@@ -27,6 +27,12 @@ public:
     Q_INVOKABLE void setLang(int l);
     // 取译文；缺键回退英文，再回退键名。/ Translate key with EN fallback.
     Q_INVOKABLE QString text(const QString& key) const;
+    // 键是否存在于当前或英文词典。/ Whether a translation key is defined.
+    Q_INVOKABLE bool hasKey(const QString& key) const;
+    // 统一消息本地化：payload 形如 "key|arg1|arg2"，先翻译 key 再按序 arg()；
+    // 非已注册 key 则原样返回（兼容服务端原文与历史双语串）。
+    // Unified message localization for key[|arg] payloads; unknown payloads pass through.
+    Q_INVOKABLE QString localize(const QString& payload) const;
 
     static QString displayName(Lang l);
 

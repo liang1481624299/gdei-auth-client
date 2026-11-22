@@ -7,19 +7,6 @@
 #include "core/PortalClient.hpp"
 
 namespace gdei {
-namespace {
-
-QString localizedMessage(const I18n* i18n, const QString& message) {
-    if (!i18n) return message;
-    if (message == QLatin1String("encoding.nonAscii") ||
-        message == QLatin1String("encoding.unmappable") ||
-        message == QLatin1String("encoding.invalidForm")) {
-        return i18n->text(message);
-    }
-    return message;
-}
-
-} // namespace
 
 AuthController::AuthController(ConfigStore* config, Logger* logger, I18n* i18n,
                                QObject* parent)
@@ -44,7 +31,9 @@ AuthController::AuthController(ConfigStore* config, Logger* logger, I18n* i18n,
 int AuthController::state() const { return m_portal->state(); }
 bool AuthController::online() const { return m_portal->online(); }
 bool AuthController::keepAliveRunning() const { return m_keep->running(); }
-QString AuthController::lastMessage() const { return localizedMessage(m_i18n, m_lastMessage); }
+QString AuthController::lastMessage() const {
+    return m_i18n ? m_i18n->localize(m_lastMessage) : m_lastMessage;
+}
 
 void AuthController::setMessage(const QString& message) {
     if (m_lastMessage == message) return;

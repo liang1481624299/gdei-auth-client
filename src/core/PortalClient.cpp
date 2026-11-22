@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
+#include <QLatin1Char>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -317,7 +318,7 @@ void PortalClient::login() {
     const QString user = m_cfg->username();
     const QString pass = m_cfg->password();
     if (user.isEmpty() || pass.isEmpty()) {
-        emit loginFinished(false, tr("Missing username or password"));
+        emit loginFinished(false, QStringLiteral("auth.reasonMissingCredentials"));
         return;
     }
     if (m_busy) return;
@@ -410,10 +411,15 @@ void PortalClient::onLoginReply() {
     if (reply->error() != QNetworkReply::NoError) {
         setState(AuthState::Error);
         setOnline(false);
-        QString msg = tr("Request error / 请求异常: ") + reply->errorString();
-        if (status == 403) msg = tr("Blocked or rate-limited (403) / 被限流或拒绝访问 (403)");
-        log(LogLevel::Error, msg);
-        emit loginFinished(false, msg);
+        QString logMsg = tr("Request error / 请求异常: ") + reply->errorString();
+        if (status == 403) logMsg = tr("Blocked or rate-limited (403) / 被限流或拒绝访问 (403)");
+        log(LogLevel::Error, logMsg);
+        // UI 错误原因走 key|arg 协议；403 用专用 reason，其余带 errorString 参数。
+        // UI reasons use the key|arg protocol; 403 has a dedicated reason.
+        const QString reason = status == 403
+            ? QStringLiteral("auth.reasonServerRejected")
+            : QStringLiteral("auth.reasonRequestError|") + reply->errorString();
+        emit loginFinished(false, reason);
         return;
     }
 
@@ -422,9 +428,8 @@ void PortalClient::onLoginReply() {
     if (status > 0 && (status < 200 || status >= 300)) {
         setState(AuthState::Offline);
         setOnline(false);
-        const QString msg = tr("Unexpected HTTP status / 异常 HTTP 状态: %1").arg(status);
-        log(LogLevel::Warning, msg);
-        emit loginFinished(false, msg);
+        log(LogLevel::Warning, tr("Unexpected HTTP status / 异常 HTTP 状态: %1").arg(status));
+        emit loginFinished(false, QStringLiteral("auth.reasonHttpStatus|%1").arg(status));
         return;
     }
 
@@ -462,9 +467,8 @@ void PortalClient::onLoginReply() {
         }
         setState(AuthState::Offline);
         setOnline(false);
-        const QString msg = tr("Empty response from portal / 门户返回为空");
-        log(LogLevel::Warning, msg);
-        emit loginFinished(false, msg);
+        log(LogLevel::Warning, tr("Empty response from portal / 门户返回为空"));
+        emit loginFinished(false, QStringLiteral("auth.reasonEmptyResponse"));
         return;
     }
 
@@ -489,7 +493,15 @@ void PortalClient::onLoginReply() {
         setOnline(false);
         log(LogLevel::Warning, tr("Login failed / 认证失败: ") + message);
     }
-    emit loginFinished(ok || already, message);
+    // 服务端原文可能是英文，不直接暴露给 UI；包装为 i18n key|原文，由 app 层翻译。
+    // Server text may be English; wrap as key|raw so the app layer localizes the prefix.
+    const QString uiMessage = (ok || already)
+        ? QStringLiteral("auth.reconnectSuccessMessage")
+        : (message.isEmpty() ? QStringLiteral("auth.reasonUnknown")
+                             : (message.contains(QLatin1Char('.')) && !message.contains(QLatin1Char(' '))
+                                    ? message
+                                    : QStringLiteral("auth.reasonRequestError|") + message));
+    emit loginFinished(ok || already, uiMessage);
 }
 
 void PortalClient::onLogoutReply() {
@@ -513,7 +525,10 @@ void PortalClient::onLogoutReply() {
     setState(AuthState::Offline);
     setOnline(false);
     log(LogLevel::Info, loggedOut ? tr("Logged out / 已下线") : tr("Logout result / 注销结果: ") + message);
-    emit loginFinished(loggedOut, message);
+    const QString uiMessage = loggedOut
+        ? QStringLiteral("auth.logoutSuccessMessage")
+        : QStringLiteral("auth.logoutFailedMessage");
+    emit loginFinished(loggedOut, uiMessage);
 }
 
 void PortalClient::onProbeReply() {
