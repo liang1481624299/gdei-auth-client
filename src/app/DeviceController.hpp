@@ -43,6 +43,7 @@ signals:
     void devicesChanged();
     void captchaImageChanged();
     void lastMessageChanged();
+    void loginFinished(bool ok, QString message);
 
 private:
     DevicePortalClient* m_dev;

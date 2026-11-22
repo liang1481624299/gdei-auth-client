@@ -33,6 +33,7 @@ AuthController::AuthController(ConfigStore* config, Logger* logger, I18n* i18n,
             [this](bool ok, const QString& message) {
                 setMessage(message);
                 if (m_log) m_log->log(ok ? LogLevel::Info : LogLevel::Warning, lastMessage());
+                emit loginFinished(ok, message);
             });
     connect(m_keep, &KeepAlive::runningChanged, this, &AuthController::keepAliveRunningChanged);
     if (m_i18n) {

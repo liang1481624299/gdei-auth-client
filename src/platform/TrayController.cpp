@@ -2,6 +2,7 @@
 #include "platform/TrayController.hpp"
 
 #include "app/AuthController.hpp"
+#include "app/SessionController.hpp"
 #include "core/I18n.hpp"
 
 #include <QAction>
@@ -15,10 +16,10 @@
 
 namespace gdei {
 
-TrayController::TrayController(QQuickWindow* window, AuthController* auth, I18n* i18n,
-                               QObject* parent)
-    : QObject(parent), m_window(window), m_auth(auth), m_i18n(i18n) {
-    if (!m_window || !m_auth || !m_i18n || !QSystemTrayIcon::isSystemTrayAvailable()) {
+TrayController::TrayController(QQuickWindow* window, SessionController* session,
+                               AuthController* auth, I18n* i18n, QObject* parent)
+    : QObject(parent), m_window(window), m_session(session), m_auth(auth), m_i18n(i18n) {
+    if (!m_window || !m_session || !m_auth || !m_i18n || !QSystemTrayIcon::isSystemTrayAvailable()) {
         return;
     }
 
@@ -33,8 +34,8 @@ TrayController::TrayController(QQuickWindow* window, AuthController* auth, I18n*
     m_tray->setContextMenu(m_menu);
 
     connect(m_showAction, &QAction::triggered, this, &TrayController::showWindow);
-    connect(m_loginAction, &QAction::triggered, m_auth, &AuthController::login);
-    connect(m_logoutAction, &QAction::triggered, m_auth, &AuthController::logout);
+    connect(m_loginAction, &QAction::triggered, m_session, &SessionController::login);
+    connect(m_logoutAction, &QAction::triggered, m_session, &SessionController::logout);
     connect(m_quitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
     connect(m_tray, &QSystemTrayIcon::activated, this,
             [this](QSystemTrayIcon::ActivationReason reason) {
@@ -47,6 +48,8 @@ TrayController::TrayController(QQuickWindow* window, AuthController* auth, I18n*
             this, &TrayController::onWindowStateChanged);
     connect(m_auth, &AuthController::onlineChanged, this, &TrayController::updateStatus);
     connect(m_auth, &AuthController::stateChanged, this, &TrayController::updateActions);
+    connect(m_session, &SessionController::busyChanged, this, &TrayController::updateActions);
+    connect(m_session, &SessionController::loggedInChanged, this, &TrayController::updateActions);
     connect(m_i18n, &I18n::langChanged, this, &TrayController::updateTexts);
 
     updateTexts();
@@ -100,10 +103,10 @@ void TrayController::updateStatus() {
 }
 
 void TrayController::updateActions() {
-    if (!m_auth) return;
-    const bool busy = m_auth->state() == 2;
+    if (!m_session) return;
+    const bool busy = m_session->busy();
     if (m_loginAction) m_loginAction->setEnabled(!busy);
-    if (m_logoutAction) m_logoutAction->setEnabled(!busy);
+    if (m_logoutAction) m_logoutAction->setEnabled(m_session->loggedIn() && !busy);
 }
 
 } // namespace gdei

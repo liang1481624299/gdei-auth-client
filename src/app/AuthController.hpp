@@ -43,6 +43,7 @@ signals:
     void onlineChanged();
     void keepAliveRunningChanged();
     void lastMessageChanged();
+    void loginFinished(bool ok, QString message);
 
 private:
     ConfigStore* m_cfg;

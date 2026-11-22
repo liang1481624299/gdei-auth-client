@@ -66,6 +66,7 @@ set(APP_SOURCES
     src/core/secretstore_mac.cpp
     src/core/secretstore_fallback.cpp
     src/core/ConfigStore.cpp
+    src/core/LocalDeviceStore.cpp
     src/core/FormEncoding.cpp
     src/core/SessionCookieJar.cpp
     src/core/PortalClient.cpp
@@ -74,6 +75,12 @@ set(APP_SOURCES
     src/core/I18n.cpp
     src/app/AuthController.cpp
     src/app/DeviceController.cpp
+    src/app/LocalDeviceController.cpp
+    src/app/NetworkInfoController.cpp
+    src/app/SessionController.cpp
+    src/app/EventBus.cpp
+    src/app/EventModel.cpp
+    src/app/EventBridge.cpp
     src/app/LogController.cpp
     src/app/AppController.cpp
 )
@@ -84,6 +91,7 @@ set(APP_HEADERS
     src/core/Logger.hpp
     src/core/SecretStore.hpp
     src/core/ConfigStore.hpp
+    src/core/LocalDeviceStore.hpp
     src/core/FormEncoding.hpp
     src/core/SessionCookieJar.hpp
     src/core/PortalClient.hpp
@@ -92,6 +100,13 @@ set(APP_HEADERS
     src/core/I18n.hpp
     src/app/AuthController.hpp
     src/app/DeviceController.hpp
+    src/app/LocalDeviceController.hpp
+    src/app/NetworkInfoController.hpp
+    src/app/SessionController.hpp
+    src/app/AppEvent.hpp
+    src/app/EventBus.hpp
+    src/app/EventModel.hpp
+    src/app/EventBridge.hpp
     src/app/LogController.hpp
     src/app/AppController.hpp
     src/core/msvc_stdext_compat.hpp
@@ -111,6 +126,15 @@ qt_add_qml_module(gdei-connect
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/pages/LoginPage.qml
+        qml/pages/DashboardPage.qml
+        qml/pages/DevicesPage.qml
+        qml/pages/ProfilePage.qml
+        qml/pages/AdvancedSettingsPage.qml
+        qml/pages/EventLogPage.qml
+        qml/pages/AboutPage.qml
+        qml/pages/RemoteDevicesPage.qml
+        qml/pages/DiagnosticsPage.qml
         qml/theme/Theme.qml
         qml/components/Card.qml
         qml/components/TextField.qml
@@ -126,6 +150,16 @@ qt_add_qml_module(gdei-connect
         qml/components/AppDialog.qml
         qml/components/SettingRow.qml
         qml/components/StatusBadge.qml
+        qml/components/PageScaffold.qml
+        qml/components/AppTabBar.qml
+        qml/components/AppTabButton.qml
+        qml/components/KeepAliveDial.qml
+        qml/components/LocalDeviceCard.qml
+        qml/components/LocalDeviceEditor.qml
+        qml/components/NetworkInfoCard.qml
+        qml/components/ToastHost.qml
+        qml/components/EventListItem.qml
+        qml/components/UnreadBadge.qml
     RESOURCES
         qml/icons/person.svg
         qml/icons/lock.svg
@@ -135,6 +169,9 @@ qt_add_qml_module(gdei-connect
         qml/icons/check.svg
         qml/icons/download.svg
         qml/icons/chevronDown.svg
+        qml/icons/chevronLeft.svg
+        qml/icons/chevronRight.svg
+        qml/icons/home.svg
         qml/icons/wifi.svg
         qml/icons/wifiOff.svg
         qml/icons/trash.svg

@@ -33,6 +33,8 @@ DeviceController::DeviceController(ConfigStore* config, Logger* logger, I18n* i1
             this, &DeviceController::captchaImageChanged);
     connect(m_dev, &DevicePortalClient::lastMessageChanged,
             this, &DeviceController::lastMessageChanged);
+    connect(m_dev, &DevicePortalClient::loginFinished,
+            this, &DeviceController::loginFinished);
     if (m_i18n) {
         connect(m_i18n, &I18n::langChanged, this, &DeviceController::lastMessageChanged);
     }

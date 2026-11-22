@@ -13,6 +13,7 @@
 
 class QNetworkAccessManager;
 class QNetworkReply;
+class QNetworkRequest;
 
 namespace gdei {
 
@@ -63,6 +64,7 @@ private:
     bool m_busy = false;
 
     QUrl urlFor(const QString& path) const;
+    void applyPeerVerify(QNetworkRequest& req) const;
     QNetworkReply* sendRequest(const QString& method, const QString& path,
                                const QString& body = QString());
     QNetworkReply* postConfiguredForm(const QString& path, const QString& body);

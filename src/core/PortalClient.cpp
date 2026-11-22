@@ -11,6 +11,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QSslConfiguration>
 #include <QSslError>
 #include <QRegularExpression>
 #include <QStringDecoder>
@@ -61,13 +62,29 @@ void PortalClient::log(LogLevel level, const QString& message) {
 }
 
 QUrl PortalClient::urlFor(const QString& path) const {
-    const QString host = m_cfg->ip().isEmpty() ? m_cfg->host() : m_cfg->ip();
+    // 域名为主、备用直连 IP 兜底。门户证书签给域名（通配符 *.gdei.edu.cn），
+    // 若用 IP 建连，Qt 会按 IP 校验主机名而证书不含 IP SAN，导致 HostNameMismatch。
+    // Domain first, fallback to the direct IP only when host is unset. The portal
+    // certificate is issued for the domain; connecting by IP makes Qt verify the
+    // certificate against the IP, which has no IP SAN and fails hostname matching.
+    const QString host = m_cfg->host().isEmpty() ? m_cfg->ip() : m_cfg->host();
     QUrl url;
     url.setScheme(constants::DEFAULT_SCHEME);
     url.setHost(host);
     url.setPort(constants::DEFAULT_PORT);
     url.setPath(path);
     return url;
+}
+
+void PortalClient::applyPeerVerify(QNetworkRequest& req) const {
+    // 直连 IP 兜底时，URL host 为 IP，但证书主体仍是域名；把证书主机名校验名
+    // 对齐到配置域名。证书链、有效期、签发者校验仍保持严格，不关闭校验。
+    // When falling back to the direct IP, verify the certificate against the
+    // configured domain instead of the IP; chain/expiry/issuer checks stay strict.
+    if (m_cfg->host().isEmpty()) return;
+    QSslConfiguration ssl = req.sslConfiguration();
+    ssl.setPeerVerifyName(m_cfg->host());
+    req.setSslConfiguration(ssl);
 }
 
 QNetworkReply* PortalClient::sendRequest(const QString& method,
@@ -80,6 +97,7 @@ QNetworkReply* PortalClient::sendRequest(const QString& method,
         QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, m_cfg->host(),
             constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
     req.setTransferTimeout(m_cfg->connectTimeoutMs());
+    applyPeerVerify(req);
 
     if (!body.isEmpty()) {
         req.setHeader(QNetworkRequest::ContentTypeHeader,
@@ -116,6 +134,7 @@ QNetworkReply* PortalClient::postConfiguredForm(const QString& path, const QStri
         QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, m_cfg->host(),
             constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
     req.setTransferTimeout(m_cfg->connectTimeoutMs());
+    applyPeerVerify(req);
     req.setHeader(QNetworkRequest::ContentTypeHeader,
         QString("application/x-www-form-urlencoded; charset=%1").arg(encoded.charset));
     req.setRawHeader("X-Requested-With", "XMLHttpRequest");

@@ -77,6 +77,25 @@ Card {
                 boundsBehavior: Flickable.StopAtBounds
                 property bool followTail: true
 
+                WheelHandler {
+                    onWheel: function(event) {
+                        var delta = event.pixelDelta.y;
+                        if (Math.abs(delta) < 0.01)
+                            delta = event.angleDelta.y / 120 * 96;
+                        if (Math.abs(delta) < 0.01)
+                            return;
+
+                        var maximumY = Math.max(0, listView.contentHeight - listView.height);
+                        var nextY = Math.max(0, Math.min(maximumY, listView.contentY - delta));
+                        if (Math.abs(nextY - listView.contentY) < 0.01) {
+                            event.accepted = false;
+                            return;
+                        }
+                        listView.contentY = nextY;
+                        event.accepted = true;
+                    }
+                }
+
                 onMovementEnded: followTail = atYEnd
                 onContentYChanged: {
                     if (!moving && !dragging && !flicking) followTail = atYEnd;

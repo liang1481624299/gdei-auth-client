@@ -29,3 +29,7 @@ qrc_*.cpp
 # 系统垃圾 / OS junk
 Thumbs.db
 .DS_Store
+
+# local build cache / editor cache
+build-android/
+.trae/

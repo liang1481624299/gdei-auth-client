@@ -23,7 +23,12 @@
 #include "app/AppController.hpp"
 #include "app/AuthController.hpp"
 #include "app/DeviceController.hpp"
+#include "app/EventBridge.hpp"
+#include "app/EventBus.hpp"
+#include "app/LocalDeviceController.hpp"
 #include "app/LogController.hpp"
+#include "app/NetworkInfoController.hpp"
+#include "app/SessionController.hpp"
 #include "core/ConfigStore.hpp"
 #include "core/I18n.hpp"
 #include "core/Logger.hpp"
@@ -88,8 +93,15 @@ int main(int argc, char* argv[]) {
 
     AuthController auth(&config, &logger, &i18n);
     LogController logs(&logger);
-    DeviceController devices(&config, &logger, &i18n);
-    AppController controller(&config, &logger, &i18n, &auth, &logs, &devices);
+    DeviceController portalDevices(&config, &logger, &i18n);
+    SessionController session(&auth);
+    LocalDeviceController localDevices(&config, &auth, &i18n);
+    NetworkInfoController network(&config);
+    EventBus events;
+    EventBridge eventBridge(&events, &auth, &session, &localDevices,
+                            &portalDevices, &network, &config, &logger);
+    AppController controller(&config, &logger, &i18n, &auth, &logs, &session,
+                             &localDevices, &network, &events, &portalDevices);
     gcStage(QStringLiteral("controller ready"));
 
     QQmlApplicationEngine engine;
@@ -109,14 +121,14 @@ int main(int argc, char* argv[]) {
 #ifdef Q_OS_WIN
     // Windows 托盘只转发窗口与认证指令，不持有网络或配置业务逻辑。
     if (auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().value(0))) {
-        new TrayController(window, &auth, &i18n, &app);
+        new TrayController(window, &session, &auth, &i18n, &app);
     }
 #endif
 
     // 自动登录 / Auto login when enabled and credentials are present.
     if (config.autoLogin() && !config.username().isEmpty() &&
         !config.password().isEmpty()) {
-        auth.login();
+        session.loginAutomatically();
     }
 
     QObject::connect(&app, &QGuiApplication::aboutToQuit, &config, &ConfigStore::save);

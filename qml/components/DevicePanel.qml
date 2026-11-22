@@ -12,10 +12,6 @@ Card {
     property real availableListHeight: 240
     readonly property bool compact: width < 440
 
-    Component.onCompleted: {
-        if (!app.devices.authenticated) app.devices.fetchCaptcha();
-    }
-
     ColumnLayout {
         width: parent.width
         spacing: th.sp6
@@ -41,17 +37,17 @@ Card {
 
             RowLayout {
                 spacing: th.sp4
-                visible: app.devices.authenticated
+                visible: app.portalDevices.authenticated
                 Layout.fillWidth: true
 
                 PrimaryButton {
                     text: (app.i18n.lang, app.i18n.text("devices.refresh"))
                     variant: "secondary"
                     leadingIcon: "refresh"
-                    busy: app.devices.busy
-                    enabled: app.devices.authenticated && !app.devices.busy
+                    busy: app.portalDevices.busy
+                    enabled: app.portalDevices.authenticated && !app.portalDevices.busy
                     Layout.fillWidth: true
-                    onClicked: app.devices.refreshDevices()
+                    onClicked: app.portalDevices.refreshDevices()
                 }
                 PrimaryButton {
                     text: (app.i18n.lang, app.i18n.text("devices.logout"))
@@ -59,14 +55,14 @@ Card {
                     bg: "transparent"
                     leadingIcon: "power"
                     Layout.fillWidth: true
-                    onClicked: app.devices.clearSession()
+                    onClicked: app.portalDevices.clearSession()
                 }
             }
         }
 
         ColumnLayout {
             spacing: th.sp5
-            visible: !app.devices.authenticated
+            visible: !app.portalDevices.authenticated
             Layout.fillWidth: true
 
             GridLayout {
@@ -91,7 +87,7 @@ Card {
                         anchors.fill: parent
                         anchors.margins: 3
                         fillMode: Image.PreserveAspectFit
-                        source: app.devices.captchaImage
+                        source: app.portalDevices.captchaImage
                         smooth: true
                         asynchronous: true
                     }
@@ -104,7 +100,7 @@ Card {
                     leadingIcon: "shield"
                     text: root.codeText
                     onTextChanged: root.codeText = text
-                    onAccepted: app.devices.loginWithCode(root.codeText)
+                    onAccepted: app.portalDevices.loginWithCode(root.codeText)
                 }
             }
 
@@ -112,11 +108,11 @@ Card {
                 text: (app.i18n.lang, app.i18n.text("devices.login"))
                 variant: "primary"
                 leadingIcon: "power"
-                busy: app.devices.busy
-                enabled: !app.devices.busy
+                busy: app.portalDevices.busy
+                enabled: !app.portalDevices.busy
                 Layout.fillWidth: true
                 onClicked: {
-                    app.devices.loginWithCode(root.codeText);
+                    app.portalDevices.loginWithCode(root.codeText);
                     root.codeText = "";
                 }
             }
@@ -124,14 +120,33 @@ Card {
 
         ListView {
             id: deviceList
-            visible: app.devices.authenticated
+            visible: app.portalDevices.authenticated
             clip: true
             spacing: th.sp4
-            model: app.devices.devices
+            model: app.portalDevices.devices
             interactive: contentHeight > height
             boundsBehavior: Flickable.StopAtBounds
             Layout.fillWidth: true
             Layout.preferredHeight: count === 0 ? 120 : Math.max(88, Math.min(root.availableListHeight, contentHeight))
+
+            WheelHandler {
+                onWheel: function(event) {
+                    var delta = event.pixelDelta.y;
+                    if (Math.abs(delta) < 0.01)
+                        delta = event.angleDelta.y / 120 * 96;
+                    if (Math.abs(delta) < 0.01)
+                        return;
+
+                    var maximumY = Math.max(0, deviceList.contentHeight - deviceList.height);
+                    var nextY = Math.max(0, Math.min(maximumY, deviceList.contentY - delta));
+                    if (Math.abs(nextY - deviceList.contentY) < 0.01) {
+                        event.accepted = false;
+                        return;
+                    }
+                    deviceList.contentY = nextY;
+                    event.accepted = true;
+                }
+            }
 
             delegate: DeviceItem {
                 required property var modelData
@@ -152,7 +167,7 @@ Card {
         }
 
         QQC.Label {
-            text: app.devices.lastMessage
+            text: app.portalDevices.lastMessage
             color: th.muted
             font.pixelSize: th.fontFootnote
             wrapMode: Text.WrapAnywhere
@@ -162,7 +177,7 @@ Card {
 
         RowLayout {
             spacing: th.sp4
-            visible: app.devices.authenticated
+            visible: app.portalDevices.authenticated
             Layout.fillWidth: true
 
             Rectangle {

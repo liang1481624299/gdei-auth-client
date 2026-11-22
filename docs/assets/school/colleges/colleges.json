@@ -1,0 +1,30 @@
+{
+  "note": "二级学院站点头部均沿用主站校徽，未发现独立院徽；variant 仅区分校徽配色/裁切版本。采集自 https://www.gdei.edu.cn/jxkyjg/list.htm，2026-11-22。",
+  "variants": {
+    "green": "绿色横版校徽 1500x300，本地 logo-green.png",
+    "white": "白色横版校徽 1500x300，本地 logo-white.png",
+    "white-crop": "白色校徽裁切版 240x99",
+    "white-thumb": "白色校徽缩略版 300x60",
+    "svg": "横版校徽矢量模板，本地 chemistry.svg"
+  },
+  "colleges": [
+    { "slug": "preschool",    "name": "广东学前教育学院",       "siteUrl": "https://www.gdei.edu.cn/jyxy/",            "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/19/25/logo.png", "variant": "green" },
+    { "slug": "cs",           "name": "计算机与人工智能学院",   "siteUrl": "https://www.gdei.edu.cn/jsjkxx/",          "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/23/35/logo.png", "variant": "white-crop" },
+    { "slug": "teacher-edu",  "name": "教师教育学院",           "siteUrl": "https://www.gdei.edu.cn/jsjyxy/",          "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/32/50/logo.png", "variant": "green" },
+    { "slug": "history",      "name": "历史与社会发展学院",     "siteUrl": "https://www.gdei.edu.cn/zfx/",             "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/1a/26/logo.png", "variant": "green" },
+    { "slug": "education",    "name": "教育学院",               "siteUrl": "https://www.gdei.edu.cn/jyxy/",            "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/19/25/logo.png", "variant": "green" },
+    { "slug": "art",          "name": "美术学院",               "siteUrl": "https://www.gdei.edu.cn/msxy/",            "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/22/34/logo.png", "variant": "green" },
+    { "slug": "chinese",      "name": "文学院",                 "siteUrl": "https://www.gdei.edu.cn/zwx/",             "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/1b/27/logo.png", "variant": "green" },
+    { "slug": "music",        "name": "音乐学院",               "siteUrl": "https://www.gdei.edu.cn/yyx/",             "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/24/36/logo.png", "variant": "green" },
+    { "slug": "math",         "name": "数学学院",               "siteUrl": "https://www.gdei.edu.cn/sxx/",             "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/1c/28/logo.png", "variant": "white" },
+    { "slug": "teacher-dev",  "name": "教师发展学院",           "siteUrl": "https://www.gdei.edu.cn/jsyxxy/",          "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/25/37/logo.png", "variant": "white" },
+    { "slug": "foreign-lang", "name": "外国语言文化学院",       "siteUrl": "https://www.gdei.edu.cn/wyx/",             "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/1d/29/logo.png", "variant": "white" },
+    { "slug": "continuing-edu", "name": "继续教育学院",         "siteUrl": "https://www.gdei.edu.cn/crjyxy/",          "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/26/38/logo.png", "variant": "green" },
+    { "slug": "physics",      "name": "物理与信息工程学院",     "siteUrl": "https://www.gdei.edu.cn/wlyxxgcx/",        "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/1e/30/logo.png", "variant": "white" },
+    { "slug": "chemistry",    "name": "化学与材料科学学院",     "siteUrl": "https://www.gdei.edu.cn/hxx",              "logoUrl": "https://www.gdei.edu.cn/_upload/tpl/01/4f/335/template335/images/logo.svg", "variant": "svg" },
+    { "slug": "marxism",      "name": "马克思主义学院",         "siteUrl": "https://www.gdei.edu.cn/mkszyxy",          "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/28/40/logo.png", "variant": "green" },
+    { "slug": "biology",      "name": "生物与食品工程学院",     "siteUrl": "https://www.gdei.edu.cn/swyspgcxy/",       "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/20/32/logo.png", "variant": "white" },
+    { "slug": "management",   "name": "管理学院",               "siteUrl": "https://www.gdei.edu.cn/glxy",             "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/31/49/logo.png", "variant": "green" },
+    { "slug": "pe",           "name": "体育学院",               "siteUrl": "https://www.gdei.edu.cn/tyxy",             "logoUrl": "https://www.gdei.edu.cn/_upload/site/00/21/33/logo.png", "variant": "white-thumb" }
+  ]
+}
