@@ -41,6 +41,39 @@ inline const QString SELF_HOME_PATH     = "/mselfservice/user/index.jsf";
 inline const QString SELF_MAC_LIST_PATH = "/mselfservice/snac/macList.xhtml";
 inline const QString SELF_CAPTCHA_PATH  = "/mselfservice/Kaptcha.jpg";
 
+// ---- PC 自助门户（PrimeFaces 单视图，:8080）/ PC self-service (PrimeFaces) ----
+// 登录后所有模块切换均为 POST 同一 main.jsf 的部分提交，无独立 .jsf 页面。
+inline const QString SELF_PC_LOGIN_PATH    = "/selfservice/login.jsf";
+inline const QString SELF_PC_HOME_PATH     = "/selfservice/main/main.jsf";
+inline const QString SELF_PC_LOGOUT_PATH   = "/selfservice/logout.xml";
+inline const QString SELF_PC_CAPTCHA_PATH  = "/selfservice/codeImages/";
+
+// PC 登录表单字段 / PC login form fields（mainForm 前缀）。
+inline constexpr const char* PC_FIELD_USERNAME   = "mainForm:username";
+inline constexpr const char* PC_FIELD_PASSWORD   = "mainForm:password";
+inline constexpr const char* PC_FIELD_CODE       = "mainForm:code";
+inline constexpr const char* PC_FIELD_USERTYPE   = "mainForm:usertype_input";
+inline constexpr const char* PC_FIELD_USERTYPE_FOCUS = "mainForm:usertype_focus";
+inline constexpr const char* PC_FIELD_LOGIN_CMD  = "mainForm:loginCmd";
+inline constexpr const char* PC_FIELD_GUEST_CTR  = "mainForm:ifFromGuestCenter";
+inline constexpr const char* PC_FIELD_DESC       = "mainForm:descContent";
+inline constexpr const char* PC_FIELD_CHECK_CODE = "mainForm:ifCheckCode";
+inline constexpr const char* PC_FIELD_DETERMINE_SHOW = "detemineIsShow";
+inline constexpr const char* PC_FORM_SUBMIT      = "mainForm_SUBMIT";
+
+// detemineIsShow 标识当前中文登录图 / Hidden flag for the Chinese login image.
+inline const QString PC_VALUE_DETERMINE_SHOW = "login_zh.gif";
+
+// PrimeFaces 部分提交参数 / PrimeFaces partial-submit parameters.
+inline constexpr const char* PF_PARTIAL_AJAX = "javax.faces.partial.ajax";
+inline constexpr const char* PF_SOURCE       = "javax.faces.source";
+inline constexpr const char* PF_EXECUTE      = "javax.faces.execute";
+inline constexpr const char* PF_VIEW_STATE   = "javax.faces.ViewState";
+
+// 用户类型：1 普通用户 / 2 设备管理用户。
+inline const QString PC_USERTYPE_NORMAL = "1";
+inline const QString PC_USERTYPE_DEVICE = "2";
+
 inline const QString USER_AGENT =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
