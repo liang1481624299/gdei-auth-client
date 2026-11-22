@@ -18,7 +18,6 @@ QQC.Dialog {
     parent: QQC.Overlay.overlay
     anchors.centerIn: parent
     width: Math.min(th.dp(420), Math.max(0, parent.width - th.sp8))
-    maximumHeight: Math.max(th.dp(180), parent.height - th.sp16)
     modal: true
     focus: true
     padding: th.sp10
@@ -29,6 +28,8 @@ QQC.Dialog {
     contentItem: QQC.ScrollView {
         id: dialogScroll
         clip: true
+        implicitHeight: Math.min(dialogColumn.implicitHeight + th.sp8,
+                                  Math.max(th.dp(180), dialog.parent.height - th.sp16))
         contentWidth: availableWidth
         contentHeight: dialogColumn.implicitHeight
         QQC.ScrollBar.vertical.policy: QQC.ScrollBar.AsNeeded
