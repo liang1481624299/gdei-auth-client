@@ -1,6 +1,8 @@
 // src/core/I18n.cpp
 #include "core/I18n.hpp"
 
+#include <QStringList>
+
 namespace gdei {
 
 I18n::I18n(QObject* parent) : QObject(parent) {
@@ -44,6 +46,24 @@ QString I18n::text(const QString& key) const {
     const QMap<QString, QString>& en = m_dict.value(Lang::EnGB);
     if (en.contains(key)) return en.value(key);
     return key;
+}
+
+bool I18n::hasKey(const QString& key) const {
+    return m_dict.value(m_lang).contains(key) || m_dict.value(Lang::EnGB).contains(key);
+}
+
+QString I18n::localize(const QString& payload) const {
+    if (payload.isEmpty()) return payload;
+    // 协议：key|arg1|arg2 —— 仅当首段是已注册 key 才翻译并回填参数。
+    // Protocol: key|arg1|arg2 — translate only when the first segment is a known key.
+    const QStringList parts = payload.split(QLatin1Char('|'));
+    const QString& key = parts.first();
+    if (!hasKey(key)) return payload;   // 服务端原文 / 历史双语串：原样透传
+    QString out = text(key);
+    for (int i = 1; i < parts.size(); ++i) {
+        out = out.arg(parts.at(i));
+    }
+    return out;
 }
 
 void I18n::buildDictionaries() {
@@ -202,6 +222,17 @@ void I18n::buildDictionaries() {
     zhCN["auth.reconnectSuccessMessage"] = "已恢复校园网连接。";
     zhCN["auth.reconnectFailed"] = "重新认证失败";
     zhCN["auth.reconnectFailedMessage"] = "暂时无法恢复校园网连接。";
+    // 结构化错误原因（key|arg 协议）/ Structured reasons (key|arg protocol).
+    zhCN["auth.reasonRequestError"] = "请求异常：%1";
+    zhCN["auth.reasonHttpStatus"] = "异常 HTTP 状态：%1";
+    zhCN["auth.reasonEmptyResponse"] = "门户返回为空，请稍后重试";
+    zhCN["portalDevices.unreachable"] = "自助门户无法访问";
+    zhCN["portalDevices.captchaUnavailable"] = "验证码获取失败";
+    zhCN["portalDevices.enterCaptcha"] = "请输入验证码";
+    zhCN["portalDevices.loginFailed"] = "自助门户登录失败，请核对验证码";
+    zhCN["portalDevices.loginRequired"] = "请先登录自助门户";
+    zhCN["portalDevices.noDevices"] = "暂无设备记录";
+    zhCN["portalDevices.loaded"] = "已加载 %1 台设备";
     zhCN["auth.logoutSuccess"] = "下线成功";
     zhCN["auth.logoutSuccessMessage"] = "已断开校园网连接。";
     zhCN["auth.logoutFailed"] = "下线失败";
@@ -425,6 +456,16 @@ void I18n::buildDictionaries() {
     zhTW["auth.reconnectSuccessMessage"] = "已恢復校園網連線。";
     zhTW["auth.reconnectFailed"] = "重新認證失敗";
     zhTW["auth.reconnectFailedMessage"] = "暫時無法恢復校園網連線。";
+    zhTW["auth.reasonRequestError"] = "請求異常：%1";
+    zhTW["auth.reasonHttpStatus"] = "異常 HTTP 狀態：%1";
+    zhTW["auth.reasonEmptyResponse"] = "入口返回為空，請稍後重試";
+    zhTW["portalDevices.unreachable"] = "自助入口無法連線";
+    zhTW["portalDevices.captchaUnavailable"] = "驗證碼取得失敗";
+    zhTW["portalDevices.enterCaptcha"] = "請輸入驗證碼";
+    zhTW["portalDevices.loginFailed"] = "自助入口登入失敗，請核對驗證碼";
+    zhTW["portalDevices.loginRequired"] = "請先登入自助入口";
+    zhTW["portalDevices.noDevices"] = "暫無裝置記錄";
+    zhTW["portalDevices.loaded"] = "已載入 %1 台裝置";
     zhTW["auth.logoutSuccess"] = "下線成功";
     zhTW["auth.logoutSuccessMessage"] = "已中斷校園網連線。";
     zhTW["auth.logoutFailed"] = "下線失敗";
@@ -648,6 +689,16 @@ void I18n::buildDictionaries() {
     enGB["auth.reconnectSuccessMessage"] = "Campus network connection restored.";
     enGB["auth.reconnectFailed"] = "Re-authentication failed";
     enGB["auth.reconnectFailedMessage"] = "The campus network connection could not be restored.";
+    enGB["auth.reasonRequestError"] = "Request error: %1";
+    enGB["auth.reasonHttpStatus"] = "Unexpected HTTP status: %1";
+    enGB["auth.reasonEmptyResponse"] = "Empty response from portal. Please retry.";
+    enGB["portalDevices.unreachable"] = "Self-service portal unreachable";
+    enGB["portalDevices.captchaUnavailable"] = "Captcha unavailable";
+    enGB["portalDevices.enterCaptcha"] = "Enter captcha";
+    enGB["portalDevices.loginFailed"] = "Portal sign-in failed. Check the captcha.";
+    enGB["portalDevices.loginRequired"] = "Sign in to the self-service portal first";
+    enGB["portalDevices.noDevices"] = "No device records";
+    enGB["portalDevices.loaded"] = "Loaded %1 device(s)";
     enGB["auth.logoutSuccess"] = "Disconnected";
     enGB["auth.logoutSuccessMessage"] = "Disconnected from the campus network.";
     enGB["auth.logoutFailed"] = "Disconnection failed";
@@ -871,6 +922,16 @@ void I18n::buildDictionaries() {
     ja["auth.reconnectSuccessMessage"] = "キャンパスネットワークへ再接続しました。";
     ja["auth.reconnectFailed"] = "再認証に失敗";
     ja["auth.reconnectFailedMessage"] = "キャンパスネットワークへ再接続できませんでした。";
+    ja["auth.reasonRequestError"] = "リクエストエラー：%1";
+    ja["auth.reasonHttpStatus"] = "予期しない HTTP ステータス：%1";
+    ja["auth.reasonEmptyResponse"] = "ポータルの応答が空です。しばらくしてから再試行してください。";
+    ja["portalDevices.unreachable"] = "セルフサービスポータルに接続できません";
+    ja["portalDevices.captchaUnavailable"] = "Captcha を取得できませんでした";
+    ja["portalDevices.enterCaptcha"] = "Captcha を入力してください";
+    ja["portalDevices.loginFailed"] = "ポータルへのログインに失敗しました。Captcha を確認してください";
+    ja["portalDevices.loginRequired"] = "先にセルフサービスポータルへログインしてください";
+    ja["portalDevices.noDevices"] = "端末記録がありません";
+    ja["portalDevices.loaded"] = "%1 台の端末を読み込みました";
     ja["auth.logoutSuccess"] = "切断しました";
     ja["auth.logoutSuccessMessage"] = "キャンパスネットワークから切断しました。";
     ja["auth.logoutFailed"] = "切断に失敗";
