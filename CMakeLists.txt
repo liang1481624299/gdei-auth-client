@@ -229,7 +229,7 @@ if(ANDROID)
         QT_ANDROID_MIN_SDK_VERSION 28
         QT_ANDROID_TARGET_SDK_VERSION 35
         QT_ANDROID_VERSION_CODE 1
-        QT_ANDROID_VERSION_NAME "0.2.0")
+        QT_ANDROID_VERSION_NAME "0.2.1")
 endif()
 
 # ---- Qt 运行时自动部署 / Auto-deploy Qt runtime ----
@@ -282,7 +282,7 @@ endif()
 
 # ---- 打包 / Packaging (deb / rpm / Arch tar.zst / macOS dmg / Windows exe) ----
 set(CPACK_PACKAGE_NAME "gdei-connect")
-set(CPACK_PACKAGE_VERSION "0.2.0")
+set(CPACK_PACKAGE_VERSION "0.2.1")
 set(CPACK_PACKAGE_VENDOR "GDEI")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GDEI campus network auto-auth client")
 set(CPACK_PACKAGE_CONTACT "liang1481624299 <liang1481624299@users.noreply.github.com>")
