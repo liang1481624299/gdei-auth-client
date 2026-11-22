@@ -81,14 +81,15 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 2. 再做 **URL 解码**；
 3. 得到 JSON。
 
-- `errorNumber == "1"`：成功。
-- `errorNumber == "7"`：**已在线重复登录**（`portServErrorCode="2"`，`portServErrorCodeDesc="User is already online."`）。此分支应识别为"当前已在线"，而非普通认证失败；完整枚举待未认证口采集。
+- `errorNumber == "1"`：上线成功。
+- `errorNumber == "7"`：**已在线重复登录**（`portServErrorCode="2"`，`portServErrorCodeDesc="User is already online."`）。上线分支应识别为"当前已在线"，而非普通认证失败。
+- `errorNumber == "8"`：**已离线**（`portServErrorCode="2"`，`portServErrorCodeDesc="User is offline."`）。下线 `t=lo` 成功后回此码；对下线动作即视为成功。
 - 失败文案：取 `e_d` 字段指向的键对应的值；其次取 `errorMessage`。
-- **空响应分支**：已在线会话下重复登录，或当前网络已旁路认证时，上线 / 保活三步（入口 GET → 登录页 GET → `POST pws`）均可能返回 200 空体、无 Set-Cookie；这属于"当前已在线 / 旁路"环境的正常现象，不等同于 app 请求构造错误。真实"未认证成功 / 失败"报文需在未认证口触发一次采集；成功 / 失败 / 已在线空体三分支的前端文案判定仍待未认证口实测复核。
+- **空响应分支**：已在线会话下重复登录，或当前网络已旁路认证时，上线 / 保活三步（入口 GET → 登录页 GET → `POST pws`）均可能返回 200 空体、无 Set-Cookie；这属于"当前已在线 / 旁路"环境的正常现象，不等同于 app 请求构造错误。
 
-### 3.0 已在线报文样本（2026-11-22 实测，浏览器 200，`Content-Length: 290`，`text/plain;charset=utf-8`）
+### 3.0 已在线 / 已离线报文样本（2026-11-22 实测，浏览器 200，`text/plain;charset=utf-8`）
 
-响应体为 Base64(URL 编码 JSON)，解码后：
+已在线（重复上线，`Content-Length: 290`）：
 
 ```json
 {
@@ -100,7 +101,19 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 }
 ```
 
-> 该样本来自已在线机器的重复登录，**不是成功上线报文**；成功报文（`errorNumber="1"`，见 3.1）仍需在未认证口采集。
+已离线（下线 `t=lo` 后，`Content-Length: 44`）：
+
+```json
+{
+  "portServErrorCode": "2",
+  "portServErrorCodeDesc": "User is offline.",
+  "e_c": "portServErrorCode",
+  "e_d": "portServErrorCodeDesc",
+  "errorNumber": "8"
+}
+```
+
+> 下线 `POST /portal/pws?t=lo` 与上线提交**同一套完整表单**（含 `userName` / `userPwd` / `basip` 等），且 **Request cookies 为空**（实测 "No request cookies were sent"），再次印证 captive 认证无状态、不依赖 `hello*` 记忆 Cookie。
 
 ### 3.1 成功报文字段（`pl` 参数 / 响应体 JSON，2026-11-22 实测）
 
