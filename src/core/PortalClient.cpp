@@ -11,7 +11,6 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QSslConfiguration>
 #include <QSslError>
 #include <QRegularExpression>
 #include <QStringDecoder>
@@ -82,9 +81,7 @@ void PortalClient::applyPeerVerify(QNetworkRequest& req) const {
     // When falling back to the direct IP, verify the certificate against the
     // configured domain instead of the IP; chain/expiry/issuer checks stay strict.
     if (m_cfg->host().isEmpty()) return;
-    QSslConfiguration ssl = req.sslConfiguration();
-    ssl.setPeerVerifyName(m_cfg->host());
-    req.setSslConfiguration(ssl);
+    req.setPeerVerifyName(m_cfg->host());
 }
 
 QNetworkReply* PortalClient::sendRequest(const QString& method,
