@@ -25,7 +25,7 @@ TrayController::TrayController(QQuickWindow* window, SessionController* session,
 
     QApplication::setQuitOnLastWindowClosed(false);
     m_tray = new QSystemTrayIcon(this);
-    m_menu = new QMenu();
+    m_menu = new QMenu(this);   // 交给 QObject 父子关系管理，避免裸指针泄漏
     m_showAction = m_menu->addAction(QString());
     m_loginAction = m_menu->addAction(QString());
     m_logoutAction = m_menu->addAction(QString());
@@ -59,7 +59,7 @@ TrayController::TrayController(QQuickWindow* window, SessionController* session,
 
 TrayController::~TrayController() {
     if (m_tray) m_tray->hide();
-    delete m_menu;
+    // m_menu 由 QObject 父子关系释放，无需手动 delete。
 }
 
 void TrayController::showWindow() {

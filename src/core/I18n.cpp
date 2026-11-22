@@ -61,6 +61,7 @@ void I18n::buildDictionaries() {
     zhCN["login.guestHint"] = "未登录可先浏览；上线、下线或管理设备时再登录。";
     zhCN["logout.success"] = "已下线";
     zhCN["config.saved"] = "配置已保存";
+    zhCN["config.saveFailed"] = "配置保存失败，请检查存储权限";
     zhCN["config.missingCred"] = "未配置账号或密码";
     zhCN["keepalive.started"] = "保活已启动";
     zhCN["keepalive.stopped"] = "保活已停止";
@@ -205,6 +206,7 @@ void I18n::buildDictionaries() {
     zhCN["auth.loginFailed"] = "认证失败";
     zhCN["auth.loginFailedMessage"] = "未能完成认证。";
     zhCN["auth.reasonMissingCredentials"] = "未填写账号或密码。";
+    zhCN["auth.reasonNetworkError"] = "网络连接异常，请检查网络后重试。";
     zhCN["auth.reasonServerRejected"] = "服务器拒绝了请求（HTTP 403）。";
     zhCN["auth.reasonUnknown"] = "未能确定具体原因，请查看日志。";
     zhCN["keepalive.startedMessage"] = "将按设定间隔检查连接。";
@@ -277,6 +279,7 @@ void I18n::buildDictionaries() {
     zhTW["login.guestHint"] = "未登入可先瀏覽；上線、下線或管理裝置時再登入。";
     zhTW["logout.success"] = "已下線";
     zhTW["config.saved"] = "設定已儲存";
+    zhTW["config.saveFailed"] = "設定儲存失敗，請檢查儲存權限";
     zhTW["config.missingCred"] = "未設定帳號或密碼";
     zhTW["keepalive.started"] = "保活已啟動";
     zhTW["keepalive.stopped"] = "保活已停止";
@@ -421,6 +424,7 @@ void I18n::buildDictionaries() {
     zhTW["auth.loginFailed"] = "認證失敗";
     zhTW["auth.loginFailedMessage"] = "未能完成認證。";
     zhTW["auth.reasonMissingCredentials"] = "未填寫帳號或密碼。";
+    zhTW["auth.reasonNetworkError"] = "網路連線異常，請檢查網路後重試。";
     zhTW["auth.reasonServerRejected"] = "伺服器拒絕了請求（HTTP 403）。";
     zhTW["auth.reasonUnknown"] = "未能確定具體原因，請查看日誌。";
     zhTW["keepalive.startedMessage"] = "將按設定間隔檢查連線。";
@@ -493,6 +497,7 @@ void I18n::buildDictionaries() {
     enGB["login.guestHint"] = "You can browse first; sign in when you need to connect, disconnect, or manage devices.";
     enGB["logout.success"] = "Logged out";
     enGB["config.saved"] = "Config saved";
+    enGB["config.saveFailed"] = "Failed to save settings. Check storage permissions.";
     enGB["config.missingCred"] = "Username or password not set";
     enGB["keepalive.started"] = "Keep-alive started";
     enGB["keepalive.stopped"] = "Keep-alive stopped";
@@ -637,6 +642,7 @@ void I18n::buildDictionaries() {
     enGB["auth.loginFailed"] = "Authentication failed";
     enGB["auth.loginFailedMessage"] = "Could not authenticate.";
     enGB["auth.reasonMissingCredentials"] = "Enter a username and password.";
+    enGB["auth.reasonNetworkError"] = "Network connection error. Check your connection and try again.";
     enGB["auth.reasonServerRejected"] = "The server rejected the request (HTTP 403).";
     enGB["auth.reasonUnknown"] = "The specific cause is unknown. Check the log for details.";
     enGB["keepalive.startedMessage"] = "The connection will be checked at the configured interval.";
@@ -709,6 +715,7 @@ void I18n::buildDictionaries() {
     ja["login.guestHint"] = "ログインしなくても閲覧できます。接続・切断・端末管理の際にログインしてください。";
     ja["logout.success"] = "ログアウトしました";
     ja["config.saved"] = "設定を保存しました";
+    ja["config.saveFailed"] = "設定の保存に失敗しました。ストレージ権限を確認してください。";
     ja["config.missingCred"] = "ユーザー名またはパスワードが未設定です";
     ja["keepalive.started"] = "キープアライブ開始";
     ja["keepalive.stopped"] = "キープアライブ停止";
@@ -853,6 +860,7 @@ void I18n::buildDictionaries() {
     ja["auth.loginFailed"] = "認証に失敗";
     ja["auth.loginFailedMessage"] = "認証を完了できませんでした。";
     ja["auth.reasonMissingCredentials"] = "ユーザー名またはパスワードが入力されていません。";
+    ja["auth.reasonNetworkError"] = "ネットワーク接続に異常があります。接続を確認して再試行してください。";
     ja["auth.reasonServerRejected"] = "サーバーがリクエストを拒否しました（HTTP 403）。";
     ja["auth.reasonUnknown"] = "原因を特定できません。ログを確認してください。";
     ja["keepalive.startedMessage"] = "設定した間隔で接続を確認します。";

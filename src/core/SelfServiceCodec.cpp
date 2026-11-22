@@ -33,9 +33,18 @@ QString escapeStep(const QString& input) {
 
 QString encodePassword(const QString& input) {
     const QString escaped = escapeStep(input);
-    // 标准 Base64，按字符低 8 位取字节（与 bouncycastle_base64 一致）。
-    // Standard Base64 over the low byte of each char, matching bouncycastle_base64.
-    return QString::fromLatin1(escaped.toLatin1().toBase64());
+    // 显式逐 QChar 取低 8 位构造字节，避免 toLatin1() 对非预期码位静默替换为 '?'
+    // 导致生成错误口令。escapeStep 已把所有 >255 码位转成 ASCII \uXXXX。
+    // Build bytes explicitly from the low byte of each QChar instead of relying on
+    // toLatin1(), which silently substitutes '?' for unexpected code points.
+    QByteArray bytes;
+    bytes.reserve(escaped.size());
+    for (const QChar ch : escaped) {
+        const uint code = ch.unicode();
+        if (code > 255) return QString();  // 防御：未转义的高码位，拒绝生成错误口令
+        bytes.append(static_cast<char>(code & 0xFF));
+    }
+    return QString::fromLatin1(bytes.toBase64());
 }
 
 } // namespace SelfServiceCodec

@@ -75,7 +75,8 @@ public:
     void setRequestEncoding(const QString& v);
 
     Q_INVOKABLE void load();
-    Q_INVOKABLE void save();
+    // 返回是否成功落盘（含口令安全存储），供 UI 显示保存结果。
+    Q_INVOKABLE bool save();
 
 signals:
     void usernameChanged();

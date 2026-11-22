@@ -301,15 +301,18 @@ PageScaffold {
                 leadingIcon: "check"
                 Layout.fillWidth: true
                 onClicked: {
-                    app.config.save();
-                    saveFeedback.visible = true;
+                    if (app.session.requireLogin("settings.save")) {
+                        saveFeedback.saved = app.config.save();
+                        saveFeedback.visible = true;
+                    }
                 }
             }
             StatusBadge {
                 id: saveFeedback
-                text: (app.i18n.lang, app.i18n.text("config.saved"))
-                iconName: "check"
-                tint: th.success
+                property bool saved: true
+                text: (app.i18n.lang, app.i18n.text(saved ? "config.saved" : "config.saveFailed"))
+                iconName: saved ? "check" : "info"
+                tint: saved ? th.success : th.danger
                 visible: false
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
             }

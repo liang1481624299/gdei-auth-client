@@ -41,6 +41,9 @@ signals:
     void onlineChanged(bool online);
     void loginFinished(bool ok, QString message);
     void portalError(QString message);
+    // 每次探测（无论在线态是否翻转）的结果，供保活状态机累计连续失败次数。
+    // Per-probe result (regardless of state flip) for the keep-alive failure counter.
+    void probeFinished(bool online, QString reason);
 
 private slots:
     void onEntryReply();
@@ -63,9 +66,11 @@ private:
     bool m_online = false;
     QString m_csrf;
     bool m_busy = false;
+    bool m_probeBusy = false;
 
     QUrl urlFor(const QString& path) const;
-    void applyPeerVerify(QNetworkRequest& req) const;
+    void applyPeerVerify(QNetworkRequest& req, const QString& urlHost) const;
+    QString hostHeader() const;
     QNetworkReply* sendRequest(const QString& method, const QString& path,
                                const QString& body = QString());
     QNetworkReply* postConfiguredForm(const QString& path, const QString& body);

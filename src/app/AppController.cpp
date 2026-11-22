@@ -19,7 +19,11 @@ AppController::AppController(ConfigStore* config, Logger* /*logger*/, I18n* i18n
                              DeviceController* portalDevices, QObject* parent)
     : QObject(parent), m_config(config), m_i18n(i18n), m_auth(auth), m_logs(logs),
       m_session(session), m_localDevices(localDevices), m_network(network),
-      m_events(events), m_portalDevices(portalDevices) {}
+      m_events(events), m_portalDevices(portalDevices) {
+    // 登出后清理自助门户会话，避免共享设备上的会话残留。
+    connect(m_session, &SessionController::sessionCleared,
+            m_portalDevices, &DeviceController::clearSession);
+}
 
 QObject* AppController::config() const { return m_config; }
 QObject* AppController::i18n() const { return m_i18n; }

@@ -8,7 +8,7 @@ Item {
 
     property string name: ""
     property int iconSize: th.dp(22)
-    property color tint: "#1C1C1E"
+    property color tint: th.text   // 跟随主题，避免暗色模式下深色图标不可见
     property real lineWidth: 1.75
 
     implicitWidth: iconSize

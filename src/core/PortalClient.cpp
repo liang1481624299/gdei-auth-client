@@ -75,26 +75,35 @@ QUrl PortalClient::urlFor(const QString& path) const {
     return url;
 }
 
-void PortalClient::applyPeerVerify(QNetworkRequest& req) const {
-    // 直连 IP 兜底时，URL host 为 IP，但证书主体仍是域名；把证书主机名校验名
-    // 对齐到配置域名。证书链、有效期、签发者校验仍保持严格，不关闭校验。
-    // When falling back to the direct IP, verify the certificate against the
-    // configured domain instead of the IP; chain/expiry/issuer checks stay strict.
-    if (m_cfg->host().isEmpty()) return;
-    req.setPeerVerifyName(m_cfg->host());
+void PortalClient::applyPeerVerify(QNetworkRequest& req, const QString& urlHost) const {
+    // 仅当用直连 IP 建连时才需要把证书主机名校验名对齐到域名；URL 已是域名时
+    // Qt 会自然按域名校验，重复 setPeerVerifyName 属于冗余。
+    // Only override the peer name when connecting by IP; when the URL host is already
+    // the domain, Qt verifies it naturally and an override is redundant.
+    if (urlHost != constants::DEFAULT_IP && urlHost != m_cfg->ip()) return;
+    const QString verifyName = m_cfg->host().isEmpty() ? constants::DEFAULT_HOST : m_cfg->host();
+    if (!verifyName.isEmpty()) req.setPeerVerifyName(verifyName);
+}
+
+QString PortalClient::hostHeader() const {
+    // IP 兜底时 Host 头不能为空；优先用配置域名，其次用兜底常量域名。
+    // In IP fallback the Host header must still carry a hostname.
+    if (!m_cfg->host().isEmpty()) return m_cfg->host();
+    return constants::DEFAULT_HOST;
 }
 
 QNetworkReply* PortalClient::sendRequest(const QString& method,
                                          const QString& path,
                                          const QString& body) {
-    QNetworkRequest req(urlFor(path));
+    const QUrl url = urlFor(path);
+    QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader, constants::USER_AGENT);
-    req.setRawHeader("Host", m_cfg->host().toUtf8());
+    req.setRawHeader("Host", hostHeader().toUtf8());
     req.setRawHeader("Referer",
-        QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, m_cfg->host(),
+        QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, hostHeader(),
             constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
     req.setTransferTimeout(m_cfg->connectTimeoutMs());
-    applyPeerVerify(req);
+    applyPeerVerify(req, url.host());
 
     if (!body.isEmpty()) {
         req.setHeader(QNetworkRequest::ContentTypeHeader,
@@ -124,14 +133,15 @@ QNetworkReply* PortalClient::postConfiguredForm(const QString& path, const QStri
         return sendRequest("POST", path, body);
     }
 
-    QNetworkRequest req(urlFor(path));
+    const QUrl url = urlFor(path);
+    QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader, constants::USER_AGENT);
-    req.setRawHeader("Host", m_cfg->host().toUtf8());
+    req.setRawHeader("Host", hostHeader().toUtf8());
     req.setRawHeader("Referer",
-        QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, m_cfg->host(),
+        QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, hostHeader(),
             constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
     req.setTransferTimeout(m_cfg->connectTimeoutMs());
-    applyPeerVerify(req);
+    applyPeerVerify(req, url.host());
     req.setHeader(QNetworkRequest::ContentTypeHeader,
         QString("application/x-www-form-urlencoded; charset=%1").arg(encoded.charset));
     req.setRawHeader("X-Requested-With", "XMLHttpRequest");
@@ -299,6 +309,7 @@ void PortalClient::login() {
     log(LogLevel::Info, tr("Opening portal entry / 正在打开门户入口"));
     QNetworkReply* entry = sendRequest("GET",
         constants::ENTRY_PAGE_PATH + m_cfg->nasip());
+    if (!entry) { setState(AuthState::Error); emit loginFinished(false, QStringLiteral("auth.reasonNetworkError")); return; }
     entry->setProperty("action", "entry");
     connect(entry, &QNetworkReply::finished, this, &PortalClient::onEntryReply);
 }
@@ -315,6 +326,7 @@ void PortalClient::onEntryReply() {
     log(LogLevel::Info, tr("Opening login page / 正在打开登录页"));
     QNetworkReply* next = sendRequest("GET",
         constants::LOGIN_PAGE_PATH + m_cfg->nasip());
+    if (!next) { setState(AuthState::Error); emit loginFinished(false, QStringLiteral("auth.reasonNetworkError")); return; }
     next->setProperty("action", "page");
     connect(next, &QNetworkReply::finished, this, &PortalClient::onPageReply);
 }
@@ -330,12 +342,17 @@ void PortalClient::logout() {
 }
 
 void PortalClient::refreshStatus() {
-    // NCSI 是外网地址，不走门户直连 IP，单独用普通 GET；地址与超时可配置。
-    // External NCSI probe: plain GET, not through the portal direct IP; URL and
-    // timeout are configurable.
+    // 并发去重：保活定时器与手动刷新可能同时触发，丢弃在途的重复探测。
+    // De-duplicate concurrent probes from the timer and manual refresh.
+    if (m_probeBusy) return;
     QNetworkRequest probeReq(QUrl(m_cfg->probeUrl()));
     probeReq.setTransferTimeout(m_cfg->probeTimeoutMs());
     QNetworkReply* reply = m_nam->get(probeReq);
+    if (!reply) {
+        emit probeFinished(false, QStringLiteral("auth.reasonNetworkError"));
+        return;
+    }
+    m_probeBusy = true;
     reply->setProperty("action", "probe");
     connect(reply, &QNetworkReply::finished, this, &PortalClient::onProbeReply);
 }
@@ -369,6 +386,7 @@ void PortalClient::onLoginReply() {
 
     if (reply->error() != QNetworkReply::NoError) {
         setState(AuthState::Error);
+        setOnline(false);
         QString msg = tr("Request error / 请求异常: ") + reply->errorString();
         if (status == 403) msg = tr("Blocked or rate-limited (403) / 被限流或拒绝访问 (403)");
         log(LogLevel::Error, msg);
@@ -380,16 +398,29 @@ void PortalClient::onLoginReply() {
     // Multi-condition success: a non-2xx status is a failure; 200 alone is not enough.
     if (status > 0 && (status < 200 || status >= 300)) {
         setState(AuthState::Offline);
+        setOnline(false);
         const QString msg = tr("Unexpected HTTP status / 异常 HTTP 状态: %1").arg(status);
         log(LogLevel::Warning, msg);
         emit loginFinished(false, msg);
         return;
     }
 
-    // 空响应单独归类，避免被当作成功或误解析。
-    // An empty body is classified separately, not parsed as success.
+    // 空响应：门户对"已在线重复登录"常返回空体（见 CAPTURE-GUIDE）。结合 2xx
+    // 与入口步已建立的会话 Cookie 判定为已在线；否则仍按失败处理，避免误判。
+    // Empty body: the portal often returns it for "already online" re-login. Treat
+    // 2xx plus an established session cookie as online; otherwise keep it a failure.
     if (raw.trimmed().isEmpty()) {
+        const bool establishedSession = !m_jar->list().isEmpty();
+        const bool successStatus = status > 0 && status >= 200 && status < 300;
+        if (successStatus && establishedSession) {
+            setState(AuthState::Online);
+            setOnline(true);
+            log(LogLevel::Info, tr("Already online (empty response) / 账号已在线（空响应）"));
+            emit loginFinished(true, QStringLiteral("auth.reconnectSuccessMessage"));
+            return;
+        }
         setState(AuthState::Offline);
+        setOnline(false);
         const QString msg = tr("Empty response from portal / 门户返回为空");
         log(LogLevel::Warning, msg);
         emit loginFinished(false, msg);
@@ -413,6 +444,7 @@ void PortalClient::onLoginReply() {
         log(LogLevel::Info, tr("Already online / 账号已在线: ") + message);
     } else {
         setState(AuthState::Offline);
+        setOnline(false);
         log(LogLevel::Warning, tr("Login failed / 认证失败: ") + message);
     }
     emit loginFinished(ok || already, message);
@@ -438,12 +470,15 @@ void PortalClient::onLogoutReply() {
 
 void PortalClient::onProbeReply() {
     QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    m_probeBusy = false;
     if (!reply) return;
     reply->deleteLater();
 
     if (reply->error() != QNetworkReply::NoError) {
         setOnline(false);
         setState(AuthState::Offline);
+        emit portalError(QStringLiteral("auth.reasonNetworkError"));
+        emit probeFinished(false, QStringLiteral("auth.reasonNetworkError"));
         return;
     }
 
@@ -457,6 +492,9 @@ void PortalClient::onProbeReply() {
                         body.contains("Microsoft", Qt::CaseInsensitive);
     setOnline(online);
     setState(online ? AuthState::Online : AuthState::Offline);
+    // 每次探测都发结果，保活据此累计连续失败；onlineChanged 仅在翻转时发，不能用于计数。
+    // Emit on every probe; onlineChanged only fires on flips and cannot drive the counter.
+    emit probeFinished(online, online ? QString() : QStringLiteral("auth.reasonServerRejected"));
 }
 
 } // namespace gdei

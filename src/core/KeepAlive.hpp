@@ -31,7 +31,7 @@ signals:
 
 private slots:
     void onTick();
-    void onOnlineChanged(bool online);
+    void onProbeResult(bool online, QString reason);
 
 private:
     PortalClient* m_portal;

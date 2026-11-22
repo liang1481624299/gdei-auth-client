@@ -4,9 +4,21 @@
 #include "core/SecretStore.hpp"
 
 #include <QSettings>
+#include <QUrl>
 #include <utility>
 
 namespace gdei {
+namespace {
+
+// 仅允许 http/https 且有主机的探测地址，防止 file: 等 scheme 触发本地资源访问。
+// Only http/https URLs with a host are accepted, blocking file: and other schemes.
+bool isSafeProbeUrl(const QString& value) {
+    const QUrl url(value);
+    return url.isValid() && !url.host().isEmpty() &&
+           (url.scheme() == QLatin1String("http") || url.scheme() == QLatin1String("https"));
+}
+
+} // namespace
 
 ConfigStore::ConfigStore(QObject* parent) : QObject(parent) {
     m_host = constants::DEFAULT_HOST;
@@ -62,6 +74,9 @@ void ConfigStore::setAutoLogin(bool v) {
     m_autoLogin = v; emit autoLoginChanged();
 }
 void ConfigStore::setLang(int v) {
+    // 非法语言值不进入状态机；有效范围 ZhCN(0)..Ja(3)。
+    // Reject out-of-range language ids instead of casting arbitrary ints into Lang.
+    if (v < static_cast<int>(Lang::ZhCN) || v > static_cast<int>(Lang::Ja)) return;
     Lang l = static_cast<Lang>(v);
     if (m_lang == l) return;
     m_lang = l; emit langChanged();
@@ -108,12 +123,16 @@ void ConfigStore::setProbeTimeoutMs(int v) {
     m_probeTimeoutMs = c; emit probeTimeoutMsChanged();
 }
 void ConfigStore::setProbeUrl(const QString& v) {
-    const QString c = v.trimmed().isEmpty() ? constants::NCSI_URL : v.trimmed();
+    const QString trimmed = v.trimmed();
+    if (!trimmed.isEmpty() && !isSafeProbeUrl(trimmed)) return;  // 拒绝非法 scheme
+    const QString c = trimmed.isEmpty() ? constants::NCSI_URL : trimmed;
     if (m_probeUrl == c) return;
     m_probeUrl = c; emit probeUrlChanged();
 }
 void ConfigStore::setHealthUrl(const QString& v) {
-    const QString c = v.trimmed().isEmpty() ? constants::HEALTH_URL : v.trimmed();
+    const QString trimmed = v.trimmed();
+    if (!trimmed.isEmpty() && !isSafeProbeUrl(trimmed)) return;
+    const QString c = trimmed.isEmpty() ? constants::HEALTH_URL : trimmed;
     if (m_healthUrl == c) return;
     m_healthUrl = c; emit healthUrlChanged();
 }
@@ -163,7 +182,7 @@ void ConfigStore::load() {
     emit probeUrlChanged(); emit healthUrlChanged(); emit requestEncodingChanged();
 }
 
-void ConfigStore::save() {
+bool ConfigStore::save() {
     QSettings s(constants::ORG_NAME, constants::APP_NAME);
     s.setValue("username", m_username);
     s.setValue("remember_password", m_rememberPassword);
@@ -184,12 +203,14 @@ void ConfigStore::save() {
     // 清理旧版本写入的混淆口令遗留键 / drop the legacy obfuscated password key.
     s.remove("password_ob");
 
+    s.sync();
+    const bool settingsOk = (s.status() == QSettings::NoError);
+
     // 口令走平台安全存储；未记住或为空时清除 / password via secure store; clear when not remembered.
-    if (m_rememberPassword && !m_password.isEmpty()) {
-        SecretStore::instance().write(QStringLiteral("password"), m_password);
-    } else {
-        SecretStore::instance().clear(QStringLiteral("password"));
-    }
+    const bool secretOk = (m_rememberPassword && !m_password.isEmpty())
+        ? SecretStore::instance().write(QStringLiteral("password"), m_password)
+        : SecretStore::instance().clear(QStringLiteral("password"));
+    return settingsOk && secretOk;
 }
 
 } // namespace gdei

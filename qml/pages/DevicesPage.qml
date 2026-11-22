@@ -84,7 +84,10 @@ PageScaffold {
             implicitHeight: Math.max(th.touchTarget, remoteRow.implicitHeight)
             padding: 0
             hoverEnabled: true
-            onClicked: root.openRemoteRequested()
+            onClicked: {
+                if (app.session.requireLogin("remote.open"))
+                    root.openRemoteRequested();
+            }
 
             contentItem: RowLayout {
                 id: remoteRow

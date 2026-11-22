@@ -28,9 +28,11 @@
         android:label="@string/app_name"
         android:allowBackup="true"
         android:fullBackupOnly="false"
-        android:usesCleartextTraffic="true">
-        <!-- Security trade-off: existing user-configurable campus portals may use HTTP.
-             Cleartext HTTP remains enabled for compatibility; HTTPS is preferred. -->
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config">
+        <!-- Cleartext remains enabled at the manifest level for legacy compatibility,
+             but network_security_config restricts it to the campus portal hosts only;
+             all other domains must use TLS. -->
         <activity
             android:name="org.qtproject.qt.android.bindings.QtActivity"
             android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"

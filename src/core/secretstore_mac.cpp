@@ -57,7 +57,13 @@ public:
             CFMutableDictionaryRef attrs = CFDictionaryCreateMutable(
                 nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
             CFDictionaryAddValue(attrs, kSecValueData, data);
-            status = SecItemUpdate(query, attrs);
+            // 更新只需定位属性；不能在 query 里带 kSecValueData（那是旧密文），
+            // 否则永远匹配不到已存在条目，导致改密失败。
+            // Update must query by identity only; including kSecValueData (the old value)
+            // never matches the existing item, so password changes silently fail.
+            CFMutableDictionaryRef locate = baseQuery(key);
+            status = SecItemUpdate(locate, attrs);
+            CFRelease(locate);
             CFRelease(attrs);
         }
 
@@ -73,7 +79,10 @@ public:
         CFDataRef data = nullptr;
         OSStatus status = SecItemCopyMatching(query, reinterpret_cast<CFTypeRef*>(&data));
         CFRelease(query);
-        if (status != errSecSuccess || !data) return {};
+        if (status != errSecSuccess || !data) {
+            if (data) CFRelease(data);   // 防御：失败分支也可能返回对象，避免泄漏
+            return {};
+        }
 
         QByteArray plain(reinterpret_cast<const char*>(CFDataGetBytePtr(data)),
                          CFDataGetLength(data));

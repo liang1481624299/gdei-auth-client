@@ -48,9 +48,15 @@ public:
     Q_INVOKABLE void promptLogin();
     // 关闭登录弹层，返回公开浏览 / Dismiss the sheet and return to public browsing.
     Q_INVOKABLE void dismissLoginPrompt();
+    // 受保护操作门禁：已登录返回 true 直接执行；未登录弹层并记录动作，登录成功后发信号续做。
+    // Guard for protected actions: true means proceed; otherwise prompt login and emit
+    // pendingActionReady(actionKey) after a successful sign-in so the caller can resume.
+    Q_INVOKABLE bool requireLogin(const QString& actionKey);
 
 signals:
     void loggedInChanged();
+    void pendingActionReady(QString actionKey);
+    void sessionCleared();
     void busyChanged();
     void lastErrorChanged();
     void operationChanged();
@@ -75,6 +81,7 @@ private:
     bool m_busy = false;
     bool m_loginPromptOpen = false;
     QString m_lastError;
+    QString m_pendingAction;
     Operation m_operation = None;
 };
 

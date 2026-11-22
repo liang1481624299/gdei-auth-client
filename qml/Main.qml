@@ -112,6 +112,17 @@ Window {
                 }
             }
 
+            // 门禁续做：按需登录后把用户带回被保护的页面继续原操作，不静默执行写操作。
+            Connections {
+                target: app.session
+                function onPendingActionReady(actionKey) {
+                    if (actionKey === "remote.open") stack.currentIndex = 3;
+                    else if (actionKey === "settings.save") stack.currentIndex = 4;
+                }
+                // 登出后复位页面栈到首页，避免高级设置/日志等敏感页残留。
+                function onSessionCleared() { stack.currentIndex = 0; }
+            }
+
             Component.onCompleted: app.events.setEventPageVisible(stack.currentIndex === 5)
             Component.onDestruction: app.events.setEventPageVisible(false)
         }

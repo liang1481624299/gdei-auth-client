@@ -121,6 +121,22 @@ QString Logger::sanitize(const QString& message) {
         "\\b(\\d{1,3})\\.(\\d{1,3})\\.\\d{1,3}\\.\\d{1,3}\\b");
     out.replace(ipv4, "\\1.\\2.***.***");
 
+    // Authorization: Bearer <token> / Bearer 令牌。
+    QRegularExpression bearer(
+        "\\bBearer\\s+[A-Za-z0-9._~+/=-]+",
+        QRegularExpression::CaseInsensitiveOption);
+    out.replace(bearer, "Bearer ***");
+
+    // 裸 JWT（三段点分 Base64Url）/ Bare JWTs (three dot-separated Base64Url parts).
+    QRegularExpression jwt(
+        "\\b[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\b");
+    out.replace(jwt, "***.***.***");
+
+    // IPv6：整体掩码，避免地址泄露 / Mask IPv6 addresses.
+    QRegularExpression ipv6(
+        "\\b(?:[0-9A-Fa-f]{1,4}:){2,7}[0-9A-Fa-f]{0,4}\\b");
+    out.replace(ipv6, "**:**:**:**");
+
     return out;
 }
 

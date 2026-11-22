@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 网络安全策略：默认强制 TLS，仅对校园门户域名/直连 IP 放行明文。
+     Cleartext is denied by default; only the campus portal hosts are exempted. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">nac.gdei.edu.cn</domain>
+        <domain includeSubdomains="false">210.38.64.39</domain>
+    </domain-config>
+</network-security-config>
