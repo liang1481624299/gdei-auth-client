@@ -25,17 +25,17 @@
 
 ## 2. 请求要点 / Request
 
-**登录时序 / Flow**：先 `GET` 入口 `/portal?nasip=<nasip>`（跟随 302、建立会话 Cookie，响应体在非浏览器下可能为空）→ `GET` 登录页 `/portal/2021/login.jsp?nasip=<nasip>` 解析 HTML 提取 CSRF token（隐藏域）→ 携带完整请求头（UA / Referer / Origin / Cookie）`POST` 表单提交。完整 CookieJar 管理会话，匹配 Nginx 会话校验与 IP 绑定。
+**登录时序 / Flow**：`GET` 入口 `/portal?nasip=<nasip>`（302 → `/portal/?nasip=<nasip>`，200 空体，**响应头无 `Set-Cookie`**）→ `GET` 登录页 `/portal/2021/login.jsp?nasip=<nasip>`（HTML 隐藏域；页面**无 CSRF/token 隐藏域**）→ `POST` 表单提交。captive 认证为**无状态**：服务端按表单 `basip` / `userip` 与来源 IP 鉴权，不依赖 Cookie 会话；前两步 GET 主要是对齐浏览器时序与渲染页面。
 
 - 方法：`POST`，`Content-Type: application/x-www-form-urlencoded; charset=UTF-8`
 - 带 `X-Requested-With: XMLHttpRequest`，`Referer: https://nac.gdei.edu.cn/portal/2021/login.jsp?nasip=<nasip>`，`Origin: https://nac.gdei.edu.cn`。
 - 直连 IP 时仍需在 `Host` 头带原始域名。
 
-**浏览器实测 Cookie（2026-11-22 Edge 157，已在线会话）**：会话标识不是 `JSESSIONID`，而是自定义 `hello1=<username>`、`hello2=true`、`hello3=<URL 编码二进制会话串>`、`hello5=`（空值，无 `hello4`）。`hello3` 的种植步骤（入口/登录页响应 `Set-Cookie`，或登录页 JS `document.cookie` 写入）尚未确认，待未认证口抓包核对；客户端入口 GET 补齐后由 CookieJar 自动存取。
+**`hello1/2/3/4/5` Cookie 是前端"记住用户名密码"记忆，不是服务端会话标识**（2026-11-22 阅 `common_head_service_code.js` / `common.js` 确认）：由页面 JS `document.cookie` 写入，`Path=/portal/`，有效期一年；`hello1`=用户名，`hello2`=是否勾选记住密码，`hello3`=口令经每字符 `XOR 0xff` 本地混淆后的串（固定混淆，可逆，**与上线提交的 `userPwd` 无关**），`hello4`=服务类型值，`hello5`=服务类型文本。服务端 captive 认证不读这些 Cookie；客户端无需复刻该记忆逻辑。
 
 - 表单额外字段 `isSavePwd=on`：仅"记住密码"勾选时由浏览器带上，位于 `userPwd` 之后、`userurl` 之前；基线与客户端当前未携带，预计不参与服务端认证校验，记住密码开启后可按需补齐。
 - 建连**域名优先**，备用 IP 仅在域名未配置时兜底；门户证书为通配符 `*.gdei.edu.cn`（SAN 不含 IP），用 IP 建连会触发证书主机名不匹配（`HostNameMismatch` / `SEC_E_WRONG_PRINCIPAL`）。IP 兜底时通过 `QNetworkRequest::setPeerVerifyName(host)` 把证书主机名校验名对齐到配置域名；证书链/有效期/签发者仍严格校验，不默认关闭校验。仅在高级设置显式开启 `allowInsecureSsl` 后才调用 `ignoreSslErrors()` 放行并写警告日志。
-- 用户名不带 `@域名` 后缀；`userip` 留空，由服务端按来源 IP 识别。
+- 用户名默认不带 `@域名` 后缀；若页面选择了服务类型，前端会把用户名拼成 `用户名@服务类型`（当前部署服务类型为空，提交为纯用户名）。`userip` 留空，由服务端按来源 IP 识别。
 - 实现位置：`src/core/PortalClient.cpp`（`sendRequest` / `extractCsrf` / `buildForm` / `parsePayload`）。
 
 ### 表单字段（顺序与浏览器 `serializeArray()` 一致）
@@ -104,11 +104,12 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 
 ### 3.1 成功报文字段（`pl` 参数 / 响应体 JSON，2026-11-22 实测）
 
-成功后浏览器跳转 `GET /portal/2021/loginSucc.jsp?pl=<Base64(URL 编码 JSON)>`；`pl` 解码流程与第 3 节一致。字段如下，取值已脱敏：
+成功后前端 `location.replace("/portal/page/afterLogin.jsp?pl=" + json.portalLink + "&userName=…&loginType=1|2&customCfg=…")`；`pl` 取自成功响应 JSON 的 `portalLink` 字段，其解码流程与第 3 节一致。字段如下，取值已脱敏：
 
 | 字段 | 含义 / Notes |
 |---|---|
 | `errorNumber` | 成功标记，`"1"` = 成功 |
+| `portalLink` | 成功后跳转 `afterLogin.jsp` 的 `pl` 参数值（Base64/URL 编码 JSON） |
 | `heartBeatCyc` | 服务端心跳周期（秒）；`0` 表示未指定，沿用客户端本地保活间隔 |
 | `heartBeatTimeoutMaxTime` | 心跳超时上限（秒）；`0` 表示未指定 |
 | `userDevPort` | 用户接入端口 / 会话标识（vlan 端口串，敏感，不落盘） |
