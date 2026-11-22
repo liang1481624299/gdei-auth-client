@@ -119,6 +119,9 @@ inline const QString DEFAULT_ASSIGN_IP     = "0";
 // ---- 超时与保活退避 / Timeouts & keep-alive backoff ----
 inline constexpr int CONNECT_TIMEOUT_MS   = 10000;
 inline constexpr int PROBE_TIMEOUT_MS     = 6000;
+// 空响应分支采信"近期外网探测可达"旁证的新鲜度窗口（毫秒）。
+// Freshness window for trusting a recent external probe as an empty-body online hint.
+inline constexpr qint64 EMPTY_HINT_FRESH_MS = 120000;
 // 超时可配置边界（毫秒）/ Bounds for configurable timeouts (ms).
 inline constexpr int TIMEOUT_MIN_MS       = 1000;
 inline constexpr int TIMEOUT_MAX_MS       = 60000;

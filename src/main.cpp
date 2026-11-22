@@ -125,6 +125,12 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
+    // 启动先做一次只读连通探测标定初始在线态（不提交账号口令），避免未开自动登录时
+    // 一打开就停留在默认离线态。探测结果由 onProbeReply 聚合外网可达信号。
+    // Seed the initial state with a read-only reachability probe (no credentials), so the
+    // UI does not start stuck offline when auto-login is disabled.
+    auth.refreshStatus();
+
     // 自动登录 / Auto login when enabled and credentials are present.
     if (config.autoLogin() && !config.username().isEmpty() &&
         !config.password().isEmpty()) {

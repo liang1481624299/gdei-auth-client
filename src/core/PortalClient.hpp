@@ -51,6 +51,9 @@ private slots:
     void onLoginReply();
     void onLogoutReply();
     void onProbeReply();
+    // 空响应旁路旁证：登录 POST 返回 2xx 空体且无会话 Cookie 时，补发一次外网探测再定在线态。
+    // External reachability probe after an empty login body, when no session cookie is held.
+    void onEmptyProbeReply();
 
 private:
     struct ReplyContext {
@@ -67,6 +70,10 @@ private:
     QString m_csrf;
     bool m_busy = false;
     bool m_probeBusy = false;
+    // 最近一次外网探测结果与时间戳，供空响应分支做新鲜旁证。
+    // Last external probe result and timestamp, used as a fresh hint for empty-body replies.
+    bool m_lastProbeOnline = false;
+    qint64 m_lastProbeMs = 0;
 
     QUrl urlFor(const QString& path) const;
     void applyPeerVerify(QNetworkRequest& req, const QString& urlHost) const;
@@ -80,6 +87,9 @@ private:
     QString decodeBody(const QByteArray& raw, const QByteArray& contentType) const;
     void parsePayload(const QString& text, bool& ok, QString& message,
                       bool& alreadyOnline, bool& offline) const;
+    // 外网探测通用判定：2xx 且响应体非空、含 NCSI 特征串即视为外网可达。
+    // Shared external-reachability check: 2xx, non-empty body carrying the NCSI marker.
+    bool externalProbeOnline(int status, const QByteArray& raw, const QString& body) const;
     void setState(AuthState s);
     void setOnline(bool v);
     void log(LogLevel level, const QString& message);

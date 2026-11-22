@@ -8,6 +8,7 @@
 
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QDateTime>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -225,6 +226,13 @@ QString PortalClient::decodeBody(const QByteArray& raw, const QByteArray& conten
     return QString::fromUtf8(raw);
 }
 
+bool PortalClient::externalProbeOnline(int status, const QByteArray& raw,
+                                       const QString& body) const {
+    const bool statusOk = (status == 0) || (status >= 200 && status < 300);
+    return statusOk && !raw.trimmed().isEmpty() &&
+           body.contains(QStringLiteral("Microsoft"), Qt::CaseInsensitive);
+}
+
 QString PortalClient::buildForm(const QString& user, const QString& pass) const {
     const QString pwdB64 = QString::fromLatin1(pass.toUtf8().toBase64());
 
@@ -420,18 +428,36 @@ void PortalClient::onLoginReply() {
         return;
     }
 
-    // 空响应：门户对"已在线重复登录"常返回空体（见 CAPTURE-GUIDE）。结合 2xx
-    // 与入口步已建立的会话 Cookie 判定为已在线；否则仍按失败处理，避免误判。
-    // Empty body: the portal often returns it for "already online" re-login. Treat
-    // 2xx plus an established session cookie as online; otherwise keep it a failure.
+    // 空响应：已在线会话旁路时，门户 POST 常返回 2xx 空体。在线旁证有两类：
+    //  1) 会话 Cookie 非空（入口步建立）；
+    //  2) 近期外网探测可达（NCSI 含 Microsoft 特征串）。
+    // captive 无状态、不下发 Cookie，故不能只认 Cookie；两类旁证都没有时，补发一次
+    // 外网旁证探测，由 onEmptyProbeReply 聚合，避免把已在线旁路误判为认证失败。
+    // Empty body: an already-online bypass often returns a 2xx empty body. Hints are a
+    // session cookie OR a recent successful external probe. The captive is stateless and
+    // sets no cookie, so cookie alone is insufficient; if neither hint exists, issue a
+    // follow-up external probe (onEmptyProbeReply) instead of failing outright.
     if (raw.trimmed().isEmpty()) {
         const bool establishedSession = !m_jar->list().isEmpty();
         const bool successStatus = status > 0 && status >= 200 && status < 300;
-        if (successStatus && establishedSession) {
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        const bool freshExternal = m_lastProbeOnline &&
+            (now - m_lastProbeMs) < constants::EMPTY_HINT_FRESH_MS;
+        if (successStatus && (establishedSession || freshExternal)) {
             setState(AuthState::Online);
             setOnline(true);
             log(LogLevel::Info, tr("Already online (empty response) / 账号已在线（空响应）"));
             emit loginFinished(true, QStringLiteral("auth.reconnectSuccessMessage"));
+            return;
+        }
+        if (successStatus) {
+            // 无现成旁证：补发一次外网探测再定，等待 onEmptyProbeReply 回调。
+            // No hint on hand: probe external reachability and decide in the callback.
+            QNetworkRequest probeReq(QUrl(m_cfg->probeUrl()));
+            probeReq.setTransferTimeout(m_cfg->probeTimeoutMs());
+            QNetworkReply* probe = m_nam->get(probeReq);
+            probe->setProperty("action", "emptyProbe");
+            connect(probe, &QNetworkReply::finished, this, &PortalClient::onEmptyProbeReply);
             return;
         }
         setState(AuthState::Offline);
@@ -496,6 +522,15 @@ void PortalClient::onProbeReply() {
     if (!reply) return;
     reply->deleteLater();
 
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const QByteArray raw = reply->readAll();
+    const QString body = decodeBody(raw, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray());
+    const bool online = reply->error() == QNetworkReply::NoError &&
+                        externalProbeOnline(status, raw, body);
+
+    m_lastProbeOnline = online;
+    m_lastProbeMs = QDateTime::currentMSecsSinceEpoch();
+
     if (reply->error() != QNetworkReply::NoError) {
         setOnline(false);
         setState(AuthState::Offline);
@@ -504,19 +539,40 @@ void PortalClient::onProbeReply() {
         return;
     }
 
-    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    const QByteArray raw = reply->readAll();
-    // 探测同样要求 2xx 且响应体含 NCSI 特征串；状态码异常或空体均判离线。
-    // Probe requires a 2xx status and the NCSI marker; bad status or empty body = offline.
-    const bool statusOk = (status == 0) || (status >= 200 && status < 300);
-    const QString body = decodeBody(raw, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray());
-    const bool online = statusOk && !raw.trimmed().isEmpty() &&
-                        body.contains("Microsoft", Qt::CaseInsensitive);
     setOnline(online);
     setState(online ? AuthState::Online : AuthState::Offline);
     // 每次探测都发结果，保活据此累计连续失败；onlineChanged 仅在翻转时发，不能用于计数。
     // Emit on every probe; onlineChanged only fires on flips and cannot drive the counter.
     emit probeFinished(online, online ? QString() : QStringLiteral("auth.reasonServerRejected"));
+}
+
+void PortalClient::onEmptyProbeReply() {
+    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) return;
+    reply->deleteLater();
+
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const QByteArray raw = reply->readAll();
+    const QString body = decodeBody(raw, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray());
+    const bool online = reply->error() == QNetworkReply::NoError &&
+                        externalProbeOnline(status, raw, body);
+
+    m_lastProbeOnline = online;
+    m_lastProbeMs = QDateTime::currentMSecsSinceEpoch();
+
+    if (online) {
+        setState(AuthState::Online);
+        setOnline(true);
+        log(LogLevel::Info,
+            tr("Already online (empty body, external reachable) / 账号已在线（空响应，外网可达）"));
+        emit loginFinished(true, QStringLiteral("auth.reconnectSuccessMessage"));
+    } else {
+        setState(AuthState::Offline);
+        setOnline(false);
+        const QString msg = tr("Empty response from portal / 门户返回为空");
+        log(LogLevel::Warning, msg);
+        emit loginFinished(false, msg);
+    }
 }
 
 } // namespace gdei
