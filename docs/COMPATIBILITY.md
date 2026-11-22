@@ -1,6 +1,6 @@
 # 兼容策略 / Compatibility Strategy
 
-核对日期：2026-11-22。本项目**固定 Qt6、C++20、Qt Quick/QML**，单一源码仓库、单一 CMake 构建，不做 Qt 版本分支，不维护两套工程。
+核对日期：本地 CST(UTC+8) `2026-11-22 17:40:35` ｜ UTC/GMT `2026-11-22 09:40:35Z` ｜ UNIX `1795340435`。本项目**固定 Qt6、C++20、Qt Quick/QML**，单一源码仓库、单一 CMake 构建，不做 Qt 版本分支，不维护两套工程。
 
 ## 1. 硬性平台基线 / Hard Baseline
 

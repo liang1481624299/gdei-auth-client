@@ -2,6 +2,7 @@
 
 > 来源：2026-11-21 对 `nac.gdei.edu.cn` 真实浏览器抓包（H3C iMC Portal 体系）。
 > Captured from a real browser session against the live portal.
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-22 17:40:35` ｜ UTC/GMT `2026-11-22 09:40:35Z` ｜ UNIX `1795340435`。
 
 ## 1. 地址 / Endpoints
 
@@ -14,6 +15,8 @@
 | 登录接口 / login | `POST /portal/pws?t=li&ifEmailAuth=false` |
 | 注销接口 / logout | `POST /portal/pws?t=lo` |
 | 门户可达性探测 / probe | `http://nac.gdei.edu.cn:8080/mselfservice/snac/macList.xhtml`（匿名 302 跳登录，认证后 200） |
+| 8080 根入口 / 8080 root | `http://nac.gdei.edu.cn:8080/`（匿名 200，126 B，页面内 JS `window.location.href='/selfservice/index.xhtml'`） |
+| 8080 captive 入口 / 8080 portal entry | `http://nac.gdei.edu.cn:8080/portal?nasip=192.168.100.8`（302 → `/portal/?nasip=192.168.100.8`；已在线会话再访问返回 200 空体） |
 | 外网连通性探测 / NCSI | `http://www.msftconnecttest.com/connecttest.txt`（body 含 `Microsoft` 视为已认证上网） |
 | 自助门户登录页 / self-service login | `http://nac.gdei.edu.cn:8080/mselfservice/login.jsf`（详见第 6 节） |
 | 自助门户首页 / self-service home | `/mselfservice/user/index.jsf` |
@@ -27,7 +30,7 @@
 - 方法：`POST`，`Content-Type: application/x-www-form-urlencoded; charset=UTF-8`
 - 带 `X-Requested-With: XMLHttpRequest`，`Referer: https://nac.gdei.edu.cn/portal/2021/login.jsp`
 - 直连 IP 时仍需在 `Host` 头带原始域名。
-- 建连**域名优先**，备用 IP 仅在域名未配置时兜底；门户证书为通配符 `*.gdei.edu.cn`（SAN 不含 IP），用 IP 建连会触发证书主机名不匹配（`HostNameMismatch` / `SEC_E_WRONG_PRINCIPAL`）。IP 兜底时 TLS 校验名对齐到配置域名（`QSslConfiguration::setPeerVerifyName`），证书链/有效期/签发者仍严格校验，不默认关闭校验。
+- 建连**域名优先**，备用 IP 仅在域名未配置时兜底；门户证书为通配符 `*.gdei.edu.cn`（SAN 不含 IP），用 IP 建连会触发证书主机名不匹配（`HostNameMismatch` / `SEC_E_WRONG_PRINCIPAL`）。IP 兜底时通过 `QNetworkRequest::setPeerVerifyName(host)` 把证书主机名校验名对齐到配置域名；证书链/有效期/签发者仍严格校验，不默认关闭校验。仅在高级设置显式开启 `allowInsecureSsl` 后才调用 `ignoreSslErrors()` 放行并写警告日志。
 - 用户名不带 `@域名` 后缀；`userip` 留空，由服务端按来源 IP 识别。
 - 实现位置：`src/core/PortalClient.cpp`（`sendRequest` / `extractCsrf` / `buildForm` / `parsePayload`）。
 
@@ -76,7 +79,7 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 
 - `errorNumber == "1"`：成功。
 - 失败文案：取 `e_d` 字段指向的键对应的值；其次取 `errorMessage`。
-- 已在线会话下重复登录，接口可能返回**空响应**，属正常现象。
+- **空响应分支**：已在线会话下重复登录，或当前网络已旁路认证时，上线 / 保活三步（入口 GET → 登录页 GET → `POST pws`）均可能返回 200 空体、无 Set-Cookie；这属于"当前已在线 / 旁路"环境的正常现象，不等同于 app 请求构造错误。真实"未认证成功 / 失败"报文需在未认证口触发一次采集；成功 / 失败 / 已在线空体三分支的前端文案判定仍待未认证口实测复核。
 
 ### 3.1 成功报文字段（`pl` 参数 / 响应体 JSON，2026-11-22 实测）
 

@@ -31,6 +31,7 @@
 ## 功能
 
 - 上线 / 下线 / 状态查询，登录流程：GET 登录页 → 解析 HTML 提取 CSRF token → 带 UA / Referer / Cookie POST 表单
+- **导航常驻、按需登录**：未登录可浏览概览 / 设备 / 我的等公开页；上线、下线、设备管理等受保护操作才弹出登录层，可取消返回浏览；captive 在线态、页面登录态、门户会话三套状态相互独立、分别登出
 - **完整 CookieJar 会话管理**，匹配 Nginx 会话校验与 IP 绑定机制
 - **自动保活**：定时探测外网连通性，仅掉线时才触发登录；探测间隔带随机抖动，避免固定高频轮询被 Nginx 限流 403
 - **Windows 系统托盘**：最小化到托盘，支持显示主窗口、上线、下线、退出，图标与提示跟随在线状态；保活沿用现有控制器。macOS / Linux 托盘、Android 前台服务与电池优化引导仍为规划项
@@ -55,12 +56,17 @@ gdei-auth-client/
 │   │   ├── ConfigStore.*     #   QSettings 持久化配置
 │   │   ├── SessionCookieJar.*#   完整 Cookie 会话管理
 │   │   ├── PortalClient.*    #   QNAM 门户认证客户端（CSRF / 表单 / 解码）
+│   │   ├── DevicePortalClient.*# 移动 ICEfaces 自助门户：验证码会话 + 设备只读列表
 │   │   ├── KeepAlive.*       #   随机间隔探测，掉线才重登
 │   │   └── I18n.*            #   四语言字典与切换
 │   └── app/                  # 应用层控制器，向 QML 暴露接口
-│       ├── AuthController.*  #   组合门户客户端 + 保活
+│       ├── AuthController.*  #   captive 在线态：组合门户客户端 + 保活
+│       ├── SessionController.*# 页面登录态：手动 / 自动认证 + 按需登录弹层
+│       ├── DeviceController.*# 移动自助门户会话与设备列表
+│       ├── LocalDeviceController.*# 本机本地设备档案
+│       ├── NetworkInfoController.*# 本机网卡 / 网络信息
 │       ├── LogController.*   #   日志面板适配层
-│       └── AppController.*   #   聚合 config / i18n / auth / logs 暴露给 QML
+│       └── AppController.*   #   聚合 config / i18n / auth / session / devices / logs 暴露给 QML
 ├── qml/
 │   ├── Main.qml              # 主窗口
 │   ├── theme/Theme.qml       # 设计令牌（配色 / 圆角 / 阴影）

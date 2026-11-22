@@ -2,6 +2,7 @@
 
 > 来源：2026-11-22 对公网可访问页面、门户前端 bundle（React/axios）的静态分析。
 > Source: public-facing pages and the portal frontend bundle analyzed from the public network.
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-22 17:40:35` ｜ UTC/GMT `2026-11-22 09:40:35Z` ｜ UNIX `1795340435`。
 >
 > **环境限制 / Environment caveat**：本次调研在**校外公网**进行。CAS 登录子页 `login2022` 对校外 IP 返回“系统维护期间暂停校外访问，需连接 gdei-wifi 或 WebVPN”提示，因此**登录表单字段、口令加密方式、验证码机制，以及登录后才返回的个人信息 JSON 均未在本次实测**，需在校内网（gdei-wifi）或已登录 WebVPN 会话中补抓，见第 9 节。
 >

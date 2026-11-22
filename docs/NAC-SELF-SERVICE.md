@@ -2,8 +2,9 @@
 
 > 来源：2026-11-22 对公网可访问登录页、未登录跳转行为与前端脚本的静态分析。
 > Source: public-facing login pages, unauthenticated redirect behavior and frontend scripts analyzed from the public network.
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-22 17:40:35` ｜ UTC/GMT `2026-11-22 09:40:35Z` ｜ UNIX `1795340435`。
 >
-> **环境限制 / Environment caveat**：本次在**校外公网**进行，未持有登录会话。登录后的功能页、AJAX 提交端点、上网明细查询接口与真实返回 JSON 均**未实测**；未登录访问受保护页面仅返回 `meta refresh` 跳回 `login.jsf`，猜测的常见页面名多为 `404`。需在校内网（gdei-wifi）、已登录 WebVPN 会话，或由用户在已登录浏览器 F12 抓包后补抓，见第 7 节。
+> **环境限制 / Environment caveat**：调研分两轮，均**未持有登录会话**——早期在校外公网静态分析，本轮改为校园网直连（本机 `10.0.146.65`）后再次匿名探测。登录后的功能页、AJAX 提交端点、上网明细查询接口与真实返回 JSON 均**未实测**；未登录访问受保护页面仅返回 `meta refresh` 跳回 `login.jsf` 或 `302` 跳登录，猜测的常见页面名多为 `404`。需在校内网（gdei-wifi）、已登录 WebVPN 会话，或由用户在已登录浏览器 F12 抓包后补抓，见第 7 节。
 >
 > **合规红线 / Compliance**：账号余额、证件号码、电话、电子邮件、MAC 地址、在线记录等均为本人敏感信息，由客户端在用户登录后按账号**运行时拉取**，不得硬编码进仓库或文档；口令仅经系统密钥存储读取，不明文落盘、不写日志。本文档只记录**字段名与功能分层**，不记录任何真实取值。
 
@@ -56,16 +57,22 @@ PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理�
 
 | 字段名 / Field name | 类型 / Type | 说明 / Notes |
 |---|---|---|
+| `detemineIsShow` | hidden（无 `mainForm` 前缀） | 当前中文登录图标识，默认 `login_zh.gif` |
 | `mainForm:username` | text | 帐号名，必填 |
 | `mainForm:password` | password | 密码，必填；**提交前**经前端函数 `imc_byod_function_base64_with_chinese(...)` 做可逆编码后再放入提交值 |
 | `mainForm:code` | text | 验证码，`maxlength=4`，必填（隐藏项 `mainForm:ifCheckCode=true` 控制是否校验） |
-| `mainForm:usertype_input` | select | 用户类型：`1` 普通用户（默认）/ `2` 设备管理用户；切换时前端 `differWithType()` 显隐对应入口 |
+| `mainForm:usertype_input` | select | 用户类型：`1` 普通用户（默认 selected）/ `2` 设备管理用户；切换时前端 `differWithType()` 显隐对应入口 |
+| `mainForm:usertype_focus` | text（readonly） | PrimeFaces SelectOneMenu 只读焦点占位字段，提交为空 |
+| `mainForm:loginCmd` | submit 按钮 | 触发登录动作的按钮标识，按钮无 value（显示文案在 `span.ui-button-text`），提交为空值字段 |
 | `mainForm:ifFromGuestCenter` | hidden | 是否来自访客中心，默认 `0` |
-| `mainForm:descContent` | hidden | 访客管理员描述文案 |
+| `mainForm:descContent` | hidden | 访客管理员描述文案，默认 `访客管理员管理访客` |
+| `mainForm:ifCheckCode` | hidden | 是否校验验证码，默认 `true` |
 | `mainForm_SUBMIT` / `javax.faces.ViewState` | hidden | JSF 提交标记与视图状态，**每次 POST 必须随表单回传**当前页的 ViewState |
 
+- 表单 `action` 为 `/selfservice/login.jsf;jsessionid=<JSESSIONID>`，`enctype=application/x-www-form-urlencoded`。
 - 验证码图片：`/selfservice/codeImages/checkCode<数字>.jpg`；「看不清，换一张」走 PrimeFaces ajax（`mainForm:switchValidCode`）异步刷新。
-- 密码编码：函数名表明为「带中文的 Base64」，典型实现是先按 UTF-8/`encodeURIComponent` 转字节再 Base64；**属前端可逆编码，不是服务端强加密**。函数体所在的 `ssv.js` 在匿名请求下返回 `404`，具体编码表与是否含加盐需登录环境复核。
+- 密码编码：函数体已从 `ssv.js`（`/selfservice/javax.faces.resource/jquery/ssv.js.jsf?ln=jscript`）取得并核对，分两步：① `imc_byod_function_base_escape` 逐字符 `escape()`，码位 >255 的中文把 `%uXXXX` 替换为字面 `\uXXXX`（大写十六进制、4 位补零），其余字符原样、反斜杠双写；② `imc_byod_function_bouncycastle_base64` 用标准字母表 `A–Z a–z 0–9 + /`、`=` 填充，按 `charCodeAt & 255` 取每字符低 8 位做 Base64。纯 ASCII 口令等价标准 Base64(UTF-8 字节)。**属前端可逆编码，不是服务端强加密**。客户端 `core/SelfServiceCodec.cpp` 已按此复刻。
+- 页面另有 `mainForm:faqHidden` 被 JS 函数 `changeFaqHidden()` 引用，但静态表单中无对应 `<input>`，提交时不带该字段。
 - 浏览器兼容提示：推荐 IE10/IE11、Firefox 30+（页脚 50+）、Chrome 44+。
 
 ### 3.2 触屏版（`/mselfservice/login.jsf`，ICEfaces 表单）
@@ -73,10 +80,13 @@ PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理�
 | 字段名 / Field name | 类型 / Type | 说明 / Notes |
 |---|---|---|
 | `textInput` | text | 帐号名，`maxlength=32` |
-| `loginCodeInput` | password | 密码，`maxlength=32` |
+| `loginCodeInput` | password | 密码，`maxlength=32`，**前端明文提交**（不做 PC 端那种 Base64 编码） |
 | `code` | text | 验证码，`maxlength=4` |
+| `submitBtn` | submit 按钮 | 登录按钮，提交值为 `登录` |
+| `j_id_h_SUBMIT` | hidden | ICEfaces 主表单提交标记，`1` |
 | `ice.window` / `ice.view` / `javax.faces.ViewState` | hidden | ICEfaces + JSF 视图状态，POST 须回传 |
 
+- 主表单 `id/name=j_id_h`，`action=/mselfservice/login.jsf;jsessionid=<JSESSIONID>`；页面另含两个 ICEfaces 内部表单 `vpp4m9uesi1-retrieve-update`、`vpp4m9uesi1-single-submit`，各带自身 `_SUBMIT=1` 与 ViewState。
 - 验证码图片：`/mselfservice/Kaptcha.jpg?<随机数>`，点击/触摸刷新。
 - 登录前前端校验：空帐号、空密码、空验证码分别弹提示框（`show_warning_panel`）。
 
@@ -178,8 +188,26 @@ PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理�
 - [ ] 各模块列表与详情的 AJAX 端点、请求参数、分页/时间范围参数与返回 JSON 结构。
 - [ ] 上网明细查询的条件项、返回列与流量单位。
 - [ ] 修改密码、更新资料、报修、绑定/解绑 MAC 的提交字段名、校验规则与成功/失败响应。
-- [ ] `imc_byod_function_base64_with_chinese` 完整函数体（定位 `ssv.js` 或内联脚本），确认编码细节。
+- [x] `imc_byod_function_base64_with_chinese` 完整函数体已从 `ssv.js` 取得并核对（见 3.1），`core/SelfServiceCodec.cpp` 已复刻。
 - [ ] 验证码生成/校验会话绑定方式，以及连续失败锁定策略。
 - [ ] 设备管理用户（`usertype=2`）与访客自助（`mlogin.jsf`）的专属功能与字段。
+
+### 7.1 匿名可达性实测（2026-11-22，校园网直连、未登录会话）
+
+> 环境：本机已由路由器 NAT 改为校园网直连（Ethernet 取得 `10.0.146.65`，NCSI 200、外网已通）；下列请求仍为**匿名无会话**探测。DNS `nac.gdei.edu.cn → 210.38.64.39`。
+
+| 路径 | 上下文 | 匿名结果 |
+|---|---|---|
+| `/` | 8080 根 | `200`，126 B，页面内 JS `window.location.href='/selfservice/index.xhtml'` |
+| `/selfservice/login.jsf` | PC | `200`，17005 B，下发 `JSESSIONID` + `oam.Flash.RENDERMAP.TOKEN`，`Path=/selfservice` |
+| `/mselfservice/login.jsf` | 移动 | `200`，14722 B，下发 `JSESSIONID` + TOKEN，`Path=/mselfservice` |
+| `/selfservice/index.xhtml` | PC | `200`，691 B，`meta refresh 0;URL=login.jsf` 跳登录 |
+| `/selfservice/index.jsf` | PC | `200`，687 B，`meta refresh 0;URL=login.jsf` 跳登录 |
+| `/selfservice/main/main.jsf` | PC | `404`（受会话保护，未登录不返回页面） |
+| `/mselfservice/user/index.jsf` | 移动 | `302` 跳移动登录 |
+| `/mselfservice/snac/macList.xhtml` | 移动 | `302` 跳移动登录 |
+| `/portal?nasip=192.168.100.8` | 8080 captive 入口 | `302 → /portal/?nasip=192.168.100.8`；已在线会话再访问返回 `200` 空体 |
+
+> 结论：无登录会话时拿不到任何登录后页面 DOM；`AccountPortalClient::parseProfile` 的资料/服务解析规则必须在取得 `main.jsf` 已登录样本后再实现，当前为空占位。
 
 > 采集方式三选一：① 用户在已登录浏览器 F12 复制各接口请求/响应 JSON 回贴；② 本机接入 gdei-wifi 或登录 WebVPN 后继续抓取；③ 先按第 4 节字段名搭个人信息模型与 UI 骨架，接口留待对接。
