@@ -3,6 +3,7 @@
 #include "core/Constants.hpp"
 #include "core/SecretStore.hpp"
 
+#include <QHostAddress>
 #include <QSettings>
 #include <QUrl>
 #include <utility>
@@ -82,16 +83,26 @@ void ConfigStore::setLang(int v) {
     m_lang = l; emit langChanged();
 }
 void ConfigStore::setHost(const QString& v) {
-    if (m_host == v) return;
-    m_host = v; emit hostChanged();
+    const QString c = v.trimmed();
+    // 主机域名不得为空（PortalClient 用它构造 Host 头与证书校验名）。
+    // Host must be non-empty; it feeds the Host header and certificate name.
+    if (c.isEmpty()) return;
+    if (m_host == c) return;
+    m_host = c; emit hostChanged();
 }
 void ConfigStore::setIp(const QString& v) {
-    if (m_ip == v) return;
-    m_ip = v; emit ipChanged();
+    const QString c = v.trimmed();
+    // IP 兜底地址必须为空或合法 IPv4（允许空表示未配置）。
+    // Fallback IP must be empty or a valid IPv4 address.
+    if (!c.isEmpty() && QHostAddress(c).isNull()) return;
+    if (m_ip == c) return;
+    m_ip = c; emit ipChanged();
 }
 void ConfigStore::setNasip(const QString& v) {
-    if (m_nasip == v) return;
-    m_nasip = v; emit nasipChanged();
+    const QString c = v.trimmed();
+    if (!c.isEmpty() && QHostAddress(c).isNull()) return;
+    if (m_nasip == c) return;
+    m_nasip = c; emit nasipChanged();
 }
 void ConfigStore::setAllowInsecureSsl(bool v) {
     if (m_allowInsecureSsl == v) return;
@@ -163,10 +174,15 @@ void ConfigStore::load() {
                                   constants::TIMEOUT_MIN_MS, constants::TIMEOUT_MAX_MS);
     m_probeTimeoutMs = clampInt(s.value("probe_timeout_ms", constants::PROBE_TIMEOUT_MS).toInt(),
                                 constants::TIMEOUT_MIN_MS, constants::TIMEOUT_MAX_MS);
-    m_probeUrl = s.value("probe_url", constants::NCSI_URL).toString().trimmed();
-    if (m_probeUrl.isEmpty()) m_probeUrl = constants::NCSI_URL;
-    m_healthUrl = s.value("health_url", constants::HEALTH_URL).toString().trimmed();
-    if (m_healthUrl.isEmpty()) m_healthUrl = constants::HEALTH_URL;
+    // 配置文件可能被篡改，load 必须复用 setter 的 scheme/host 白名单，
+    // 防止 file: 等危险 scheme 注入探测地址。
+    // Validate persisted URLs with the same whitelist used by setters.
+    const QString loadedProbe = s.value("probe_url", constants::NCSI_URL).toString().trimmed();
+    m_probeUrl = (!loadedProbe.isEmpty() && isSafeProbeUrl(loadedProbe))
+                     ? loadedProbe : constants::NCSI_URL;
+    const QString loadedHealth = s.value("health_url", constants::HEALTH_URL).toString().trimmed();
+    m_healthUrl = (!loadedHealth.isEmpty() && isSafeProbeUrl(loadedHealth))
+                      ? loadedHealth : constants::HEALTH_URL;
     m_requestEncoding = normalizeRequestEncoding(s.value("request_encoding", "UTF-8").toString());
 
     // 仅在记住密码时从平台安全存储还原口令 / restore from secure store only when remembered.

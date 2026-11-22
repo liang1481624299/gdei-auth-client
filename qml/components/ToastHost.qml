@@ -40,10 +40,13 @@ Item {
         function onToastRequested(event) {
             if (toastModel.count >= 3)
                 toastModel.remove(0);
+            // 存 key/args 而非译文，delegate 显示时才翻译，切语言后自动刷新。
+            // Store keys, not rendered text, so labels re-translate on language change.
             toastModel.append({
-                title: root.localized(event.titleKey, event.arguments),
-                message: root.localized(event.messageKey, event.arguments),
-                reason: root.localized(event.reasonKey, event.arguments),
+                titleKey: event.titleKey,
+                messageKey: event.messageKey,
+                reasonKey: event.reasonKey,
+                args: event.arguments,
                 level: Number(event.level)
             });
         }
@@ -63,10 +66,16 @@ Item {
             Item {
                 id: toast
                 required property int index
-                required property string title
-                required property string message
-                required property string reason
+                required property string titleKey
+                required property string messageKey
+                required property string reasonKey
+                required property var args
                 required property int level
+
+                // 显示时翻译，app.i18n.lang 作为依赖触发切语言刷新。
+                title: root.localized(toast.titleKey, toast.args)
+                message: root.localized(toast.messageKey, toast.args)
+                reason: root.localized(toast.reasonKey, toast.args)
 
                 property bool closing: false
                 property real slideY: -th.sp4

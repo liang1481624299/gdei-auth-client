@@ -352,7 +352,12 @@ void PortalClient::onEntryReply() {
 }
 
 void PortalClient::logout() {
-    if (m_busy) return;
+    if (m_busy) {
+        // 在途认证时拒绝下线，但必须回一个失败结果，否则上层会话卡在 busy 等待态。
+        // Reject logout while busy, but report failure so the caller never hangs.
+        emit loginFinished(false, QStringLiteral("auth.logoutFailedMessage"));
+        return;
+    }
     m_busy = true;
     // 下线 t=lo 实测表单 userName/userPwd 均为空：在线会话由服务端按来源 IP / 会话释放，
     // 不提交账号口令。其余隐藏域与上线一致。
@@ -584,9 +589,8 @@ void PortalClient::onEmptyProbeReply() {
     } else {
         setState(AuthState::Offline);
         setOnline(false);
-        const QString msg = tr("Empty response from portal / 门户返回为空");
-        log(LogLevel::Warning, msg);
-        emit loginFinished(false, msg);
+        log(LogLevel::Warning, tr("Empty response from portal / 门户返回为空"));
+        emit loginFinished(false, QStringLiteral("auth.reasonEmptyResponse"));
     }
 }
 

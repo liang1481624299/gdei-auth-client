@@ -24,6 +24,9 @@ QVariantList I18n::languages() const {
 }
 
 void I18n::setLang(int l) {
+    // 拒绝越界语言 id，避免非法枚举值进入字典查找（与 ConfigStore::setLang 一致）。
+    // Reject out-of-range ids so invalid enums never reach dictionary lookup.
+    if (l < static_cast<int>(Lang::ZhCN) || l > static_cast<int>(Lang::Ja)) return;
     Lang nl = static_cast<Lang>(l);
     if (m_lang == nl) return;
     m_lang = nl;
@@ -839,7 +842,7 @@ void I18n::buildDictionaries() {
     ja["action.cancel"] = "キャンセル";
     ja["action.delete"] = "削除";
     ja["common.close"] = "閉じる";
-    ja["common.notProvided"] = "未提供";
+    ja["common.notProvided"] = "未設定";
     ja["common.unavailable"] = "利用不可";
     ja["nav.dashboard"] = "概要";
     ja["nav.devices"] = "デバイス";
