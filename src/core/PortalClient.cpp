@@ -290,8 +290,8 @@ void PortalClient::parsePayload(const QString& text, bool& ok, QString& message,
     ok = errNo == "1";
     // errorNumber=7：当前账号已在线，重复登录返回 "User is already online."；
     // 视为已达成在线态，而非普通认证失败。
-    // errorNumber=8：已离线，下线 t=lo 成功后回此码；对下线动作即成功。
-    // 7 = already online (repeat login); 8 = offline (logout success).
+    // errorNumber=8：本就离线 / 会话已释放（重复下线场景），作为下线成功的兼容分支保留。
+    // 7 = already online (repeat login); 8 = already offline / session released (compat).
     alreadyOnline = errNo == "7";
     offline = errNo == "8";
 
@@ -345,7 +345,11 @@ void PortalClient::onEntryReply() {
 void PortalClient::logout() {
     if (m_busy) return;
     m_busy = true;
-    const QString body = buildForm(m_cfg->username(), m_cfg->password());
+    // 下线 t=lo 实测表单 userName/userPwd 均为空：在线会话由服务端按来源 IP / 会话释放，
+    // 不提交账号口令。其余隐藏域与上线一致。
+    // The logout form carries empty userName/userPwd: the session is released by
+    // source IP / online session, no credentials are submitted.
+    const QString body = buildForm(QString(), QString());
     QNetworkReply* reply = postConfiguredForm(constants::LOGOUT_ACTION_PATH, body);
     if (!reply) return;
     reply->setProperty("action", "logout");
@@ -475,8 +479,10 @@ void PortalClient::onLogoutReply() {
     const QByteArray rawLogout = reply->readAll();
     parsePayload(decodeBody(rawLogout, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray()),
                  ok, message, already, offline);
-    // 下线成功回 errorNumber=8（User is offline）；与 1 一样视为会话已释放。
-    // Logout success returns errorNumber=8 (User is offline); treat it like 1 as released.
+    // 在线状态下手动下线成功实测回 errorNumber=1；8 为本就离线/会话已释放的兼容码，
+    // 两者都视为会话已释放。
+    // A manual logout from online returns errorNumber=1; 8 is the already-offline
+    // compat code. Both count as the session being released.
     const bool loggedOut = ok || offline;
     setState(AuthState::Offline);
     setOnline(false);

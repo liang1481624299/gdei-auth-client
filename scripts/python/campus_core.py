@@ -305,7 +305,9 @@ def logout(cfg: dict, log=print):
     except Exception as e:
         log(f"访问门户入口失败：{e}")
 
-    body = build_form(cfg, cfg.get("username", ""), get_password(cfg))
+    # 下线 t=lo 实测表单 userName/userPwd 均为空：在线会话按来源 IP / 会话释放，不提交凭据。
+    # The logout form carries empty userName/userPwd; the session is released by source IP.
+    body = build_form(cfg, "", "")
     log("正在提交注销请求 ...")
     try:
         status, headers, text = client.request("POST", LOGOUT_PATH, body=body)
