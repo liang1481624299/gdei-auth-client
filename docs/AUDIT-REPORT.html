@@ -89,7 +89,7 @@ ul.tight{margin:8px 0;padding-left:22px} ul.tight li{margin:4px 0}
   <div class="wrap">
     <h1>GDEI 校园网认证客户端 · 全栈审计报告</h1>
     <p>前端 QML / C++ 后端 / 全部对外接口 / 编码规范 / i18n 国际化 / 多系统 UI 适配 / 可扩展性与逻辑孤岛</p>
-    <p style="opacity:.78;font-size:13px">静态审计 · 证据基于源码逐行核验 · 生成日期 2026-11-22（基准提交 <code>ab7ca36</code>）</p>
+    <p style="opacity:.78;font-size:13px">静态审计 · 证据基于源码逐行核验 · 初版 2026-11-22（<code>ab7ca36</code>）· 复审计 2026-11-22（当前 <code>0056465</code>）</p>
     <p style="opacity:.78;font-size:13px">时效提示：本报告为阶段 A（导航常驻 / 按需登录）改造前的静态快照；改造后未重跑审计，最新差距状态以 <code>GAP-REPORT.md</code> 为准。本地 CST 2026-11-22 17:40:35 ｜ UTC 2026-11-22 09:40:35Z ｜ UNIX 1795340435。</p>
     <div class="meta">
       <span>仓库 gdei-auth-client</span><span>分支 main</span><span>35 QML + 25 C++ 模块</span>
@@ -100,17 +100,18 @@ ul.tight{margin:8px 0;padding-left:22px} ul.tight li{margin:4px 0}
 
 <div class="wrap">
 <div class="summary">
-  <div class="stat p0"><b>5</b><span>P0 阻断级问题</span></div>
-  <div class="stat p1"><b>35</b><span>P1 高优先级问题</span></div>
-  <div class="stat p2"><b>21</b><span>P2 改进项</span></div>
-  <div class="stat"><b>61</b><span>问题总数</span></div>
-  <div class="stat"><b>14</b><span>后端闲置能力</span></div>
+  <div class="stat p0"><b>3/5</b><span>初版 P0 仍未关闭</span></div>
+  <div class="stat p1"><b>2</b><span>新修复引入的 P1</span></div>
+  <div class="stat p0"><b>8</b><span>复审计新增 P0/P1</span></div>
+  <div class="stat"><b>9</b><span>需求偏离项</span></div>
+  <div class="stat"><b>35</b><span>新增 dead-code 接口</span></div>
   <div class="stat"><b>0</b><span>前端悬空调用</span></div>
 </div>
 
 <nav class="toc">
   <b>目录 / CONTENTS</b>
-  <a href="#overview">0. 审计结论摘要</a>
+  <a href="#reaudit" style="font-weight:700;color:#b91c1c">★ 复审计结论（最新）</a>
+  <a href="#overview">0. 初版审计结论摘要</a>
   <a href="#structure">1. 项目结构与分层依赖</a>
   <a href="#interfaces">2. 接口专项</a>
   <a href="#islands">3. 后端逻辑孤岛清单</a>
@@ -118,9 +119,106 @@ ul.tight{margin:8px 0;padding-left:22px} ul.tight li{margin:4px 0}
   <a href="#i18n">5. i18n 国际化专项</a>
   <a href="#ui">6. 多系统与 UI 适配评估</a>
   <a href="#scalability">7. 可扩展性与可维护性</a>
-  <a href="#issues">8. 问题逐条清单</a>
+  <a href="#issues">8. 问题逐条清单（初版）</a>
   <a href="#method">9. 方法与置信度</a>
 </nav>
+
+<!-- ================= RE-AUDIT ================= -->
+<section id="reaudit" style="border:2px solid #dc2626">
+<h2 style="border-color:#dc2626">★ 复审计结论（基于当前提交 <code>0056465</code>）</h2>
+<p class="lead">本次复审计针对用户修复后的 11 个新提交（含新增 <code>AccountPortalClient</code>/<code>SelfServiceCodec</code>、门户在线态与会话修复、按需登录弹层）。结论：<b>初版 5 项 P0 中仅 P0-03（Android 明文流量）与 P0-05（高分辨率）状态未变，P0-01/P0-02/P0-04 均未修复且部分被放大</b>；用户本次三处"修复"中两处存在条件写反或覆盖不全；新模块引入一批高风险问题。</p>
+
+<h3>R-0. 初版 P0 / 关键 P1 修复状态跟踪</h3>
+<table>
+<tr><th>原问题</th><th>状态</th><th>证据</th></tr>
+<tr><td>P0-01 断线自动重连阈值不可达</td><td><span class="badge p0">未修复</span></td><td><code>KeepAlive.cpp:18-19,65-90</code> 本次未改，仍连接 <code>onlineChanged</code>（仅翻转发信号），未新增 probeFinished 回调</td></tr>
+<tr><td>P0-02 Linux/Android 凭据仅 Base64</td><td><span class="badge p0">未修复·面扩大</span></td><td><code>secretstore_fallback.cpp:20-35</code> 未改；新增 <code>AccountPortalClient.cpp:164-165</code> 继续取内存明文口令</td></tr>
+<tr><td>P0-03 Android 明文流量</td><td><span class="badge p1">部分缓解</span></td><td>AndroidManifest 未改；但 <code>setPeerVerifyName</code> 试图收紧证书校验（条件写反，见 R-1）</td></tr>
+<tr><td>P0-04 C++ tr 双语串绕过 i18n</td><td><span class="badge p0">未修复·被放大</span></td><td><code>PortalClient.cpp:413</code> 新增 1 处；新增 <code>AccountPortalClient.cpp</code> 约 12 处中英合体串；本次 I18n 仅 +2 key</td></tr>
+<tr><td>P0-05 高分辨率缩放收口</td><td><span class="badge p1">部分</span></td><td><code>Theme.qml</code> 未改；<code>ProfilePage:81-89</code>、<code>PageScaffold:91</code> 仍多处硬编码像素</td></tr>
+<tr><td>P1-02 logout 先切 UI 后请求</td><td><span class="badge p2">已改善</span></td><td><code>SessionController.cpp:52-58</code> 现先 <code>stopKeepAlive()</code> 再置 loggedIn，防重连；失败回滚语义仍需复查</td></tr>
+</table>
+
+<h3>R-1. 用户本次"修复"的有效性核验</h3>
+<details class="issue p1" open><summary><span class="badge p1">P1</span><span class="id">R-01</span><span class="tag">业务 Bug</span><strong>已在线 errorNumber=7 判定：覆盖不全，空体场景仍误判</strong><span class="loc">src/core/PortalClient.cpp:270-275, 391-397, 399-418；docs/CAPTURE-GUIDE.md:96</span></summary><div class="body">
+<p><b>现象：</b>本次在 JSON 解析中新增 <code>alreadyOnline = (errNo == "7")</code> 并 <code>setState(Online)</code>；但 <code>docs/CAPTURE-GUIDE.md:96</code> 记录"已在线重复登录"实际返回<b>空体</b>，而 <code>:391-397</code> 的空体分支在 <code>parsePayload()</code> 之前就短路返回失败。</p>
+<p><b>风险：</b>最常见的"已在线空响应"场景未被修复，仍误判为失败并弹错误，与修复目标相反。</p>
+<p><b>修复方向：</b><b>收敛修复</b> —— 空体分支结合 HTTP 状态码 + 会话 Cookie + 已在线特征统一判定，不要先短路；<code>message</code> 服务端原文改走 i18n key。<b>理由：</b>判定逻辑集中在 onLoginReply，可局部调整。<span class="effort">工作量：小</span></p>
+</div></details>
+
+<details class="issue p1" open><summary><span class="badge p1">P1</span><span class="id">R-02</span><span class="tag sec">接口安全</span><strong>证书主机名校验条件写反，IP 兜底路径未生效</strong><span class="loc">src/core/PortalClient.cpp:78-85（applyPeerVerify）；:69（urlFor）；docs/PROTOCOL.md:37</span></summary><div class="body">
+<p><b>现象：</b><code>applyPeerVerify()</code> 首行 <code>if (m_cfg->host().isEmpty()) return;</code>，而 <code>urlFor()</code> 恰在 <code>host()</code> 为空时才走 IP 兜底 —— 真正需要把证书校验名对齐到域名的路径被跳过；<code>host()</code> 非空时 URL 已是域名，<code>setPeerVerifyName</code> 冗余。</p>
+<p><b>风险：</b>IP 直连模式下证书主机名不匹配仍报错，用户被迫开启"跳过证书校验"；协议文档宣称的修复未实现。<b>注意：</b>证书链/有效期校验未被关闭，故不构成新的绕过漏洞。</p>
+<p><b>修复方向：</b><b>收敛修复</b> —— 增加独立"证书校验域名"配置项，IP 模式下显式设置；同步修正 <code>:92,129</code> IP 模式写入空 Host 头的问题。<b>理由：</b>请求构造局部调整。<span class="effort">工作量：小</span></p>
+</div></details>
+
+<details class="issue p0" open><summary><span class="badge p0">P0</span><span class="id">R-03</span><span class="tag arch">架构问题</span><span class="tag">业务 Bug</span><strong>AccountPortalClient 全部接口为未接入的死代码（35 个成员不可达）</strong><span class="loc">src/core/AccountPortalClient.hpp:33-68；src/main.cpp:94-108；app/AppController.hpp:23-32；CMakeLists.txt:75,102；docs/PLAN-2026-11-22.md:68</span></summary><div class="body">
+<p><b>现象：</b>新增模块编译进产物，但 <code>main.cpp</code> 未实例化、<code>AppController</code> 无 <code>accountPortal</code> 属性；6 属性 + 5 方法 + 7 信号 + 2 类共 35 个成员全部不可达；<code>parseProfile():322-331</code> 仅清空 profile/services，是空壳。</p>
+<p><b>风险：</b>"PC 自助账户客户端"宣称能力不可用；死代码携带 HTTP 明文口令、无状态码校验、无 i18n 等风险，却无法通过 UI 验证；冗余维护且版本不一致。</p>
+<p><b>修复方向：</b><b>收敛修复</b> —— 二选一：① 若本阶段不交付则从 CMake 构建中移除，消除风险面；② 若交付则完成 parseProfile、全链路 HTTPS、状态码校验、i18n key 化后再接入 AppController。<b>理由：</b>接入点集中，不需要重构整体骨架。<span class="effort">工作量：大（交付）/ 小（移除）</span></p>
+</div></details>
+
+<details class="issue p0"><summary><span class="badge p0">P0</span><span class="id">R-04</span><span class="tag sec">接口安全</span><strong>新增 AccountPortalClient 明文 HTTP 传账号口令 + 可逆 Base64 编码</strong><span class="loc">src/core/Constants.hpp:37-38；AccountPortalClient.cpp:59-65,164-165,209-223；SelfServiceCodec.cpp:38</span></summary><div class="body">
+<p><b>现象：</b><code>SELF_SERVICE_SCHEME="http"</code> + 端口 8080，<code>loginWithCode</code> 把账号/口令经 SelfServiceCodec 转义后做<b>可逆 Base64</b> POST 明文传输。</p>
+<p><b>风险：</b>校园网公共 WiFi 可嗅探账号口令；Base64 不是加密。与上版 P0-02/P0-03 同源，属新增路径。</p>
+<p><b>修复方向：</b><b>更换骨架、重构核心</b> —— 自助门户全链路 HTTPS + 严格证书；若服务端仅 HTTP，做域名级 cleartext 收敛 + 显著用户风险提示。<b>理由：</b>涉及协议链路与服务端能力，非参数调整。<span class="effort">工作量：大</span></p>
+</div></details>
+
+<details class="issue p1"><summary><span class="badge p1">P1</span><span class="id">R-05</span><span class="tag">业务 Bug</span><strong>AccountPortalClient 缺 HTTP 状态码校验，注销失败误报成功</strong><span class="loc">src/core/AccountPortalClient.cpp:226-236,277-298,312-320</span></summary><div class="body">
+<p><b>现象：</b>登录/首页/登出三个 reply handler 均不读 <code>HttpStatusCodeAttribute</code>；<code>onLogoutReply()</code> 完全不检查 <code>reply->error()</code> 即无条件 <code>clearSession()</code> + 提示已注销。</p>
+<p><b>风险：</b>4xx/5xx 可判为登录成功；500 被解释为会话过期强制重登；注销失败被误报成功而会话仍有效。</p>
+<p><b>修复方向：</b><b>收敛修复</b> —— 复用 PortalClient 的"2xx + 体特征"判定，登出按 error/状态码分支。<b>理由：</b>判定逻辑局部化。<span class="effort">工作量：中</span></p>
+</div></details>
+
+<details class="issue p1"><summary><span class="badge p1">P1</span><span class="id">R-06</span><span class="tag arch">架构问题</span><span class="tag">业务 Bug</span><strong>登录拦截被主动弱化为"按需弹层"，与原始需求冲突</strong><span class="loc">qml/Main.qml:28-51,74-104；src/app/SessionController.cpp:48-50,52-58；docs/PLAN-2026-11-22.md:24-28,53-60,68</span></summary><div class="body">
+<p><b>现象：</b><code>mainLoader.active:true</code> 主框架无条件常驻，概览/设备/我的/远程设备/高级设置/事件日志/诊断/关于 8 页未登录均可访问；编辑/删除设备、保存高级配置、导出日志等受保护操作无门禁；<code>loginPromptOpen</code> 仅控制遮罩，无 <code>loggedIn</code> 失效联动。</p>
+<p><b>风险：</b>直接违反原需求"除登录页外所有页面前置登录校验、失效自动切回登录页"。文档确认这是用户主动的产品形态调整，但未显式声明覆盖原需求，验收时易被判缺陷。</p>
+<p><b>修复方向：</b><b>更换骨架、重构核心</b>（若要恢复门控）或 <b>收敛修复</b>（保留新形态）：建立统一 <code>requiresLogin</code> 守卫，受保护 action 执行前校验并登录后续做原动作；<code>loggedInChanged(false)</code> → <code>promptLogin()</code>。<b>理由：</b>涉及路由与全局状态机，骨架级改动。<span class="effort">工作量：大</span></p>
+</div></details>
+
+<details class="issue p1"><summary><span class="badge p1">P1</span><span class="id">R-07</span><span class="tag">业务 Bug</span><strong>退出登录后三处状态残留</strong><span class="loc">SessionController.cpp:52-58；DeviceController.cpp:54；AccountPortalClient.cpp:333；qml/LoginPage.qml:106,129；Main.qml:64-66</span></summary><div class="body">
+<p><b>现象：</b>logout 未清理门户/账户中心会话、未清内存密码、页面栈 <code>stack.currentIndex</code> 不复位；重新弹登录层时账号密码回填。</p>
+<p><b>风险：</b>共享设备上凭据与会话残留；退出后仍停留在高级设置等页面。</p>
+<p><b>修复方向：</b><b>收敛修复</b> —— logout 统一清理三套会话、按 rememberPassword 清密码、复位 stack 到 0。<b>理由：</b>集中在登出路径。<span class="effort">工作量：中</span></p>
+</div></details>
+
+<details class="issue p1"><summary><span class="badge p1">P1</span><span class="id">R-08</span><span class="tag">i18n 国际化</span><strong>P0-04 被放大：新增约 13 处中英合体串 + 字符串 contains 反推语义</strong><span class="loc">AccountPortalClient.cpp:112-319（~12 处）；PortalClient.cpp:413（新增）；SessionController.cpp:133-146；AuthController.cpp:12-20</span></summary><div class="body">
+<p><b>现象：</b>新增 <code>tr("Already online / 账号已在线: ")</code> 及 AccountPortalClient 约 12 处 <code>tr("English / 中文")</code>；<code>reasonForMessage()</code> 用 <code>message.contains("Missing username or password")</code>/<code>contains("403")</code> 反推原因。</p>
+<p><b>风险：</b>四语言界面进一步失效；文案变更/多语言/任意含 403 字符串都会误判 reason。</p>
+<p><b>修复方向：</b><b>更换骨架、重构核心</b> —— 建立 ErrorCode→i18n key 结构化协议，<code>I18n::text(key, args)</code> 支持参数，彻底取消 contains 匹配（与上版 P0-04 合并）。<b>理由：</b>跨模块协议改造。<span class="effort">工作量：大</span></p>
+</div></details>
+
+<details class="issue p1"><summary><span class="badge p1">P1</span><span class="id">R-09</span><span class="tag">UI 适配</span><strong>AppDialog 移除 maximumHeight 后仍有小窗口溢出风险</strong><span class="loc">qml/components/AppDialog.qml:23,31-32,88-104；docs/PLAN-2026-11-22.md:73</span></summary><div class="body">
+<p><b>现象：</b>内容区用 <code>Math.max(th.dp(180), parent.height - th.sp16)</code> 设 180dp 硬下限；padding×2 + footer 未计入可用高度扣减。</p>
+<p><b>风险：</b>窗口高度小于 180dp+sp16 或叠加 footer 后，Dialog 仍可能超出屏幕（内容有 ScrollView 兜底但外框溢出）。</p>
+<p><b>修复方向：</b><b>收敛修复</b> —— 下限改为按 parent.height 比例，Dialog 自身加 <code>height: Math.min(..., parent.height - th.sp8)</code>。<b>理由：</b>样式/布局局部修正。<span class="effort">工作量：小</span></p>
+</div></details>
+
+<details class="issue p1"><summary><span class="badge p1">P1</span><span class="id">R-10</span><span class="tag">编码规范</span><span class="tag sec">接口安全</span><strong>SelfServiceCodec 容错与重复实现隐患</strong><span class="loc">src/core/SelfServiceCodec.cpp:38；AccountPortalClient.cpp:178-207,68-84</span></summary><div class="body">
+<p><b>现象：</b><code>escaped.toLatin1().toBase64()</code> 隐含"所有 &gt;255 字符已转义"，异常代理对会静默变 '?'；<code>AccountPortalClient</code> 重复实现 charset 归一化且能力弱于 <code>PortalClient::normalizeCharset</code>；body 先百分号编码再交 FormEncoding 二次序列化。</p>
+<p><b>风险：</b>非预期码位生成错误口令无报错；GBK 响应乱码；编解码规则双源漂移。</p>
+<p><b>修复方向：</b><b>收敛修复</b> —— 显式逐 QChar 取低 8 位并对异常码位报错；抽公共 <code>HttpText::decode()</code>；直接传字段给 FormEncoding。<b>理由：</b>算法骨架正确，属健壮性加固。<span class="effort">工作量：中</span></p>
+</div></details>
+
+<h3>R-2. 本次复审计新增问题清单（10 项）</h3>
+<p class="tiny">R-01 ~ R-10 已在上文逐条展开：P0 级 2 项（R-03 死代码、R-04 明文口令），P1 级 8 项（R-01/R-02/R-05/R-06/R-07/R-08/R-09/R-10）。</p>
+
+<h3>R-3. 文档一致性复核（本次新发现）</h3>
+<table>
+<tr><th>文档</th><th>宣称</th><th>实际</th><th>状态</th></tr>
+<tr><td>GAP-REPORT.md:117-120</td><td>UTF-8 未显式固定</td><td><code>Logger.cpp:49,70</code> 已 setEncoding(Utf8)，REQUIREMENTS:114 标 ✅</td><td><span class="badge p1">不一致</span></td></tr>
+<tr><td>GAP-REPORT.md:38 vs README.md:133</td><td>Android 无可安装 apk / 已产出 Debug APK</td><td>仓库 artifacts/android 仅 .gitkeep</td><td><span class="badge p1">自相矛盾</span></td></tr>
+<tr><td>GAP-REPORT.md:90</td><td>高级配置无 QML 入口</td><td><code>AdvancedSettingsPage.qml:69-289</code> 完整入口</td><td><span class="badge p1">不一致</span></td></tr>
+<tr><td>GAP-REPORT.md:66 vs REQUIREMENTS.md:115</td><td>POST 仍 UTF-8 / GBK 已实现</td><td>FormEncoding 支持三编码</td><td><span class="badge p1">不一致</span></td></tr>
+<tr><td>GAP-REPORT.md:49-52</td><td>失败阈值已实现</td><td>代码有阈值但 P0-01 使其不可达</td><td><span class="badge p0">结论失效</span></td></tr>
+<tr><td>PLAN-2026-11-22.md:3,144-151</td><td>阶段 C 进行中 / 8 决策未定</td><td>阶段 A/B 大部已落地</td><td><span class="badge p2">状态滞后</span></td></tr>
+<tr><td>README.md:81-84,221-224</td><td>文档索引仅 2 份</td><td>新增 6 份文档无入口</td><td><span class="badge p2">索引缺失</span></td></tr>
+</table>
+
+<h3>R-4. 符合原需求 / 偏离原需求</h3>
+<div class="okbox"><b>符合：</b>新增 QML 文本全部走 i18n 且四语言齐全；窗口/卡片/表单宽度用 <code>th.dp()</code>；PageScaffold/LoginPage/AppDialog 有滚轮+滚动条；账号/密码/记住密码/自动登录逻辑保留；证书放行仍是配置开关；保活开关与随机抖动保留；core 未反向依赖 app/platform；新增代码 reply 均 deleteLater、超时完整；SelfServiceCodec 算法与 ssv.js 吻合且无系统 locale 依赖。</div>
+<div class="warn"><b>偏离：</b>① 所有页面前置登录校验 → 改为按需弹层（8 页免登录）；② 登录失效自动切回 → 未实现；③ 退出后会话/密码/页面栈残留；④ 验证码字段未落地；⑤ IP 字段移入设备档案（形态变化）；⑥ <code>ProfilePage:81-89</code>/<code>PageScaffold:91</code> 仍硬编码像素；⑦ AppDialog 小窗口溢出；⑧ 登录弹层登录后不续做原动作（交互断点）；⑨ 文档宣称失真（见 R-3）。</div>
+</section>
 
 <!-- ================= 0 ================= -->
 <section id="overview">
