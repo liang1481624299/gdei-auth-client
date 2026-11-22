@@ -66,8 +66,10 @@ QByteArray randomBytes(int size) {
 }
 
 QByteArray deriveKey(const QByteArray& salt) {
-    return QPasswordDigestor::deriveKey(QPasswordDigestor::Algorithm::Pbkdf2Sha256,
-                                        appPepper(), salt, kKdfIterations, kKeyLength);
+    // Qt6: QPasswordDigestor 属 QtNetwork，派生接口为 deriveKeyPbkdf2，
+    // 算法枚举取自 QCryptographicHash（旧版 deriveKey/Algorithm 已移除）。
+    return QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256,
+                                              appPepper(), salt, kKdfIterations, kKeyLength);
 }
 
 // HMAC-SHA256 作为 PRF 生成密钥流（CTR 风格，每块 32 字节）。
