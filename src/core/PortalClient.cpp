@@ -261,9 +261,10 @@ QString PortalClient::buildForm(const QString& user, const QString& pass) const 
 }
 
 void PortalClient::parsePayload(const QString& text, bool& ok, QString& message,
-                                bool& alreadyOnline) const {
+                                bool& alreadyOnline, bool& offline) const {
     ok = false;
     alreadyOnline = false;
+    offline = false;
     message = text.trimmed();
     const QString trimmed = text.trimmed();
     if (trimmed.isEmpty()) return;
@@ -281,8 +282,10 @@ void PortalClient::parsePayload(const QString& text, bool& ok, QString& message,
     ok = errNo == "1";
     // errorNumber=7：当前账号已在线，重复登录返回 "User is already online."；
     // 视为已达成在线态，而非普通认证失败。
-    // errorNumber=7: account already online; treat as online, not a plain failure.
+    // errorNumber=8：已离线，下线 t=lo 成功后回此码；对下线动作即成功。
+    // 7 = already online (repeat login); 8 = offline (logout success).
     alreadyOnline = errNo == "7";
+    offline = errNo == "8";
 
     const QString ed = obj.value("e_d").toString();
     if (!ed.isEmpty() && obj.contains(ed)) {
@@ -429,9 +432,10 @@ void PortalClient::onLoginReply() {
 
     bool ok = false;
     bool already = false;
+    bool offline = false;
     QString message;
     parsePayload(decodeBody(raw, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray()),
-                 ok, message, already);
+                 ok, message, already, offline);
     if (ok) {
         setState(AuthState::Online);
         setOnline(true);
@@ -458,14 +462,18 @@ void PortalClient::onLogoutReply() {
 
     bool ok = false;
     bool already = false;
+    bool offline = false;
     QString message;
     const QByteArray rawLogout = reply->readAll();
     parsePayload(decodeBody(rawLogout, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray()),
-                 ok, message, already);
+                 ok, message, already, offline);
+    // 下线成功回 errorNumber=8（User is offline）；与 1 一样视为会话已释放。
+    // Logout success returns errorNumber=8 (User is offline); treat it like 1 as released.
+    const bool loggedOut = ok || offline;
     setState(AuthState::Offline);
     setOnline(false);
-    log(LogLevel::Info, ok ? tr("Logged out / 已下线") : tr("Logout result / 注销结果: ") + message);
-    emit loginFinished(ok, message);
+    log(LogLevel::Info, loggedOut ? tr("Logged out / 已下线") : tr("Logout result / 注销结果: ") + message);
+    emit loginFinished(loggedOut, message);
 }
 
 void PortalClient::onProbeReply() {

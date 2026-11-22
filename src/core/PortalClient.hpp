@@ -79,7 +79,7 @@ private:
     QString detectCharset(const QByteArray& contentType, const QByteArray& body) const;
     QString decodeBody(const QByteArray& raw, const QByteArray& contentType) const;
     void parsePayload(const QString& text, bool& ok, QString& message,
-                      bool& alreadyOnline) const;
+                      bool& alreadyOnline, bool& offline) const;
     void setState(AuthState s);
     void setOnline(bool v);
     void log(LogLevel level, const QString& message);
