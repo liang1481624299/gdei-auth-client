@@ -257,17 +257,14 @@ endif()
 # CPack / `cmake --install` 路径的桌面部署（Windows / macOS / Linux 通用）。
 # Android 由 apk target 调用 androiddeployqt，不支持此桌面部署函数。
 set(_gc_deploy_script "")
-if(COMMAND qt_generate_deploy_qml_app_script AND NOT ANDROID)
-    if(APPLE)
-        qt_generate_deploy_qml_app_script(
-            TARGET gdei-connect
-            OUTPUT_SCRIPT _gc_deploy_script
-            MACOS_BUNDLE_POST_PROCESSING)
-    else()
-        qt_generate_deploy_qml_app_script(
-            TARGET gdei-connect
-            OUTPUT_SCRIPT _gc_deploy_script)
-    endif()
+# 该宏的参数集合随 Qt 版本变化：6.4 旧宏不接受 OUTPUT_SCRIPT，6.5 尚不识别
+# MACOS_BUNDLE_POST_PROCESSING；且生成的脚本只在 cpack/install 阶段使用，CI 的
+# Configure/Build 并不依赖。旧版 Qt 直接跳过，运行时部署交由各平台 packaging/ 脚本。
+if(COMMAND qt_generate_deploy_qml_app_script AND NOT ANDROID
+   AND QT_VERSION_MAJOR EQUAL 6 AND QT_VERSION_MINOR GREATER_EQUAL 5)
+    qt_generate_deploy_qml_app_script(
+        TARGET gdei-connect
+        OUTPUT_SCRIPT _gc_deploy_script)
 endif()
 
 # ---- 安装 / Install ----
