@@ -317,5 +317,43 @@ PageScaffold {
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
             }
         }
+
+        ColumnLayout {
+            spacing: th.sp4
+            Layout.fillWidth: true
+
+            PrimaryButton {
+                text: (app.i18n.lang, app.i18n.text("action.resetDefaults"))
+                variant: "danger"
+                bg: "transparent"
+                leadingIcon: "refresh"
+                Layout.fillWidth: true
+                onClicked: resetDialog.open()
+            }
+            StatusBadge {
+                id: resetFeedback
+                property bool saved: true
+                text: (app.i18n.lang, app.i18n.text(saved ? "config.resetDone" : "config.resetFailed"))
+                iconName: saved ? "check" : "info"
+                tint: saved ? th.success : th.danger
+                visible: false
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
+            }
+        }
+    }
+
+    property var resetDialog: AppDialog {
+        title: (app.i18n.lang, app.i18n.text("config.resetTitle"))
+        message: (app.i18n.lang, app.i18n.text("config.resetMessage"))
+        confirmText: (app.i18n.lang, app.i18n.text("action.resetDefaults"))
+        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
+        showCancel: true
+        destructive: true
+        onAccepted: {
+            resetFeedback.saved = app.config.resetToDefaults();
+            // 复位后界面语言一并回到默认（简体中文）。
+            app.i18n.setLang(0);
+            resetFeedback.visible = true;
+        }
     }
 }

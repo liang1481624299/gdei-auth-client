@@ -62,6 +62,11 @@ void I18n::buildDictionaries() {
     zhCN["logout.success"] = "已下线";
     zhCN["config.saved"] = "配置已保存";
     zhCN["config.saveFailed"] = "配置保存失败，请检查存储权限";
+    zhCN["action.resetDefaults"] = "恢复默认设置";
+    zhCN["config.resetTitle"] = "恢复默认设置？";
+    zhCN["config.resetMessage"] = "将清空已保存的账号与密码，并把所有选项还原为出厂默认值；已添加的设备配置会保留。";
+    zhCN["config.resetDone"] = "已恢复默认设置";
+    zhCN["config.resetFailed"] = "恢复默认失败，请检查存储权限";
     zhCN["config.missingCred"] = "未配置账号或密码";
     zhCN["keepalive.started"] = "保活已启动";
     zhCN["keepalive.stopped"] = "保活已停止";
@@ -280,6 +285,11 @@ void I18n::buildDictionaries() {
     zhTW["logout.success"] = "已下線";
     zhTW["config.saved"] = "設定已儲存";
     zhTW["config.saveFailed"] = "設定儲存失敗，請檢查儲存權限";
+    zhTW["action.resetDefaults"] = "恢復預設設定";
+    zhTW["config.resetTitle"] = "恢復預設設定？";
+    zhTW["config.resetMessage"] = "將清空已儲存的帳號與密碼，並把所有選項還原為出廠預設值；已新增的裝置設定檔會保留。";
+    zhTW["config.resetDone"] = "已恢復預設設定";
+    zhTW["config.resetFailed"] = "恢復預設失敗，請檢查儲存權限";
     zhTW["config.missingCred"] = "未設定帳號或密碼";
     zhTW["keepalive.started"] = "保活已啟動";
     zhTW["keepalive.stopped"] = "保活已停止";
@@ -498,6 +508,11 @@ void I18n::buildDictionaries() {
     enGB["logout.success"] = "Logged out";
     enGB["config.saved"] = "Config saved";
     enGB["config.saveFailed"] = "Failed to save settings. Check storage permissions.";
+    enGB["action.resetDefaults"] = "Reset to defaults";
+    enGB["config.resetTitle"] = "Reset settings to defaults?";
+    enGB["config.resetMessage"] = "Saved credentials will be cleared and all options restored to factory defaults. Your saved device profiles will be kept.";
+    enGB["config.resetDone"] = "Settings restored to defaults";
+    enGB["config.resetFailed"] = "Could not reset settings. Check storage permissions.";
     enGB["config.missingCred"] = "Username or password not set";
     enGB["keepalive.started"] = "Keep-alive started";
     enGB["keepalive.stopped"] = "Keep-alive stopped";
@@ -716,6 +731,11 @@ void I18n::buildDictionaries() {
     ja["logout.success"] = "ログアウトしました";
     ja["config.saved"] = "設定を保存しました";
     ja["config.saveFailed"] = "設定の保存に失敗しました。ストレージ権限を確認してください。";
+    ja["action.resetDefaults"] = "初期設定に戻す";
+    ja["config.resetTitle"] = "初期設定に戻しますか？";
+    ja["config.resetMessage"] = "保存済みのアカウントとパスワードを消去し、すべてのオプションを初期値に戻します。登録済みのデバイスプロファイルは保持されます。";
+    ja["config.resetDone"] = "初期設定に戻しました";
+    ja["config.resetFailed"] = "初期設定への復元に失敗しました。ストレージ権限を確認してください。";
     ja["config.missingCred"] = "ユーザー名またはパスワードが未設定です";
     ja["keepalive.started"] = "キープアライブ開始";
     ja["keepalive.stopped"] = "キープアライブ停止";

@@ -77,6 +77,11 @@ public:
     Q_INVOKABLE void load();
     // 返回是否成功落盘（含口令安全存储），供 UI 显示保存结果。
     Q_INVOKABLE bool save();
+    // 恢复出厂默认设置：复位全部全局选项、清除已保存口令与自有配置键，
+    // 保留 localProfiles 设备配置组。返回是否成功落盘。
+    // Restore factory defaults: reset all global options, drop the stored
+    // password and owned settings keys, keep the localProfiles group.
+    Q_INVOKABLE bool resetToDefaults();
 
 signals:
     void usernameChanged();

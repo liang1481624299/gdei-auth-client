@@ -213,4 +213,56 @@ bool ConfigStore::save() {
     return settingsOk && secretOk;
 }
 
+bool ConfigStore::resetToDefaults() {
+    // 复位到出厂默认值 / Restore factory defaults.
+    m_username.clear();
+    m_password.clear();
+    m_rememberPassword = false;
+    m_autoLogin = false;
+    m_lang = Lang::ZhCN;
+    m_host = constants::DEFAULT_HOST;
+    m_ip = constants::DEFAULT_IP;
+    m_nasip = constants::DEFAULT_NASIP;
+    m_allowInsecureSsl = false;
+    m_keepaliveMinSec = constants::KEEPALIVE_MIN_SEC;
+    m_keepaliveMaxSec = constants::KEEPALIVE_MAX_SEC;
+    m_offlineFailThreshold = constants::OFFLINE_FAIL_THRESHOLD;
+    m_connectTimeoutMs = constants::CONNECT_TIMEOUT_MS;
+    m_probeTimeoutMs = constants::PROBE_TIMEOUT_MS;
+    m_probeUrl = constants::NCSI_URL;
+    m_healthUrl = constants::HEALTH_URL;
+    m_requestEncoding = QStringLiteral("UTF-8");
+
+    // 仅移除全局设置自身写入的顶层键；localProfiles 设备配置组不在此列，予以保留。
+    // Remove only the keys owned by global settings; keep the localProfiles group.
+    QSettings s(constants::ORG_NAME, constants::APP_NAME);
+    static const QStringList ownedKeys = {
+        QStringLiteral("username"),          QStringLiteral("remember_password"),
+        QStringLiteral("auto_login"),        QStringLiteral("lang"),
+        QStringLiteral("host"),              QStringLiteral("ip"),
+        QStringLiteral("nasip"),             QStringLiteral("allow_insecure_ssl"),
+        QStringLiteral("keepalive_min_sec"), QStringLiteral("keepalive_max_sec"),
+        QStringLiteral("offline_fail_threshold"), QStringLiteral("connect_timeout_ms"),
+        QStringLiteral("probe_timeout_ms"),  QStringLiteral("probe_url"),
+        QStringLiteral("health_url"),        QStringLiteral("request_encoding"),
+        QStringLiteral("password_ob")
+    };
+    for (const QString& key : ownedKeys) s.remove(key);
+    s.sync();
+
+    // 清除已保存口令 / drop the stored credential.
+    SecretStore::instance().clear(QStringLiteral("password"));
+
+    emit usernameChanged(); emit passwordChanged();
+    emit rememberPasswordChanged(); emit autoLoginChanged();
+    emit langChanged(); emit hostChanged(); emit ipChanged(); emit nasipChanged();
+    emit allowInsecureSslChanged();
+    emit keepaliveMinSecChanged(); emit keepaliveMaxSecChanged(); emit offlineFailThresholdChanged();
+    emit connectTimeoutMsChanged(); emit probeTimeoutMsChanged();
+    emit probeUrlChanged(); emit healthUrlChanged(); emit requestEncodingChanged();
+
+    // 落盘默认值并返回存储状态 / persist defaults and report storage status.
+    return save();
+}
+
 } // namespace gdei
