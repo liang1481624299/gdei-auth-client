@@ -22,6 +22,9 @@ inline const QString DEFAULT_SCHEME = "https";
 inline constexpr int DEFAULT_PORT = 443;
 
 inline const QString LOGIN_PAGE_PATH  = "/portal/2021/login.jsp?nasip=";
+// Referer 头只引用登录页本身，不带 nasip 查询串（与浏览器实测一致）。
+// Referer header references the login page without the nasip query string.
+inline const QString LOGIN_PAGE_REFERRER = "/portal/2021/login.jsp";
 inline const QString ENTRY_PAGE_PATH  = "/portal?nasip=";
 inline const QString LOGIN_ACTION_PATH  = "/portal/pws?t=li&ifEmailAuth=false";
 inline const QString LOGOUT_ACTION_PATH = "/portal/pws?t=lo";

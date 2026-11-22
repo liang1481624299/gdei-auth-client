@@ -101,7 +101,7 @@ QNetworkReply* PortalClient::sendRequest(const QString& method,
     req.setRawHeader("Host", hostHeader().toUtf8());
     req.setRawHeader("Referer",
         QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, hostHeader(),
-            constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
+            constants::LOGIN_PAGE_REFERRER).toUtf8());
     req.setTransferTimeout(m_cfg->connectTimeoutMs());
     applyPeerVerify(req, url.host());
 
@@ -109,6 +109,10 @@ QNetworkReply* PortalClient::sendRequest(const QString& method,
         req.setHeader(QNetworkRequest::ContentTypeHeader,
             "application/x-www-form-urlencoded; charset=UTF-8");
         req.setRawHeader("X-Requested-With", "XMLHttpRequest");
+        // 同源 jQuery ajax 浏览器会自动带 Origin；补齐以贴近真实请求头。
+        // Same-origin jQuery ajax sends Origin automatically; mirror it.
+        req.setRawHeader("Origin",
+            QString("%1://%2").arg(constants::DEFAULT_SCHEME, hostHeader()).toUtf8());
     }
 
     QNetworkReply* reply = nullptr;
@@ -139,12 +143,14 @@ QNetworkReply* PortalClient::postConfiguredForm(const QString& path, const QStri
     req.setRawHeader("Host", hostHeader().toUtf8());
     req.setRawHeader("Referer",
         QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, hostHeader(),
-            constants::LOGIN_PAGE_PATH + m_cfg->nasip()).toUtf8());
+            constants::LOGIN_PAGE_REFERRER).toUtf8());
     req.setTransferTimeout(m_cfg->connectTimeoutMs());
     applyPeerVerify(req, url.host());
     req.setHeader(QNetworkRequest::ContentTypeHeader,
         QString("application/x-www-form-urlencoded; charset=%1").arg(encoded.charset));
     req.setRawHeader("X-Requested-With", "XMLHttpRequest");
+    req.setRawHeader("Origin",
+        QString("%1://%2").arg(constants::DEFAULT_SCHEME, hostHeader()).toUtf8());
     return m_nam->post(req, encoded.body);
 }
 
@@ -228,7 +234,9 @@ QString PortalClient::buildForm(const QString& user, const QString& pass) const 
     fields << qMakePair(QString::fromLatin1(constants::FIELD_PASSWORD), pwdB64);
     fields << qMakePair(QString::fromLatin1(constants::FIELD_USERURL), QString());
     fields << qMakePair(QString::fromLatin1(constants::FIELD_USERIP), QString());
-    fields << qMakePair(QString::fromLatin1(constants::FIELD_BASIP), m_cfg->nasip());
+    // basip 隐藏域在登录页 HTML 中 value 即为空；服务端按来源 IP 鉴权，不填 NAS 地址。
+    // The basip hidden field renders empty; the server authenticates by source IP.
+    fields << qMakePair(QString::fromLatin1(constants::FIELD_BASIP), QString());
     fields << qMakePair(QString::fromLatin1(constants::FIELD_LANGUAGE), constants::DEFAULT_LANGUAGE);
     fields << qMakePair(QString::fromLatin1(constants::FIELD_USERS_MAC), constants::DEFAULT_NULL);
     fields << qMakePair(QString::fromLatin1(constants::FIELD_WLAN_NASID), QString());

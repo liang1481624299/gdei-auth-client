@@ -50,7 +50,7 @@ DEFAULT_FIELDS = [
     ("userPwd", ""),
     ("userurl", ""),
     ("userip", ""),
-    ("basip", DEFAULT_NASIP),
+    ("basip", ""),
     ("language", "English"),
     ("usermac", "null"),
     ("wlannasid", ""),
@@ -264,7 +264,8 @@ def build_form(cfg: dict, username: str, password: str, userip: str = "",
     form["userPwd"] = base64.b64encode(password.encode("utf-8")).decode("ascii")
     form["userip"] = userip
     form["userurl"] = userurl
-    form["basip"] = cfg.get("nasip") or DEFAULT_NASIP
+    # basip 隐藏域登录页渲染即为空，服务端按来源 IP 鉴权。
+    # basip renders empty on the login page; the server authenticates by source IP.
     # 按默认顺序输出
     ordered = [(k, form.get(k, "")) for k, _ in fields]
     return urllib.parse.urlencode(ordered)
