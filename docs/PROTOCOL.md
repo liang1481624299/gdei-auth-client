@@ -38,7 +38,9 @@
 - 用户名默认不带 `@域名` 后缀；若页面选择了服务类型，前端会把用户名拼成 `用户名@服务类型`（当前部署服务类型为空，提交为纯用户名）。`userip` 留空，由服务端按来源 IP 识别。
 - 实现位置：`src/core/PortalClient.cpp`（`sendRequest` / `extractCsrf` / `buildForm` / `parsePayload`）。
 
-### 表单字段（顺序与浏览器 `serializeArray()` 一致）
+### 上线表单字段（顺序与浏览器 `serializeArray()` 一致）
+
+> 下线 `t=lo` 复用同一字段集合，但 `userName` / `userPwd` 为空（见 3.0 节）。
 
 | 字段 | 默认值 / 说明 |
 |---|---|
@@ -81,9 +83,9 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 2. 再做 **URL 解码**；
 3. 得到 JSON。
 
-- `errorNumber == "1"`：上线成功。
+- `errorNumber == "1"`：上线成功；在线状态下**手动下线成功**同样回此码（单键 `{"errorNumber":"1"}`，`Content-Length: 44`）。
 - `errorNumber == "7"`：**已在线重复登录**（`portServErrorCode="2"`，`portServErrorCodeDesc="User is already online."`）。上线分支应识别为"当前已在线"，而非普通认证失败。
-- `errorNumber == "8"`：**已离线**（`portServErrorCode="2"`，`portServErrorCodeDesc="User is offline."`）。下线 `t=lo` 成功后回此码；对下线动作即视为成功。
+- `errorNumber == "8"`：**本就离线 / 会话已释放**（早期截图记录 `portServErrorCodeDesc="User is offline."`）。作为下线成功的兼容分支保留；该报文结构尚未用完整 HAR 复核，真实下线成功以 `1` 为准。
 - 失败文案：取 `e_d` 字段指向的键对应的值；其次取 `errorMessage`。
 - **空响应分支**：已在线会话下重复登录，或当前网络已旁路认证时，上线 / 保活三步（入口 GET → 登录页 GET → `POST pws`）均可能返回 200 空体、无 Set-Cookie；这属于"当前已在线 / 旁路"环境的正常现象，不等同于 app 请求构造错误。
 
@@ -101,7 +103,15 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 }
 ```
 
-已离线（下线 `t=lo` 后，`Content-Length: 44`）：
+下线成功（在线状态手动点击下线，`t=lo`，浏览器 200，`Content-Length: 44`，2026-11-22 HAR 实测）：
+
+```json
+{
+  "errorNumber": "1"
+}
+```
+
+本就离线 / 兼容码（早期截图记录，报文结构待完整 HAR 复核）：
 
 ```json
 {
@@ -113,7 +123,7 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 }
 ```
 
-> 下线 `POST /portal/pws?t=lo` 与上线提交**同一套完整表单**（含 `userName` / `userPwd` / `basip` 等），且 **Request cookies 为空**（实测 "No request cookies were sent"），再次印证 captive 认证无状态、不依赖 `hello*` 记忆 Cookie。
+> 下线 `POST /portal/pws?t=lo` 复用上线的隐藏域集合，但 **`userName` / `userPwd` 实测为空**（在线会话由服务端按来源 IP / 会话释放，不提交凭据）；`basip` / `userip` 同样为空。**Request cookies 为空**（实测 "No request cookies were sent"），再次印证 captive 认证无状态、不依赖 `hello*` 记忆 Cookie。
 
 ### 3.1 成功报文字段（`pl` 参数 / 响应体 JSON，2026-11-22 实测）
 
