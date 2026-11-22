@@ -42,7 +42,7 @@ Rectangle {
 
         GridLayout {
             width: parent.width
-            columns: root.width < 340 ? 1 : 2
+            columns: root.width < th.dp(340) ? 1 : 2
             columnSpacing: th.sp4
             rowSpacing: th.sp2
 
@@ -57,7 +57,7 @@ Rectangle {
             StatusBadge {
                 text: root.catText(root.device.category)
                 tint: root.catColor(root.device.category)
-                Layout.alignment: Qt.AlignVCenter | (root.width < 340 ? Qt.AlignLeft : Qt.AlignRight)
+                Layout.alignment: Qt.AlignVCenter | (root.width < th.dp(340) ? Qt.AlignLeft : Qt.AlignRight)
             }
         }
 

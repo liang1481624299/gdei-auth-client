@@ -10,12 +10,17 @@ Window {
     id: root
     Theme { id: th }
 
-    width: Math.min(1040, Screen.desktopAvailableWidth,
-                    Math.max(320, Math.round(Screen.desktopAvailableWidth * 0.90)))
-    height: Math.min(860, Screen.desktopAvailableHeight,
-                     Math.max(400, Math.round(Screen.desktopAvailableHeight * 0.86)))
-    minimumWidth: Math.min(320, Screen.desktopAvailableWidth)
-    minimumHeight: Math.min(400, Screen.desktopAvailableHeight)
+    readonly property int maxWindowWidth: th.dp(1040)
+    readonly property int maxWindowHeight: th.dp(860)
+    readonly property int minWindowWidth: th.dp(320)
+    readonly property int minWindowHeight: th.dp(400)
+
+    width: Math.min(maxWindowWidth, Screen.desktopAvailableWidth,
+                    Math.max(minWindowWidth, Math.round(Screen.desktopAvailableWidth * 0.90)))
+    height: Math.min(maxWindowHeight, Screen.desktopAvailableHeight,
+                     Math.max(minWindowHeight, Math.round(Screen.desktopAvailableHeight * 0.86)))
+    minimumWidth: Math.min(minWindowWidth, Screen.desktopAvailableWidth)
+    minimumHeight: Math.min(minWindowHeight, Screen.desktopAvailableHeight)
     visible: true
     color: th.window
     title: (app.i18n.lang, app.i18n.text("app.title"))

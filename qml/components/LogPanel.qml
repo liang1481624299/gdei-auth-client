@@ -9,7 +9,7 @@ Card {
     readonly property Theme th: Theme {}
 
     property real viewportHeight: 220
-    readonly property bool compact: width < 480
+    readonly property bool compact: width < th.compactBreakpoint
 
     function levelColor(level) {
         if (level === 1) return th.primary;
@@ -75,13 +75,17 @@ Card {
                 spacing: 2
                 model: app.logs.entries
                 boundsBehavior: Flickable.StopAtBounds
+                QQC.ScrollBar.vertical: QQC.ScrollBar {
+                    policy: QQC.ScrollBar.AsNeeded
+                    interactive: true
+                }
                 property bool followTail: true
 
                 WheelHandler {
                     onWheel: function(event) {
                         var delta = event.pixelDelta.y;
                         if (Math.abs(delta) < 0.01)
-                            delta = event.angleDelta.y / 120 * 96;
+                            delta = event.angleDelta.y / 120 * th.wheelStep;
                         if (Math.abs(delta) < 0.01)
                             return;
 

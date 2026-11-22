@@ -17,7 +17,8 @@ QQC.Dialog {
 
     parent: QQC.Overlay.overlay
     anchors.centerIn: parent
-    width: Math.min(420, Math.max(0, parent.width - th.sp8))
+    width: Math.min(th.dp(420), Math.max(0, parent.width - th.sp8))
+    maximumHeight: Math.max(th.dp(180), parent.height - th.sp16)
     modal: true
     focus: true
     padding: th.sp10
@@ -25,33 +26,61 @@ QQC.Dialog {
 
     QQC.Overlay.modal: Rectangle { color: th.overlay }
 
-    contentItem: ColumnLayout {
-        spacing: th.sp4
+    contentItem: QQC.ScrollView {
+        id: dialogScroll
+        clip: true
+        contentWidth: availableWidth
+        contentHeight: dialogColumn.implicitHeight
+        QQC.ScrollBar.vertical.policy: QQC.ScrollBar.AsNeeded
+        QQC.ScrollBar.horizontal.policy: QQC.ScrollBar.AlwaysOff
+        background: Rectangle { color: "transparent" }
+        Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
 
-        QQC.Label {
-            text: dialog.title
-            color: th.text
-            font.pixelSize: th.fontTitle3
-            font.weight: th.weightSemibold
-            wrapMode: Text.Wrap
-            visible: text.length > 0
-            Layout.fillWidth: true
+        WheelHandler {
+            onWheel: function(event) {
+                var delta = event.pixelDelta.y;
+                if (Math.abs(delta) < 0.01)
+                    delta = event.angleDelta.y / 120 * th.wheelStep;
+                if (Math.abs(delta) < 0.01)
+                    return;
+                var flickable = dialogScroll.contentItem;
+                var maximumY = Math.max(0, flickable.contentHeight - flickable.height);
+                var nextY = Math.max(0, Math.min(maximumY, flickable.contentY - delta));
+                event.accepted = Math.abs(nextY - flickable.contentY) >= 0.01;
+                flickable.contentY = nextY;
+            }
         }
-        QQC.Label {
-            text: dialog.message
-            color: th.text
-            font.pixelSize: th.fontBody
-            wrapMode: Text.Wrap
-            visible: text.length > 0
-            Layout.fillWidth: true
-        }
-        QQC.Label {
-            text: dialog.detail
-            color: th.muted
-            font.pixelSize: th.fontFootnote
-            wrapMode: Text.WrapAnywhere
-            visible: text.length > 0
-            Layout.fillWidth: true
+
+        ColumnLayout {
+            id: dialogColumn
+            width: dialogScroll.availableWidth
+            spacing: th.sp4
+
+            QQC.Label {
+                text: dialog.title
+                color: th.text
+                font.pixelSize: th.fontTitle3
+                font.weight: th.weightSemibold
+                wrapMode: Text.Wrap
+                visible: text.length > 0
+                Layout.fillWidth: true
+            }
+            QQC.Label {
+                text: dialog.message
+                color: th.text
+                font.pixelSize: th.fontBody
+                wrapMode: Text.Wrap
+                visible: text.length > 0
+                Layout.fillWidth: true
+            }
+            QQC.Label {
+                text: dialog.detail
+                color: th.muted
+                font.pixelSize: th.fontFootnote
+                wrapMode: Text.WrapAnywhere
+                visible: text.length > 0
+                Layout.fillWidth: true
+            }
         }
     }
 

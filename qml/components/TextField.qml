@@ -21,8 +21,8 @@ QQC.TextField {
     font.pixelSize: th.fontBody
     font.weight: th.weightRegular
     implicitHeight: th.inputHeight
-    leftPadding: leadingIcon.length > 0 ? 40 : 14
-    rightPadding: passwordMode ? th.touchTarget + 8 : 14
+    leftPadding: leadingIcon.length > 0 ? th.dp(40) : th.dp(14)
+    rightPadding: passwordMode ? th.touchTarget + th.sp4 : th.dp(14)
     topPadding: 0
     bottomPadding: 0
     selectByMouse: true
@@ -33,7 +33,7 @@ QQC.TextField {
 
     cursorDelegate: Rectangle {
         color: th.primary
-        width: 2
+        width: th.dp(2)
     }
 
     background: Item {
@@ -41,10 +41,10 @@ QQC.TextField {
 
         Rectangle {
             anchors.fill: parent
-            anchors.margins: -3
+            anchors.margins: -th.dp(3)
             radius: th.radius
             color: "transparent"
-            border.width: 2
+            border.width: th.dp(2)
             border.color: th.focusRing
             opacity: control.activeFocus ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: th.durationFast } }
@@ -56,7 +56,7 @@ QQC.TextField {
             color: !control.enabled ? th.disabledBackground
                  : control.activeFocus ? th.card
                  : control.hovered ? th.controlHover : th.field
-            border.width: 1
+            border.width: th.dp(1)
             border.color: control.activeFocus ? th.primary : th.separator
             Behavior on color { ColorAnimation { duration: th.durationFast } }
             Behavior on border.color { ColorAnimation { duration: th.durationFast } }
@@ -66,10 +66,10 @@ QQC.TextField {
     Icon {
         id: leading
         anchors.left: parent.left
-        anchors.leftMargin: 13
+        anchors.leftMargin: th.dp(13)
         anchors.verticalCenter: parent.verticalCenter
         name: control.leadingIcon
-        iconSize: 17
+        iconSize: th.dp(17)
         tint: control.activeFocus ? th.primary : th.muted
         visible: name.length > 0
         Behavior on tint { ColorAnimation { duration: th.durationFast } }
@@ -82,7 +82,7 @@ QQC.TextField {
         width: th.touchTarget
         height: th.touchTarget
         anchors.right: parent.right
-        anchors.rightMargin: 1
+        anchors.rightMargin: th.dp(1)
         anchors.verticalCenter: parent.verticalCenter
         padding: 0
         hoverEnabled: true
@@ -95,7 +95,7 @@ QQC.TextField {
 
         contentItem: Icon {
             name: control.passwordVisible ? "eyeOff" : "eye"
-            iconSize: 18
+            iconSize: th.dp(18)
             tint: passwordButton.activeFocus ? th.primary : th.muted
         }
 
@@ -103,7 +103,7 @@ QQC.TextField {
             radius: th.radiusSmall
             color: passwordButton.down ? th.controlPressed
                  : passwordButton.hovered ? th.controlHover : "transparent"
-            border.width: passwordButton.activeFocus ? 1 : 0
+            border.width: passwordButton.activeFocus ? th.dp(1) : 0
             border.color: th.primary
             Behavior on color { ColorAnimation { duration: th.durationFast } }
         }

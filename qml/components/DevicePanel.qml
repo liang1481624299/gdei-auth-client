@@ -10,7 +10,7 @@ Card {
 
     property string codeText: ""
     property real availableListHeight: 240
-    readonly property bool compact: width < 440
+    readonly property bool compact: width < th.compactBreakpoint
 
     ColumnLayout {
         width: parent.width
@@ -133,7 +133,7 @@ Card {
                 onWheel: function(event) {
                     var delta = event.pixelDelta.y;
                     if (Math.abs(delta) < 0.01)
-                        delta = event.angleDelta.y / 120 * 96;
+                        delta = event.angleDelta.y / 120 * th.wheelStep;
                     if (Math.abs(delta) < 0.01)
                         return;
 

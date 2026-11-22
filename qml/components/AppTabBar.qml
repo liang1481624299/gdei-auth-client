@@ -10,14 +10,14 @@ Rectangle {
     property int currentIndex: 0
     signal tabSelected(int index)
 
-    implicitHeight: 72
+    implicitHeight: th.dp(72)
     color: th.card
 
     Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        height: 1
+        height: th.dp(1)
         color: th.separator
     }
 

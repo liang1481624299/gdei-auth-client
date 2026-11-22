@@ -11,7 +11,7 @@ Item {
     property string title: ""
     property string subtitle: ""
     property bool showBack: false
-    property int contentMaxWidth: 1080
+    property int contentMaxWidth: th.dp(1080)
     signal backRequested()
 
     default property alias content: contentColumn.data
@@ -41,7 +41,7 @@ Item {
             onWheel: function(event) {
                 var delta = event.pixelDelta.y;
                 if (Math.abs(delta) < 0.01)
-                    delta = event.angleDelta.y / 120 * 96;
+                    delta = event.angleDelta.y / 120 * th.wheelStep;
                 if (Math.abs(delta) < 0.01)
                     return;
 

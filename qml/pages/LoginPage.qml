@@ -27,7 +27,7 @@ Item {
             onWheel: function(event) {
                 var delta = event.pixelDelta.y;
                 if (Math.abs(delta) < 0.01)
-                    delta = event.angleDelta.y / 120 * 96;
+                    delta = event.angleDelta.y / 120 * th.wheelStep;
                 if (Math.abs(delta) < 0.01)
                     return;
 
@@ -52,7 +52,7 @@ Item {
             Card {
                 id: loginCard
                 anchors.centerIn: parent
-                width: Math.min(440, Math.max(0, parent.width - th.sp12 * 2))
+                width: Math.min(th.dp(440), Math.max(0, parent.width - th.sp12 * 2))
                 margins: th.sp10
 
                 ColumnLayout {

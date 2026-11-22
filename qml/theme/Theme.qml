@@ -57,43 +57,65 @@ QtObject {
     readonly property color redFill: fill(red, isDark ? 0.18 : 0.10)
     readonly property color grayFill: fill(gray, isDark ? 0.16 : 0.09)
 
-    readonly property int fontCaption: 11
-    readonly property int fontFootnote: 12
-    readonly property int fontSubhead: 13
-    readonly property int fontBody: 14
-    readonly property int fontCallout: 15
-    readonly property int fontHeadline: 16
-    readonly property int fontTitle3: 19
-    readonly property int fontTitle2: 22
-    readonly property int fontTitle1: 28
-    readonly property int fontLarge: 34
+    // 高分辨率 / 无障碍缩放：以系统应用字体为基准，跟随系统字号放大，范围收敛避免溢出。
+    readonly property real baseFontPixelSize: 13
+    readonly property real systemFontPixelSize: (Qt.application && Qt.application.font
+                                                 && Qt.application.font.pixelSize > 0)
+                                               ? Qt.application.font.pixelSize
+                                               : baseFontPixelSize
+    readonly property real fontScale: Math.max(0.9, Math.min(1.75,
+                                                   systemFontPixelSize / baseFontPixelSize))
+    // 屏幕逻辑宽度因子：宽屏适度放大以利用空间，上限收敛避免控件过大。
+    readonly property real screenScale: {
+        var w = Screen.desktopAvailableWidth;
+        return w > 0 ? Math.max(1.0, Math.min(1.35, w / 1600)) : 1.0;
+    }
+    property real userScale: 1.0
+    readonly property real uiScale: Math.max(0.8, Math.min(2.2,
+                                               fontScale * userScale * screenScale))
+
+    // 设计像素 -> 当前缩放下的逻辑像素；滚轮步长随字号同步，避免高分屏滚动过慢/过快。
+    function dp(value) { return Math.round(value * uiScale); }
+    readonly property int wheelStep: dp(96)
+    readonly property int wheelStepSmall: dp(48)
+
+    readonly property int fontCaption: dp(11)
+    readonly property int fontFootnote: dp(12)
+    readonly property int fontSubhead: dp(13)
+    readonly property int fontBody: dp(14)
+    readonly property int fontCallout: dp(15)
+    readonly property int fontHeadline: dp(16)
+    readonly property int fontTitle3: dp(19)
+    readonly property int fontTitle2: dp(22)
+    readonly property int fontTitle1: dp(28)
+    readonly property int fontLarge: dp(34)
 
     readonly property int weightRegular: 400
     readonly property int weightMedium: 500
     readonly property int weightSemibold: 600
     readonly property int weightBold: 700
 
-    readonly property int radiusSmall: 8
-    readonly property int radius: 12
-    readonly property int radiusLarge: 16
+    readonly property int radiusSmall: dp(8)
+    readonly property int radius: dp(12)
+    readonly property int radiusLarge: dp(16)
     readonly property int radiusPill: 999
 
-    readonly property int sp2: 4
-    readonly property int sp3: 6
-    readonly property int sp4: 8
-    readonly property int sp5: 10
-    readonly property int sp6: 12
-    readonly property int sp8: 16
-    readonly property int sp10: 20
-    readonly property int sp12: 24
-    readonly property int sp16: 32
+    readonly property int sp2: dp(4)
+    readonly property int sp3: dp(6)
+    readonly property int sp4: dp(8)
+    readonly property int sp5: dp(10)
+    readonly property int sp6: dp(12)
+    readonly property int sp8: dp(16)
+    readonly property int sp10: dp(20)
+    readonly property int sp12: dp(24)
+    readonly property int sp16: dp(32)
 
-    readonly property int touchTarget: 44
-    readonly property int inputHeight: 44
-    readonly property int buttonHeight: 44
-    readonly property int contentMaxWidth: 1080
-    readonly property int compactBreakpoint: 600
-    readonly property int wideBreakpoint: 960
+    readonly property int touchTarget: dp(48)
+    readonly property int inputHeight: dp(48)
+    readonly property int buttonHeight: dp(48)
+    readonly property int contentMaxWidth: dp(1080)
+    readonly property int compactBreakpoint: dp(600)
+    readonly property int wideBreakpoint: dp(960)
 
     readonly property color shadowColor: "#000000"
     readonly property real shadowOpacityCard: isDark ? 0.24 : 0.055

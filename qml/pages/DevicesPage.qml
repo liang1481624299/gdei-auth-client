@@ -15,7 +15,7 @@ PageScaffold {
     title: "profiles.title"
     subtitle: "profiles.subtitle"
     showBack: false
-    contentMaxWidth: 860
+    contentMaxWidth: th.dp(860)
 
     function editProfile(id) {
         profileEditor.edit(id);

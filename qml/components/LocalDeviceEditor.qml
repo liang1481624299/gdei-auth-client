@@ -98,7 +98,7 @@ QQC.Dialog {
             onWheel: function(event) {
                 var delta = event.pixelDelta.y;
                 if (Math.abs(delta) < 0.01)
-                    delta = event.angleDelta.y / 120 * 96;
+                    delta = event.angleDelta.y / 120 * th.wheelStep;
                 if (Math.abs(delta) < 0.01)
                     return;
 

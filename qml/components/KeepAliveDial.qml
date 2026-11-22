@@ -13,12 +13,12 @@ QQC.Button {
     property bool busy: false
     signal toggleRequested()
 
-    readonly property real diameter: Math.max(th.touchTarget, Math.min(240, width))
+    readonly property real diameter: Math.max(th.touchTarget, Math.min(th.dp(240), width))
     readonly property color statusColor: running ? (online ? th.success : th.warning) : th.muted
     readonly property string stateKey: running ? "keepalive.on" : "keepalive.off"
 
     text: (app.i18n.lang, app.i18n.text(stateKey))
-    implicitWidth: 240
+    implicitWidth: th.dp(240)
     implicitHeight: diameter
     padding: 0
     enabled: !busy
@@ -38,12 +38,12 @@ QQC.Button {
     contentItem: Item {
         ColumnLayout {
             anchors.centerIn: parent
-            width: Math.max(0, Math.min(184, control.diameter - th.sp16))
-            spacing: control.diameter < 160 ? th.sp2 : th.sp4
+            width: Math.max(0, Math.min(th.dp(184), control.diameter - th.sp16))
+            spacing: control.diameter < th.dp(160) ? th.sp2 : th.sp4
 
             Icon {
                 name: control.running ? "bolt" : "power"
-                iconSize: control.diameter < 160 ? 28 : 40
+                iconSize: control.diameter < th.dp(160) ? th.dp(28) : th.dp(40)
                 tint: control.statusColor
                 Layout.alignment: Qt.AlignHCenter
                 Behavior on tint { ColorAnimation { duration: th.durationNormal } }
@@ -76,11 +76,11 @@ QQC.Button {
     background: Item {
         Rectangle {
             anchors.centerIn: parent
-            width: control.diameter + 6
-            height: control.diameter + 6
+            width: control.diameter + th.sp3
+            height: control.diameter + th.sp3
             radius: width / 2
             color: "transparent"
-            border.width: 2
+            border.width: th.dp(2)
             border.color: th.focusRing
             opacity: control.activeFocus ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: th.durationFast } }
@@ -93,7 +93,7 @@ QQC.Button {
             radius: width / 2
             color: th.fill(control.statusColor, control.running ? (th.isDark ? 0.18 : 0.10)
                                                                 : (th.isDark ? 0.12 : 0.07))
-            border.width: 2
+            border.width: th.dp(2)
             border.color: th.fill(control.statusColor, control.hovered ? 0.82 : 0.58)
             antialiasing: true
             Behavior on color { ColorAnimation { duration: th.durationNormal } }

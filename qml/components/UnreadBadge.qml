@@ -7,8 +7,8 @@ Rectangle {
 
     property int count: 0
 
-    implicitWidth: 8
-    implicitHeight: 8
+    implicitWidth: th.dp(10)
+    implicitHeight: th.dp(10)
     width: implicitWidth
     height: implicitHeight
     radius: width / 2

@@ -30,7 +30,7 @@ PageScaffold {
     title: "dashboard.title"
     subtitle: "dashboard.subtitle"
     showBack: false
-    contentMaxWidth: 860
+    contentMaxWidth: th.dp(860)
 
     function requestDelete(id) {
         pendingDeleteId = id;
@@ -70,7 +70,7 @@ PageScaffold {
 
             KeepAliveDial {
                 id: dial
-                width: Math.min(220, parent.width)
+                width: Math.min(th.dp(220), parent.width)
                 height: width
                 anchors.centerIn: parent
                 running: app.auth.keepAliveRunning

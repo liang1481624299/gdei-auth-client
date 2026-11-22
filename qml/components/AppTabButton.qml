@@ -15,8 +15,8 @@ QQC.Button {
     readonly property color foregroundColor: !enabled ? th.disabledText
                                              : selected ? th.primary : th.muted
 
-    implicitWidth: 76
-    implicitHeight: 60
+    implicitWidth: th.dp(76)
+    implicitHeight: th.dp(60)
     padding: th.sp3
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
@@ -30,18 +30,18 @@ QQC.Button {
     }
 
     contentItem: ColumnLayout {
-        spacing: 3
+        spacing: th.dp(3)
 
         Item {
-            Layout.preferredWidth: 30
-            Layout.preferredHeight: 26
+            Layout.preferredWidth: th.dp(30)
+            Layout.preferredHeight: th.dp(26)
             Layout.alignment: Qt.AlignHCenter
 
             Icon {
                 id: icon
                 anchors.centerIn: parent
                 name: control.iconName
-                iconSize: 22
+                iconSize: th.dp(22)
                 tint: control.foregroundColor
                 Behavior on tint { ColorAnimation { duration: th.durationFast } }
             }
@@ -49,9 +49,9 @@ QQC.Button {
             UnreadBadge {
                 visible: control.showBadge
                 anchors.left: icon.right
-                anchors.leftMargin: -4
+                anchors.leftMargin: -th.dp(4)
                 anchors.top: parent.top
-                anchors.topMargin: 1
+                anchors.topMargin: th.dp(1)
             }
         }
 
@@ -71,10 +71,10 @@ QQC.Button {
     background: Item {
         Rectangle {
             anchors.fill: parent
-            anchors.margins: -2
+            anchors.margins: -th.dp(2)
             radius: th.radius
             color: "transparent"
-            border.width: 2
+            border.width: th.dp(2)
             border.color: th.focusRing
             opacity: control.activeFocus ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: th.durationFast } }

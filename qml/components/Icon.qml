@@ -1,11 +1,13 @@
 import QtQuick
 import QtQuick.Controls.impl
+import "../theme"
 
 Item {
     id: root
+    Theme { id: th }
 
     property string name: ""
-    property int iconSize: 22
+    property int iconSize: th.dp(22)
     property color tint: "#1C1C1E"
     property real lineWidth: 1.75
 
