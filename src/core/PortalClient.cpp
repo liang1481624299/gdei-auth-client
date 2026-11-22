@@ -250,8 +250,10 @@ QString PortalClient::buildForm(const QString& user, const QString& pass) const 
     return parts.join("&");
 }
 
-void PortalClient::parsePayload(const QString& text, bool& ok, QString& message) const {
+void PortalClient::parsePayload(const QString& text, bool& ok, QString& message,
+                                bool& alreadyOnline) const {
     ok = false;
+    alreadyOnline = false;
     message = text.trimmed();
     const QString trimmed = text.trimmed();
     if (trimmed.isEmpty()) return;
@@ -265,7 +267,12 @@ void PortalClient::parsePayload(const QString& text, bool& ok, QString& message)
         return;
     }
     QJsonObject obj = doc.object();
-    ok = obj.value("errorNumber").toString() == "1";
+    const QString errNo = obj.value("errorNumber").toString();
+    ok = errNo == "1";
+    // errorNumber=7：当前账号已在线，重复登录返回 "User is already online."；
+    // 视为已达成在线态，而非普通认证失败。
+    // errorNumber=7: account already online; treat as online, not a plain failure.
+    alreadyOnline = errNo == "7";
 
     const QString ed = obj.value("e_d").toString();
     if (!ed.isEmpty() && obj.contains(ed)) {
@@ -390,18 +397,25 @@ void PortalClient::onLoginReply() {
     }
 
     bool ok = false;
+    bool already = false;
     QString message;
     parsePayload(decodeBody(raw, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray()),
-                 ok, message);
+                 ok, message, already);
     if (ok) {
         setState(AuthState::Online);
         setOnline(true);
         log(LogLevel::Info, tr("Authenticated, online / 认证成功，已上线"));
+    } else if (already) {
+        // 服务端告知已在线：在线态已达成，仅记录提示，不按失败报错。
+        // Server reports already online: the online state holds; log a hint, not a failure.
+        setState(AuthState::Online);
+        setOnline(true);
+        log(LogLevel::Info, tr("Already online / 账号已在线: ") + message);
     } else {
         setState(AuthState::Offline);
         log(LogLevel::Warning, tr("Login failed / 认证失败: ") + message);
     }
-    emit loginFinished(ok, message);
+    emit loginFinished(ok || already, message);
 }
 
 void PortalClient::onLogoutReply() {
@@ -411,10 +425,11 @@ void PortalClient::onLogoutReply() {
     m_busy = false;
 
     bool ok = false;
+    bool already = false;
     QString message;
     const QByteArray rawLogout = reply->readAll();
     parsePayload(decodeBody(rawLogout, reply->header(QNetworkRequest::ContentTypeHeader).toByteArray()),
-                 ok, message);
+                 ok, message, already);
     setState(AuthState::Offline);
     setOnline(false);
     log(LogLevel::Info, ok ? tr("Logged out / 已下线") : tr("Logout result / 注销结果: ") + message);

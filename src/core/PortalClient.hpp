@@ -73,7 +73,8 @@ private:
     QString buildForm(const QString& user, const QString& pass) const;
     QString detectCharset(const QByteArray& contentType, const QByteArray& body) const;
     QString decodeBody(const QByteArray& raw, const QByteArray& contentType) const;
-    void parsePayload(const QString& text, bool& ok, QString& message) const;
+    void parsePayload(const QString& text, bool& ok, QString& message,
+                      bool& alreadyOnline) const;
     void setState(AuthState s);
     void setOnline(bool v);
     void log(LogLevel level, const QString& message);
