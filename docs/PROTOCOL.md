@@ -2,7 +2,7 @@
 
 > 来源：2026-11-21 对 `nac.gdei.edu.cn` 真实浏览器抓包（H3C iMC Portal 体系）。
 > Captured from a real browser session against the live portal.
-> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-22 18:03:22` ｜ UTC/GMT `2026-11-22 10:03:22Z` ｜ UNIX `1795341802`。
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-22 19:35:32` ｜ UTC/GMT `2026-11-22 11:35:32Z` ｜ UNIX `1795347332`。
 
 ## 1. 地址 / Endpoints
 
@@ -25,10 +25,10 @@
 
 ## 2. 请求要点 / Request
 
-**登录时序 / Flow**：`GET` 入口 `/portal?nasip=<nasip>`（302 → `/portal/?nasip=<nasip>`，200 空体，**响应头无 `Set-Cookie`**）→ `GET` 登录页 `/portal/2021/login.jsp?nasip=<nasip>`（HTML 隐藏域；页面**无 CSRF/token 隐藏域**）→ `POST` 表单提交。captive 认证为**无状态**：服务端按表单 `basip` / `userip` 与来源 IP 鉴权，不依赖 Cookie 会话；前两步 GET 主要是对齐浏览器时序与渲染页面。
+**登录时序 / Flow**：`GET` 入口 `/portal?nasip=<nasip>`（302 → `/portal/?nasip=<nasip>`，200 空体，**响应头无 `Set-Cookie`**）→ `GET` 登录页 `/portal/2021/login.jsp?nasip=<nasip>`（HTML 隐藏域；页面**无 CSRF/token 隐藏域**）→ `POST` 表单提交。captive 认证为**无状态**：服务端按来源 IP 鉴权，表单 `basip` / `userip` 隐藏域均为空，不依赖 Cookie 会话；前两步 GET 主要是对齐浏览器时序与渲染页面。
 
 - 方法：`POST`，`Content-Type: application/x-www-form-urlencoded; charset=UTF-8`
-- 带 `X-Requested-With: XMLHttpRequest`，`Referer: https://nac.gdei.edu.cn/portal/2021/login.jsp?nasip=<nasip>`，`Origin: https://nac.gdei.edu.cn`。
+- 带 `X-Requested-With: XMLHttpRequest`，`Origin: https://nac.gdei.edu.cn`，`Referer: https://nac.gdei.edu.cn/portal/2021/login.jsp`（Referer 不带 `nasip` 查询串）。
 - 直连 IP 时仍需在 `Host` 头带原始域名。
 
 **`hello1/2/3/4/5` Cookie 是前端"记住用户名密码"记忆，不是服务端会话标识**（2026-11-22 阅 `common_head_service_code.js` / `common.js` 确认）：由页面 JS `document.cookie` 写入，`Path=/portal/`，有效期一年；`hello1`=用户名，`hello2`=是否勾选记住密码，`hello3`=口令经每字符 `XOR 0xff` 本地混淆后的串（固定混淆，可逆，**与上线提交的 `userPwd` 无关**），`hello4`=服务类型值，`hello5`=服务类型文本。服务端 captive 认证不读这些 Cookie；客户端无需复刻该记忆逻辑。
@@ -47,7 +47,7 @@
 | `userPwd` | **Base64(UTF-8 明文口令)**，标准 Base64 |
 | `userurl` | 空 |
 | `userip` | 空 |
-| `basip` | NAS 地址，默认 `192.168.100.8` |
+| `basip` | 空（登录页隐藏域 `value=""`；服务端按来源 IP 鉴权） |
 | `language` | `English` |
 | `usermac` | `null` |
 | `wlannasid` | 空 |
@@ -69,7 +69,7 @@
 ### 实测登录 Body（示例）
 
 ```
-freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&userip=&basip=192.168.100.8&language=English&usermac=null&wlannasid=&wlanssid=&entrance=null&loginVerifyCode=&userDynamicPwddd=&customPageId=105&send_dynamic_pwd_type=0&pwdMode=0&portalProxyIP=210.38.64.39&portalProxyPort=50200&dcPwdNeedEncrypt=1&assignIpType=0&appRootUrl=https%3A%2F%2Fnac.gdei.edu.cn%2Fportal%2F&manualUrl=&manualUrlEncryptKey=
+freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&userip=&basip=&language=English&usermac=null&wlannasid=&wlanssid=&entrance=null&loginVerifyCode=&userDynamicPwddd=&customPageId=105&send_dynamic_pwd_type=0&pwdMode=0&portalProxyIP=210.38.64.39&portalProxyPort=50200&dcPwdNeedEncrypt=1&assignIpType=0&appRootUrl=https%3A%2F%2Fnac.gdei.edu.cn%2Fportal%2F&manualUrl=&manualUrlEncryptKey=
 ```
 
 > 示例中的账号与口令已脱敏；`userPwd` 为口令 UTF-8 字节的标准 Base64。
@@ -117,26 +117,47 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 
 ### 3.1 成功报文字段（`pl` 参数 / 响应体 JSON，2026-11-22 实测）
 
-成功后前端 `location.replace("/portal/page/afterLogin.jsp?pl=" + json.portalLink + "&userName=…&loginType=1|2&customCfg=…")`；`pl` 取自成功响应 JSON 的 `portalLink` 字段，其解码流程与第 3 节一致。字段如下，取值已脱敏：
+成功后前端 `location.replace("/portal/page/afterLogin.jsp?pl=" + json.portalLink + "&userName=…&loginType=1|2&customCfg=…")`；`pl` 取自成功响应 JSON 的 `portalLink` 字段，其解码流程与第 3 节一致。`portalLink` 是第二重 Base64/URL 编码 JSON，解码后与外层报文同构（仅去掉 `portalLink` 自身）。实测成功报文（`Content-Length: 1538`，取值已脱敏）：
 
-| 字段 | 含义 / Notes |
-|---|---|
-| `errorNumber` | 成功标记，`"1"` = 成功 |
-| `portalLink` | 成功后跳转 `afterLogin.jsp` 的 `pl` 参数值（Base64/URL 编码 JSON） |
-| `heartBeatCyc` | 服务端心跳周期（秒）；`0` 表示未指定，沿用客户端本地保活间隔 |
-| `heartBeatTimeoutMaxTime` | 心跳超时上限（秒）；`0` 表示未指定 |
-| `userDevPort` | 用户接入端口 / 会话标识（vlan 端口串，敏感，不落盘） |
-| `userStatus` | 用户状态码（实测成功为 `99`；完整枚举待核对） |
-| `serialNo` | 本次会话序列号（敏感，不落盘） |
-| `ifNeedModifyPwd` | 是否需要下次登录改密（布尔） |
-| `browserUrl` | 登录后浏览器跳转 URL，可空 |
-| `clientPrivateIp` | 客户端私网 IP；空表示由服务端按来源地址识别 |
-| `userurl` | 用户原始访问 URL，可空 |
-| `usermac` | 用户 MAC；`null` 表示未上报 |
-| `nasIp` | NAS / AC 地址（对应表单 `basip`） |
-| `clientLanguage` | 客户端语言（如 `English`） |
-| `ifTryUsePopupWindow` | 是否尝试弹窗（布尔） |
-| `triggerRedirectUrl` | 触发重定向 URL，可空 |
+```json
+{
+  "errorNumber": "1",
+  "heartBeatCyc": 0,
+  "heartBeatTimeoutMaxTime": 0,
+  "userDevPort": "<接入端口/会话标识，脱敏>",
+  "userStatus": 99,
+  "serialNo": "<会话序列号，脱敏>",
+  "ifNeedModifyPwd": false,
+  "browserUrl": "",
+  "clientPrivateIp": "",
+  "userurl": "",
+  "usermac": null,
+  "nasIp": "",
+  "clientLanguage": "English",
+  "ifTryUsePopupWindow": false,
+  "triggerRedirectUrl": "",
+  "portalLink": "<第二重 Base64/URL 编码 JSON，内嵌与外层同构报文>"
+}
+```
+
+| 字段 | 类型 | 实测值 / 含义 |
+|---|---|---|
+| `errorNumber` | str | 成功标记，`"1"` = 成功 |
+| `heartBeatCyc` | int | 服务端心跳周期（秒）；实测 `0`，未指定，沿用客户端本地保活间隔 |
+| `heartBeatTimeoutMaxTime` | int | 心跳超时上限（秒）；实测 `0`，未指定 |
+| `userDevPort` | str | 用户接入端口 / 会话标识（vlan 端口串，敏感，不落盘） |
+| `userStatus` | int | 用户状态码；实测成功为 `99`（完整枚举待核对） |
+| `serialNo` | int | 本次会话序列号（负数，敏感，不落盘） |
+| `ifNeedModifyPwd` | bool | 是否需要下次登录改密；实测 `false` |
+| `browserUrl` | str | 登录后浏览器跳转 URL，实测空 |
+| `clientPrivateIp` | str | 客户端私网 IP；实测空，由服务端按来源地址识别 |
+| `userurl` | str | 用户原始访问 URL，实测空 |
+| `usermac` | null | 用户 MAC；`null` 表示未上报 |
+| `nasIp` | str | NAS / AC 地址；实测空串（与表单 `basip` 无关，后者亦为空） |
+| `clientLanguage` | str | 客户端语言，实测 `English` |
+| `ifTryUsePopupWindow` | bool | 是否尝试弹窗；实测 `false` |
+| `triggerRedirectUrl` | str | 触发重定向 URL，实测空 |
+| `portalLink` | str | 成功后跳转 `afterLogin.jsp` 的 `pl` 参数值（第二重 Base64/URL 编码 JSON） |
 
 `loginSucc.jsp` 查询串附加参数：`customCfg=105`、`uamInitLogo=H3C`、`loginType=3`、`v_is_selfLogin=0`、`byodserverip=<BYOD 服务器 IP>`、`byodserverhttpport=8080`；`userName` / `userPwd` 在成功页为 `null`，不落凭据。
 
