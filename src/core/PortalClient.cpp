@@ -289,11 +289,27 @@ void PortalClient::login() {
     setState(AuthState::Authenticating);
     m_csrf.clear();
 
+    log(LogLevel::Info, tr("Opening portal entry / 正在打开门户入口"));
+    QNetworkReply* entry = sendRequest("GET",
+        constants::ENTRY_PAGE_PATH + m_cfg->nasip());
+    entry->setProperty("action", "entry");
+    connect(entry, &QNetworkReply::finished, this, &PortalClient::onEntryReply);
+}
+
+void PortalClient::onEntryReply() {
+    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) return;
+    // 入口步仅用于跟随 302、建立会话 Cookie；响应体本身在非浏览器下可能为空，属正常。
+    // The entry step only follows the 302 and establishes the session cookie; its body
+    // may be empty outside a browser, which is expected.
+    reply->readAll();
+    reply->deleteLater();
+
     log(LogLevel::Info, tr("Opening login page / 正在打开登录页"));
-    QNetworkReply* reply = sendRequest("GET",
+    QNetworkReply* next = sendRequest("GET",
         constants::LOGIN_PAGE_PATH + m_cfg->nasip());
-    reply->setProperty("action", "page");
-    connect(reply, &QNetworkReply::finished, this, &PortalClient::onPageReply);
+    next->setProperty("action", "page");
+    connect(next, &QNetworkReply::finished, this, &PortalClient::onPageReply);
 }
 
 void PortalClient::logout() {

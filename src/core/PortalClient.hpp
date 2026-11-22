@@ -43,6 +43,7 @@ signals:
     void portalError(QString message);
 
 private slots:
+    void onEntryReply();
     void onPageReply();
     void onLoginReply();
     void onLogoutReply();
