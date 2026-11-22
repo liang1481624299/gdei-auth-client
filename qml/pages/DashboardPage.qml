@@ -77,8 +77,15 @@ PageScaffold {
                 online: app.auth.online
                 busy: app.session.busy
                 onToggleRequested: {
-                    if (app.auth.keepAliveRunning) app.auth.stopKeepAlive();
-                    else app.auth.startKeepAlive();
+                    if (app.auth.keepAliveRunning) {
+                        app.auth.stopKeepAlive();
+                    } else if (!app.session.loggedIn && !app.auth.online) {
+                        // 未登录且离线：先弹登录层，认证成功后再保活。
+                        // Offline and signed out: prompt sign-in first, then start keep-alive.
+                        app.session.promptLogin();
+                    } else {
+                        app.auth.startKeepAlive();
+                    }
                 }
             }
         }

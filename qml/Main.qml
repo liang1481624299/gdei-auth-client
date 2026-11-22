@@ -25,18 +25,29 @@ Window {
     color: th.window
     title: (app.i18n.lang, app.i18n.text("app.title"))
 
-    Loader {
-        id: loginLoader
-        anchors.fill: parent
-        active: !app.session.loggedIn
-        sourceComponent: LoginPage {}
-    }
-
+    // 主框架常驻：未登录也可浏览公开页，导航栏始终可见。
+    // The shell stays mounted so public pages and the tab bar are browsable without sign-in.
     Loader {
         id: mainLoader
         anchors.fill: parent
-        active: app.session.loggedIn
+        active: true
         sourceComponent: mainShellComponent
+    }
+
+    // 按需登录弹层：受保护操作触发后弹出，可取消返回浏览。
+    // On-demand login sheet: shown by protected actions; dismiss to keep browsing.
+    Rectangle {
+        id: loginMask
+        anchors.fill: parent
+        visible: app.session.loginPromptOpen
+        color: th.overlay
+        z: 10
+
+        Loader {
+            anchors.fill: parent
+            active: loginMask.visible
+            sourceComponent: LoginPage {}
+        }
     }
 
     Component {

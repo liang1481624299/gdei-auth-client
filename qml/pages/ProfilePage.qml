@@ -200,11 +200,20 @@ PageScaffold {
         }
 
         PrimaryButton {
+            text: (app.i18n.lang, app.i18n.text("btn.login"))
+            leadingIcon: "power"
+            Layout.fillWidth: true
+            visible: !app.session.loggedIn
+            onClicked: app.session.promptLogin()
+        }
+
+        PrimaryButton {
             text: (app.i18n.lang, app.i18n.text("profile.logout"))
             variant: "danger"
             bg: "transparent"
             leadingIcon: "power"
             Layout.fillWidth: true
+            visible: app.session.loggedIn
             onClicked: logoutDialog.open()
         }
     }

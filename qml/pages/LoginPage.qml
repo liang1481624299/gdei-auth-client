@@ -76,6 +76,14 @@ Item {
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                     }
+                    QQC.Label {
+                        text: (app.i18n.lang, app.i18n.text("login.guestHint"))
+                        color: th.muted
+                        font.pixelSize: th.fontFootnote
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
                     LangSelector {
                         Layout.alignment: Qt.AlignHCenter
                         Layout.topMargin: th.sp3
@@ -172,6 +180,13 @@ Item {
                     leadingIcon: "power"
                     busy: app.session.busy
                     onClicked: root.submitLogin()
+                }
+                PrimaryButton {
+                    width: parent.width
+                    variant: "secondary"
+                    text: (app.i18n.lang, app.i18n.text("login.cancel"))
+                    enabled: !app.session.busy
+                    onClicked: app.session.dismissLoginPrompt()
                 }
             }
         }

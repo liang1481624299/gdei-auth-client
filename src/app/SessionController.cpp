@@ -36,6 +36,7 @@ SessionController::SessionController(AuthController* auth, QObject* parent)
 
 bool SessionController::loggedIn() const { return m_loggedIn; }
 bool SessionController::busy() const { return m_busy || m_auth->state() == 2; }
+bool SessionController::loginPromptOpen() const { return m_loginPromptOpen; }
 QString SessionController::route() const { return m_loggedIn ? QStringLiteral("main")
                                                               : QStringLiteral("login"); }
 QString SessionController::lastError() const { return m_lastError; }
@@ -43,6 +44,10 @@ int SessionController::operation() const { return static_cast<int>(m_operation);
 
 void SessionController::login() { begin(ManualLogin); }
 void SessionController::loginAutomatically() { begin(AutomaticLogin); }
+
+void SessionController::promptLogin() { setLoginPromptOpen(true); }
+
+void SessionController::dismissLoginPrompt() { setLoginPromptOpen(false); }
 
 void SessionController::logout() {
     if (m_busy) return;
@@ -67,6 +72,7 @@ void SessionController::finish(Operation operation, bool ok, const QString& mess
 
     if (operation == Logout) {
         setLoggedIn(false);
+        setLoginPromptOpen(false);
         if (!ok) setLastError(message);
         emit eventRequested(static_cast<int>(ok ? LogLevel::Info : LogLevel::Warning),
                             ok ? QStringLiteral("auth.logoutSuccess")
@@ -79,6 +85,7 @@ void SessionController::finish(Operation operation, bool ok, const QString& mess
 
     if (ok) {
         setLoggedIn(true);
+        setLoginPromptOpen(false);
         setLastError(QString());
     } else {
         setLastError(message);
@@ -97,6 +104,12 @@ void SessionController::setLoggedIn(bool value) {
     if (m_loggedIn == value) return;
     m_loggedIn = value;
     emit loggedInChanged();
+}
+
+void SessionController::setLoginPromptOpen(bool value) {
+    if (m_loginPromptOpen == value) return;
+    m_loginPromptOpen = value;
+    emit loginPromptOpenChanged();
 }
 
 void SessionController::setBusy(bool value) {

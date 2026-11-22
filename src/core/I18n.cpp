@@ -57,6 +57,8 @@ void I18n::buildDictionaries() {
     zhCN["status.offline"] = "未上线";
     zhCN["login.success"] = "认证成功，已上线";
     zhCN["login.failed"] = "认证失败";
+    zhCN["login.cancel"] = "暂不登录";
+    zhCN["login.guestHint"] = "未登录可先浏览；上线、下线或管理设备时再登录。";
     zhCN["logout.success"] = "已下线";
     zhCN["config.saved"] = "配置已保存";
     zhCN["config.missingCred"] = "未配置账号或密码";
@@ -271,6 +273,8 @@ void I18n::buildDictionaries() {
     zhTW["status.offline"] = "未上線";
     zhTW["login.success"] = "認證成功，已上線";
     zhTW["login.failed"] = "認證失敗";
+    zhTW["login.cancel"] = "暫不登入";
+    zhTW["login.guestHint"] = "未登入可先瀏覽；上線、下線或管理裝置時再登入。";
     zhTW["logout.success"] = "已下線";
     zhTW["config.saved"] = "設定已儲存";
     zhTW["config.missingCred"] = "未設定帳號或密碼";
@@ -485,6 +489,8 @@ void I18n::buildDictionaries() {
     enGB["status.offline"] = "Offline";
     enGB["login.success"] = "Authenticated, online";
     enGB["login.failed"] = "Login failed";
+    enGB["login.cancel"] = "Browse without signing in";
+    enGB["login.guestHint"] = "You can browse first; sign in when you need to connect, disconnect, or manage devices.";
     enGB["logout.success"] = "Logged out";
     enGB["config.saved"] = "Config saved";
     enGB["config.missingCred"] = "Username or password not set";
@@ -699,6 +705,8 @@ void I18n::buildDictionaries() {
     ja["status.offline"] = "オフライン";
     ja["login.success"] = "認証成功、オンライン";
     ja["login.failed"] = "認証失敗";
+    ja["login.cancel"] = "ログインせずに閲覧";
+    ja["login.guestHint"] = "ログインしなくても閲覧できます。接続・切断・端末管理の際にログインしてください。";
     ja["logout.success"] = "ログアウトしました";
     ja["config.saved"] = "設定を保存しました";
     ja["config.missingCred"] = "ユーザー名またはパスワードが未設定です";
