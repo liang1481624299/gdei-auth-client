@@ -13,8 +13,12 @@ Card {
     readonly property string subnetKey: subnetStatus === 1 ? "network.subnetSame"
                                         : subnetStatus === 2 ? "network.subnetDifferent"
                                         : "network.subnetUnknown"
+    // 跨路由器 / NAT 时本机私网与备用公网 IP 本就不在同一子网，属常态，用中性信息色，
+    // 不作橙色告警；该指标仅在直连同二层时为“同一子网”。
+    // Behind a router/NAT the local private IP and the fallback public IP are naturally on
+    // different subnets; show a neutral badge, not a warning.
     readonly property color subnetColor: subnetStatus === 1 ? th.success
-                                         : subnetStatus === 2 ? th.warning : th.muted
+                                         : th.muted
     readonly property var fields: [
         { key: "network.sourceIp", value: app.network.sourceIp, notProvided: false },
         { key: "network.targetIp", value: app.network.targetIp, notProvided: false },
