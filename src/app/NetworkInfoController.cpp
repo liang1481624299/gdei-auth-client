@@ -11,6 +11,27 @@
 namespace gdei {
 namespace {
 
+// 虚拟 / 隧道 / 桥接接口关键词；主网卡选择时优先排除。
+// Keywords for virtual / tunnel / bridge adapters; deprioritized when picking the primary NIC.
+const QStringList kVirtualKeywords = {
+    "vethernet", "hyper-v", "vmware", "virtualbox", "vbox", "wsl", "tailscale",
+    "tun", "tap", "docker", "veth", "vmxnet", "virtual", "virtualbox", "hyperv",
+    "warp", "zerotier", "openvpn", "wireguard"
+};
+
+bool isVirtualAdapter(const QNetworkInterface& iface) {
+    const QString name = iface.name().toLower();
+    const QString human = iface.humanReadableName().toLower();
+    for (const QString& kw : kVirtualKeywords) {
+        if (name.contains(kw) || human.contains(kw)) return true;
+    }
+    return false;
+}
+
+bool isLinkLocal(const QHostAddress& ip) {
+    return ip.isInSubnet(QHostAddress("169.254.0.0"), 16);
+}
+
 int calculateSubnetStatus(const QString& sourceIp, const QString& targetIp,
                           const QString& netmask) {
     QHostAddress source;
@@ -53,6 +74,7 @@ void NetworkInfoController::refresh() {
     QString interfaceName;
     QVariantList interfaces;
     bool havePrimary = false;
+    int bestScore = -1;
 
     const auto allInterfaces = QNetworkInterface::allInterfaces();
     for (const QNetworkInterface& networkInterface : allInterfaces) {
@@ -62,6 +84,7 @@ void NetworkInfoController::refresh() {
             (flags & QNetworkInterface::IsLoopBack)) {
             continue;
         }
+        const bool virtualAdapter = isVirtualAdapter(networkInterface);
         const auto entries = networkInterface.addressEntries();
         for (const QNetworkAddressEntry& entry : entries) {
             if (entry.ip().protocol() != QAbstractSocket::IPv4Protocol || entry.ip().isLoopback()) {
@@ -76,13 +99,28 @@ void NetworkInfoController::refresh() {
                 {QStringLiteral("netmask"), entryNetmask},
                 {QStringLiteral("mac"), entryMac}
             });
-            if (!havePrimary || (localMac.isEmpty() && !entryMac.isEmpty())) {
+
+            // 主网卡打分：非虚拟活动网卡优先，其次虚拟 / 隧道；link-local（如 Tailscale 169.254）最低。
+            // Score the primary NIC: plain non-virtual adapter first, then virtual/tunnel;
+            // link-local (e.g. Tailscale 169.254) ranks last.
+            int score;
+            if (isLinkLocal(entry.ip())) {
+                score = 0;
+            } else if (!virtualAdapter) {
+                score = 2;
+            } else {
+                score = 1;
+            }
+            if (!entryMac.isEmpty()) ++score;
+
+            if (score > bestScore) {
+                bestScore = score;
                 sourceIp = entryIp;
                 netmask = entryNetmask;
                 localMac = entryMac;
                 interfaceName = networkInterface.name();
+                havePrimary = true;
             }
-            havePrimary = true;
         }
     }
 
