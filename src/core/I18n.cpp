@@ -71,7 +71,7 @@ QString I18n::localize(const QString& payload) const {
 
 void I18n::buildDictionaries() {
     QMap<QString, QString> zhCN;
-    zhCN["app.title"] = "GDEI 校园网认证客户端";
+    zhCN["app.title"] = "广东第二师范学院网络客户端";
     zhCN["app.subtitle"] = "校园网自动认证";
     zhCN["section.connection"] = "连接状态";
     zhCN["section.credentials"] = "账号与认证";
@@ -305,7 +305,7 @@ void I18n::buildDictionaries() {
     m_dict[Lang::ZhCN] = zhCN;
 
     QMap<QString, QString> zhTW;
-    zhTW["app.title"] = "GDEI 校園網認證客戶端";
+    zhTW["app.title"] = "廣東第二師範學院網絡客戶端";
     zhTW["app.subtitle"] = "校園網自動認證";
     zhTW["section.connection"] = "連線狀態";
     zhTW["section.credentials"] = "帳號與認證";
@@ -538,7 +538,7 @@ void I18n::buildDictionaries() {
     m_dict[Lang::ZhTW] = zhTW;
 
     QMap<QString, QString> enGB;
-    enGB["app.title"] = "GDEI Campus Network Auth Client";
+    enGB["app.title"] = "GDEI Network Client";
     enGB["app.subtitle"] = "Campus auto-authentication";
     enGB["section.connection"] = "Connection";
     enGB["section.credentials"] = "Credentials";
@@ -771,7 +771,7 @@ void I18n::buildDictionaries() {
     m_dict[Lang::EnGB] = enGB;
 
     QMap<QString, QString> ja;
-    ja["app.title"] = "GDEI キャンパス認証クライアント";
+    ja["app.title"] = "GDEI ネットワーククライアント";
     ja["app.subtitle"] = "キャンパス自動認証";
     ja["section.connection"] = "接続状態";
     ja["section.credentials"] = "アカウントと認証";

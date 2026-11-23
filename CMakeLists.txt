@@ -1,8 +1,8 @@
-# CMakeLists.txt — gdei-connect 校园网自动认证客户端
+# CMakeLists.txt — gdei-auth-client 广东第二师范学院网络客户端
 # Single-source, single CMake build. Fixed Qt6, C++20, Qt Quick/QML.
 # 单一源码、单一 CMake；固定 Qt6，不维护 Qt5 分支。
 cmake_minimum_required(VERSION 3.16)
-project(gdei-connect LANGUAGES CXX)
+project(gdei-auth-client LANGUAGES CXX)
 
 # ---- 标准 / Language standard ----
 set(CMAKE_CXX_STANDARD 20)
@@ -122,24 +122,24 @@ if(WIN32)
     list(APPEND APP_HEADERS src/platform/TrayController.hpp)
 endif()
 
-qt_add_executable(gdei-connect WIN32 MACOSX_BUNDLE ${APP_SOURCES} ${APP_HEADERS})
+qt_add_executable(gdei-auth-client WIN32 MACOSX_BUNDLE ${APP_SOURCES} ${APP_HEADERS})
 
-target_include_directories(gdei-connect PRIVATE src)
+target_include_directories(gdei-auth-client PRIVATE src)
 
 # ---- 应用图标 / Application icons ----
 # Windows: 多尺寸 ico 经资源脚本编译进 exe。
 if(WIN32)
-    target_sources(gdei-connect PRIVATE packaging/windows/app.rc)
+    target_sources(gdei-auth-client PRIVATE packaging/windows/app.rc)
 endif()
 # macOS: bundle 图标名；app.icns 由 packaging/macos/deploy.sh 从
 # assets/app.iconset 用 iconutil 生成并放入 Contents/Resources。
 if(APPLE)
-    set_target_properties(gdei-connect PROPERTIES
+    set_target_properties(gdei-auth-client PROPERTIES
         MACOSX_BUNDLE_ICON_FILE app.icns)
 endif()
 
 # ---- QML 模块 / QML module ----
-qt_add_qml_module(gdei-connect
+qt_add_qml_module(gdei-auth-client
     URI GdeiConnect
     VERSION 1.0
     QML_FILES
@@ -218,7 +218,7 @@ qt_add_qml_module(gdei-connect
         qml/icons/brand/ubuntu.svg
 )
 
-target_link_libraries(gdei-connect PRIVATE
+target_link_libraries(gdei-auth-client PRIVATE
     Qt6::Core
     Qt6::Quick
     Qt6::QuickControls2
@@ -231,26 +231,26 @@ target_link_libraries(gdei-connect PRIVATE
 # ---- Platform secure-storage libraries ----
 # Windows DPAPI (Crypt32) / macOS Keychain (Security framework).
 if(WIN32)
-    target_link_libraries(gdei-connect PRIVATE crypt32 Qt6::Widgets)
+    target_link_libraries(gdei-auth-client PRIVATE crypt32 Qt6::Widgets)
 elseif(APPLE)
-    target_link_libraries(gdei-connect PRIVATE "-framework Security")
+    target_link_libraries(gdei-auth-client PRIVATE "-framework Security")
 endif()
 
 # ---- MSVC: force-include the stdext iterator polyfill ----
 # New MSVC toolsets removed stdext::make_checked_array_iterator; Qt 6.5 still
 # references it on MSVC, so pull in the compat header before any Qt header.
 if(MSVC)
-    target_compile_options(gdei-connect PRIVATE
+    target_compile_options(gdei-auth-client PRIVATE
         "/FI${CMAKE_CURRENT_SOURCE_DIR}/src/core/msvc_stdext_compat.hpp"
         /utf-8)
 elseif(MINGW)
-    target_compile_options(gdei-connect PRIVATE
+    target_compile_options(gdei-auth-client PRIVATE
         -finput-charset=UTF-8 -fexec-charset=UTF-8)
 endif()
 
 # ---- Android 包与自适应配置 / Android package and rotation support ----
 if(ANDROID)
-    set_target_properties(gdei-connect PROPERTIES
+    set_target_properties(gdei-auth-client PROPERTIES
         QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android"
         QT_ANDROID_PACKAGE_NAME "org.gdei.connect"
         QT_ANDROID_MIN_SDK_VERSION 28
@@ -268,11 +268,11 @@ if(WIN32)
         NAMES windeployqt
         HINTS "${QT6_INSTALL_PREFIX}/bin" "${QT6_HOST_INFO_PREFIX}/bin")
     if(WINDEPLOYQT_EXECUTABLE)
-        add_custom_command(TARGET gdei-connect POST_BUILD
+        add_custom_command(TARGET gdei-auth-client POST_BUILD
             COMMAND "${WINDEPLOYQT_EXECUTABLE}"
                     --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/qml"
                     --no-translations
-                    "$<TARGET_FILE:gdei-connect>"
+                    "$<TARGET_FILE:gdei-auth-client>"
             COMMENT "windeployqt: 部署 Qt 运行时依赖到输出目录 (auto-bundle)"
             VERBATIM)
     else()
@@ -290,12 +290,12 @@ set(_gc_deploy_script "")
 if(COMMAND qt_generate_deploy_qml_app_script AND NOT ANDROID
    AND QT_VERSION_MAJOR EQUAL 6 AND QT_VERSION_MINOR GREATER_EQUAL 5)
     qt_generate_deploy_qml_app_script(
-        TARGET gdei-connect
+        TARGET gdei-auth-client
         OUTPUT_SCRIPT _gc_deploy_script)
 endif()
 
 # ---- 安装 / Install ----
-install(TARGETS gdei-connect
+install(TARGETS gdei-auth-client
     BUNDLE DESTINATION .
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
@@ -305,10 +305,10 @@ if(_gc_deploy_script)
 endif()
 
 # ---- 打包 / Packaging (deb / rpm / Arch tar.zst / macOS dmg / Windows exe) ----
-set(CPACK_PACKAGE_NAME "gdei-connect")
+set(CPACK_PACKAGE_NAME "gdei-auth-client")
 set(CPACK_PACKAGE_VERSION "0.2.1")
 set(CPACK_PACKAGE_VENDOR "GDEI")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GDEI campus network auto-auth client")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GDEI Network Client, campus network auto-authentication")
 set(CPACK_PACKAGE_CONTACT "liang1481624299 <liang1481624299@users.noreply.github.com>")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "liang1481624299 <liang1481624299@users.noreply.github.com>")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")

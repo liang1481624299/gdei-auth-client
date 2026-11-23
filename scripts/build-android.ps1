@@ -5,7 +5,7 @@
 #   2. Android SDK，以及 Qt 6.8.3 推荐的 NDK r26b（26.1.10909125）。
 #   3. JDK 17、CMake、Ninja。
 #
-# 默认产物：artifacts\android\gdei-connect-android-arm64-v8a-debug.apk
+# 默认产物：artifacts\android\gdei-auth-client-android-arm64-v8a-debug.apk
 # Release 未配置签名，产物名会明确标记 release-unsigned。
 param(
     [ValidateSet("arm64-v8a")]
@@ -176,8 +176,8 @@ if ($LASTEXITCODE -ne 0) {
 
 # Qt 6.8.3 的 apk target 将最终结果复制为目标名，不递归选择其他 APK。
 $apkCandidates = @(
-    (Join-Path $BuildDir "android-build\gdei-connect.apk"),
-    (Join-Path $BuildDir "android-build-gdei-connect\gdei-connect.apk")
+    (Join-Path $BuildDir "android-build\gdei-auth-client.apk"),
+    (Join-Path $BuildDir "android-build-gdei-auth-client\gdei-auth-client.apk")
 )
 $apk = $null
 foreach ($candidate in $apkCandidates) {
@@ -193,7 +193,7 @@ if ($null -eq $apk) {
 
 New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
 $packageType = if ($BuildType -eq "Release") { "release-unsigned" } else { "debug" }
-$destName = "gdei-connect-android-$Abi-$packageType.apk"
+$destName = "gdei-auth-client-android-$Abi-$packageType.apk"
 $destApk = Join-Path $DistDir $destName
 Copy-Item -LiteralPath $apk.FullName -Destination $destApk -Force
 $hash = Get-FileHash -LiteralPath $destApk -Algorithm SHA256

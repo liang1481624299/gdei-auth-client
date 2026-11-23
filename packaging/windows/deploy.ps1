@@ -9,10 +9,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$exe = Get-ChildItem -Recurse $BuildDir -Filter "gdei-connect.exe" |
+$exe = Get-ChildItem -Recurse $BuildDir -Filter "gdei-auth-client.exe" |
     Select-Object -First 1
 if (-not $exe) {
-    throw "gdei-connect.exe not found under $BuildDir"
+    throw "gdei-auth-client.exe not found under $BuildDir"
 }
 
 # 由对应编译套件的 windeployqt 收集 platforms / qml / imageformats 等插件目录。
@@ -22,7 +22,7 @@ windeployqt --release --qmldir $QmlDir $exe.FullName
 New-Item -ItemType Directory -Force $DistDir | Out-Null
 
 $exeDir = $exe.DirectoryName
-$staging = Join-Path $DistDir "gdei-connect"
+$staging = Join-Path $DistDir "gdei-auth-client"
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
 New-Item -ItemType Directory -Force $staging | Out-Null
 
@@ -32,4 +32,4 @@ Get-ChildItem $exeDir -Force |
     Where-Object { $_.Extension -ne ".pdb" } |
     Copy-Item -Destination $staging -Recurse -Force
 
-Compress-Archive -Path "$staging/*" -DestinationPath "$DistDir/gdei-connect-windows-x64.zip" -Force
+Compress-Archive -Path "$staging/*" -DestinationPath "$DistDir/gdei-auth-client-windows-x64.zip" -Force

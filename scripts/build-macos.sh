@@ -10,7 +10,7 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="${BUILD_DIR:-$SRC/build-macos}"
 PREFIX="${PREFIX:-$SRC/artifacts/macos/macos-staging}"
-DMG="$SRC/artifacts/macos/gdei-connect-macos.dmg"
+DMG="$SRC/artifacts/macos/gdei-auth-client-macos.dmg"
 
 CMAKE_ARGS=(-S "$SRC" -B "$BUILD" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX")
 if [ -n "${QTDIR:-}" ]; then
@@ -27,17 +27,17 @@ echo "==> 部署 (macdeployqt 等效步骤由 CMake 自动完成)"
 rm -rf "$PREFIX"
 cmake --install "$BUILD"
 
-APP="$(find "$PREFIX" -maxdepth 2 -name 'gdei-connect.app' | head -1)"
+APP="$(find "$PREFIX" -maxdepth 2 -name 'gdei-auth-client.app' | head -1)"
 if [ -z "$APP" ]; then
-  echo "ERROR: gdei-connect.app not found under $PREFIX" >&2
+  echo "ERROR: gdei-auth-client.app not found under $PREFIX" >&2
   exit 1
 fi
 
 echo "==> 制作 dmg"
 mkdir -p "$(dirname "$DMG")"
 rm -f "$DMG"
-hdiutil create -volname "gdei-connect" -srcfolder "$APP" -ov -format UDZO "$DMG"
+hdiutil create -volname "gdei-auth-client" -srcfolder "$APP" -ov -format UDZO "$DMG"
 
 echo
 echo "完成: $DMG"
-echo "打开 dmg 后把 gdei-connect.app 拖入应用程序即可运行。"
+echo "打开 dmg 后把 gdei-auth-client.app 拖入应用程序即可运行。"

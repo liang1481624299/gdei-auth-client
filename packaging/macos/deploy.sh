@@ -9,9 +9,9 @@ DIST_DIR="${2:-artifacts/macos}"
 
 mkdir -p "$DIST_DIR"
 
-app="$(find "$BUILD_DIR" -name 'gdei-connect.app' -maxdepth 4 | head -1)"
+app="$(find "$BUILD_DIR" -name 'gdei-auth-client.app' -maxdepth 4 | head -1)"
 if [ -z "$app" ]; then
-    echo "ERROR: gdei-connect.app not found under $BUILD_DIR"
+    echo "ERROR: gdei-auth-client.app not found under $BUILD_DIR"
     exit 1
 fi
 
@@ -30,7 +30,7 @@ rm -rf "$staging"
 mkdir -p "$staging"
 cp -R "$app" "$staging/"
 
-hdiutil create -volname "gdei-connect" -srcfolder "$staging" -ov -format UDZO \
-    "$DIST_DIR/gdei-connect-macos.dmg"
+hdiutil create -volname "gdei-auth-client" -srcfolder "$staging" -ov -format UDZO \
+    "$DIST_DIR/gdei-auth-client-macos.dmg"
 
 rm -rf "$staging"

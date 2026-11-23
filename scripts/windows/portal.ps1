@@ -284,7 +284,7 @@ function Invoke-Gui {
     $secret = Unprotect-Secret $cfg.password_ob
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "GDEI 校园网自动认证"
+    $form.Text = "广东第二师范学院网络客户端"
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
     $form.Width = 460

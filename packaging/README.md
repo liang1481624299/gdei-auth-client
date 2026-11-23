@@ -19,10 +19,10 @@ packaging/
 
 | 平台 | 目标产物 | 当前 CI 产物 | 说明 |
 |---|---|---|---|
-| Windows | NSIS exe 安装包 | `gdei-connect-windows-x64.zip` | 已用 windeployqt 收集依赖；NSIS 安装包待 CPack 在带 NSIS 工具链的 Runner 上生成 |
-| macOS | dmg | `gdei-connect-macos.dmg` | macdeployqt 收编后 hdiutil 打包；未签名 / 未公证，待补 |
-| Debian (bookworm) | deb | CPack 生成的 `.deb`（可选） | 通用保底产物为自包含 `gdei-connect-linux-x64.tar.gz`（Qt 库 + 插件 + QML 已打包，解压即用）；deb 可在 Debian 容器内用 CPack 生成，`dpkg-shlibdeps` 声明系统动态依赖 |
-| Arch Linux | `pkg.tar.zst` | `gdei-connect-linux-x64.tar.gz`（自包含） | 自包含 tar.gz 解压即用，目标机无需预装 Qt；`pkg.tar.zst` 原生包待补 PKGBUILD |
+| Windows | NSIS exe 安装包 | `gdei-auth-client-windows-x64.zip` | 已用 windeployqt 收集依赖；NSIS 安装包待 CPack 在带 NSIS 工具链的 Runner 上生成 |
+| macOS | dmg | `gdei-auth-client-macos.dmg` | macdeployqt 收编后 hdiutil 打包；未签名 / 未公证，待补 |
+| Debian (bookworm) | deb | CPack 生成的 `.deb`（可选） | 通用保底产物为自包含 `gdei-auth-client-linux-x64.tar.gz`（Qt 库 + 插件 + QML 已打包，解压即用）；deb 可在 Debian 容器内用 CPack 生成，`dpkg-shlibdeps` 声明系统动态依赖 |
+| Arch Linux | `pkg.tar.zst` | `gdei-auth-client-linux-x64.tar.gz`（自包含） | 自包含 tar.gz 解压即用，目标机无需预装 Qt；`pkg.tar.zst` 原生包待补 PKGBUILD |
 | Android | apk | 实验性脚手架，暂无 apk | Qt for Android + NDK / Gradle 工具链与真机验证待补，CI 中 `continue-on-error` 不阻塞主线 |
 
 ## 依赖分发原则

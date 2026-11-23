@@ -2,7 +2,7 @@
 
 <img src="assets/app.png" width="96" alt="GDEI 校徽" />
 
-# gdei-connect · GDEI 校园网自动认证客户端
+# gdei-auth-client · 广东第二师范学院网络客户端
 
 面向广二师校园网（H3C iMC Portal）的跨平台自动认证客户端 —— **固定 Qt6 + QML + C++20，单一源码、单一 CMake**，内置四语言、掉线自动重连、系统保活与分级日志。
 
@@ -22,7 +22,7 @@
 
 ## 简介
 
-**gdei-connect** 是一套桌面 / 移动跨平台的校园网自动认证客户端，覆盖上线、下线、状态查询与掉线自动重连。核心是一套基于 `QNetworkAccessManager` 的 Portal 协议内核：GET 登录页提取 CSRF、携带完整请求头（UA / Referer / Cookie）提交表单、完整 CookieJar 会话管理、返回报文 Base64 + URL 解码 + JSON 解析，全部自主实现，不引入浏览器内核或重型第三方 GUI 框架。
+**gdei-auth-client**（广东第二师范学院网络客户端）是一套桌面 / 移动跨平台的校园网自动认证客户端，覆盖上线、下线、状态查询与掉线自动重连。核心是一套基于 `QNetworkAccessManager` 的 Portal 协议内核：GET 登录页提取 CSRF、携带完整请求头（UA / Referer / Cookie）提交表单、完整 CookieJar 会话管理、返回报文 Base64 + URL 解码 + JSON 解析，全部自主实现，不引入浏览器内核或重型第三方 GUI 框架。
 
 项目结构严格分层：
 
@@ -104,10 +104,10 @@ gdei-auth-client/
 
 | 平台 | 脚本 | 产物 |
 |---|---|---|
-| Windows | `scripts/build-windows.ps1` | `artifacts/windows/gdei-connect/`（整个文件夹自包含）+ `artifacts/windows/gdei-connect-windows-x64.zip` |
-| macOS | `scripts/build-macos.sh` | `artifacts/macos/gdei-connect-macos.dmg` |
-| Linux（Debian / Arch） | `scripts/build-linux.sh` | `artifacts/arch/gdei-connect-linux-x64/` + `.tar.gz`（自包含，目标机无需装 Qt） |
-| Android | `scripts/build-android.ps1` | `artifacts/android/gdei-connect-android-arm64-v8a-debug.apk`（需提供 Qt for Android + SDK/NDK + JDK17 路径） |
+| Windows | `scripts/build-windows.ps1` | `artifacts/windows/gdei-auth-client/`（整个文件夹自包含）+ `artifacts/windows/gdei-auth-client-windows-x64.zip` |
+| macOS | `scripts/build-macos.sh` | `artifacts/macos/gdei-auth-client-macos.dmg` |
+| Linux（Debian / Arch） | `scripts/build-linux.sh` | `artifacts/arch/gdei-auth-client-linux-x64/` + `.tar.gz`（自包含，目标机无需装 Qt） |
+| Android | `scripts/build-android.ps1` | `artifacts/android/gdei-auth-client-android-arm64-v8a-debug.apk`（需提供 Qt for Android + SDK/NDK + JDK17 路径） |
 
 Windows 示例（在项目根目录，PowerShell）：
 
@@ -115,7 +115,7 @@ Windows 示例（在项目根目录，PowerShell）：
 powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1
 ```
 
-该脚本会把便携 Python / CMake / Ninja 装到 `%USERPROFILE%\.cache\gdei-toolchain`，用 aqt 拉取 Qt6 + MinGW，编译后自动运行 `windeployqt`。整个 `artifacts/windows/gdei-connect` 文件夹拷到任何 Windows 机器都能直接双击运行，无需预装 Qt 或编译器。
+该脚本会把便携 Python / CMake / Ninja 装到 `%USERPROFILE%\.cache\gdei-toolchain`，用 aqt 拉取 Qt6 + MinGW，编译后自动运行 `windeployqt`。整个 `artifacts/windows/gdei-auth-client` 文件夹拷到任何 Windows 机器都能直接双击运行，无需预装 Qt 或编译器。
 
 > CMake 现已加入 **POST_BUILD 自动 windeployqt**（Windows）与跨平台 `qt_generate_deploy_qml_app_script`（install/打包路径），每次构建都会把 `platforms/qwindows.dll`、Qt DLL、QML 导入模块等完整依赖闭包拷到产物旁，不再产出“裸 exe”。
 
@@ -132,10 +132,10 @@ cmake --build build --config Release
 
 | 平台 | 目标产物 | 当前 CI 产物 |
 |---|---|---|
-| Windows | NSIS exe 安装包 | `gdei-connect-windows-x64.zip`（windeployqt 收集依赖） |
-| macOS | DragNDrop dmg（签名 / 公证待补） | `gdei-connect-macos.dmg`（macdeployqt + hdiutil） |
-| Linux | deb / rpm / Arch `pkg.tar.zst` | `gdei-connect-linux-x64.tar.gz`（自包含：Qt 库 + 插件 + QML，见 `scripts/build-linux.sh`） |
-| Android | apk（Qt for Android + NDK） | CI 仍为实验性脚手架；本地已产出 `artifacts/android/gdei-connect-android-arm64-v8a-debug.apk` |
+| Windows | NSIS exe 安装包 | `gdei-auth-client-windows-x64.zip`（windeployqt 收集依赖） |
+| macOS | DragNDrop dmg（签名 / 公证待补） | `gdei-auth-client-macos.dmg`（macdeployqt + hdiutil） |
+| Linux | deb / rpm / Arch `pkg.tar.zst` | `gdei-auth-client-linux-x64.tar.gz`（自包含：Qt 库 + 插件 + QML，见 `scripts/build-linux.sh`） |
+| Android | apk（Qt for Android + NDK） | CI 仍为实验性脚手架；本地已产出 `artifacts/android/gdei-auth-client-android-arm64-v8a-debug.apk` |
 
 ```bash
 cd build

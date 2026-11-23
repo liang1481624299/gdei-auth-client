@@ -20,7 +20,7 @@ import campus_core as core
 class App:
     def __init__(self, root: tk.Tk):
         self.root = root
-        root.title("GDEI 校园网自动认证")
+        root.title("广东第二师范学院网络客户端")
         root.resizable(False, False)
         self.cfg = core.load_config()
 

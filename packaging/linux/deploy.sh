@@ -20,8 +20,8 @@ set -euo pipefail
 
 BUILD_DIR="${1:-build}"
 DIST_DIR="${2:-artifacts/arch}"
-STAGING="$DIST_DIR/gdei-connect-linux-x64"
-ARCHIVE="$DIST_DIR/gdei-connect-linux-x64.tar.gz"
+STAGING="$DIST_DIR/gdei-auth-client-linux-x64"
+ARCHIVE="$DIST_DIR/gdei-auth-client-linux-x64.tar.gz"
 
 if [ ! -d "$BUILD_DIR" ]; then
     echo "ERROR: 构建目录不存在: $BUILD_DIR" >&2
@@ -38,8 +38,8 @@ echo "==> 部署到 $STAGING (cmake --install 自动收编 Qt 库 / 插件 / QML
 cmake --install "$BUILD_DIR" --prefix "$STAGING"
 
 BIN="$STAGING/bin"
-if [ ! -x "$BIN/gdei-connect" ]; then
-    echo "ERROR: 未找到可执行文件: $BIN/gdei-connect" >&2
+if [ ! -x "$BIN/gdei-auth-client" ]; then
+    echo "ERROR: 未找到可执行文件: $BIN/gdei-auth-client" >&2
     exit 1
 fi
 
@@ -53,15 +53,15 @@ LibraryExecutables=libexec
 EOF
 
 # 启动器：设置运行时库路径，保证脱离终端 / 双击也能跑
-cat > "$STAGING/gdei-connect.sh" <<EOF
+cat > "$STAGING/gdei-auth-client.sh" <<EOF
 #!/usr/bin/env bash
 DIR="\$(cd "\$(dirname "\$0")" && pwd)"
 export QT_PLUGIN_PATH="\$DIR/plugins"
 export QML2_IMPORT_PATH="\$DIR/qml"
 export LD_LIBRARY_PATH="\$DIR/lib:\${LD_LIBRARY_PATH:-}"
-exec "\$DIR/bin/gdei-connect" "\$@"
+exec "\$DIR/bin/gdei-auth-client" "\$@"
 EOF
-chmod +x "$STAGING/gdei-connect.sh"
+chmod +x "$STAGING/gdei-auth-client.sh"
 
 echo "==> 归档 $ARCHIVE"
 tar -czf "$ARCHIVE" -C "$DIST_DIR" "$(basename "$STAGING")"
@@ -70,4 +70,4 @@ echo
 echo "完成。"
 echo "  自包含目录: $STAGING"
 echo "  归档文件:   $ARCHIVE"
-echo "  启动方式:   解压后运行 $STAGING/gdei-connect.sh （无需安装 Qt）"
+echo "  启动方式:   解压后运行 $STAGING/gdei-auth-client.sh （无需安装 Qt）"

@@ -8,11 +8,11 @@
 
 | 子目录 | 平台 / Target | 产物 / Artifact | 来源 / Producer |
 |---|---|---|---|
-| `windows/` | Windows x64 | `gdei-connect-windows-x64.zip`（解压后为自包含 `gdei-connect/` 目录） | `packaging/windows/deploy.ps1` |
-| `macos/` | macOS | `gdei-connect-macos.dmg` | `packaging/macos/deploy.sh` |
+| `windows/` | Windows x64 | `gdei-auth-client-windows-x64.zip`（解压后为自包含 `gdei-auth-client/` 目录） | `packaging/windows/deploy.ps1` |
+| `macos/` | macOS | `gdei-auth-client-macos.dmg` | `packaging/macos/deploy.sh` |
 | `debian/` | Debian (bookworm) | `*.deb`（CPack DEB 包） | Release 工作流 `cpack -G DEB` |
-| `arch/` | Arch Linux / 通用 x86_64 | `gdei-connect-linux-x64.tar.gz`（自包含目录 + 启动脚本）；CPack Arch 包 `*.pkg.tar.zst` | `packaging/linux/deploy.sh` / Release 工作流 `cpack -G` |
-| `android/` | Android arm64-v8a | `gdei-connect-android-arm64-v8a-<debug|release>.apk`（含 `.sha256`） | `scripts/build-android.ps1` |
+| `arch/` | Arch Linux / 通用 x86_64 | `gdei-auth-client-linux-x64.tar.gz`（自包含目录 + 启动脚本）；CPack Arch 包 `*.pkg.tar.zst` | `packaging/linux/deploy.sh` / Release 工作流 `cpack -G` |
+| `android/` | Android arm64-v8a | `gdei-auth-client-android-arm64-v8a-<debug|release>.apk`（含 `.sha256`） | `scripts/build-android.ps1` |
 
 ## 说明 / Notes
 

@@ -14,8 +14,8 @@ set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="${BUILD_DIR:-$SRC/build-linux}"
-PREFIX="${PREFIX:-$SRC/artifacts/arch/gdei-connect-linux-x64}"
-ARCHIVE="$SRC/artifacts/arch/gdei-connect-linux-x64.tar.gz"
+PREFIX="${PREFIX:-$SRC/artifacts/arch/gdei-auth-client-linux-x64}"
+ARCHIVE="$SRC/artifacts/arch/gdei-auth-client-linux-x64.tar.gz"
 
 CMAKE_ARGS=(-S "$SRC" -B "$BUILD" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX")
 if [ -n "${QTDIR:-}" ]; then
@@ -42,22 +42,22 @@ LibraryExecutables=libexec
 EOF
 
 # 启动器：设置运行时库路径，保证脱离终端也能跑
-cat > "$PREFIX/gdei-connect.sh" <<EOF
+cat > "$PREFIX/gdei-auth-client.sh" <<EOF
 #!/usr/bin/env bash
 DIR="\$(cd "\$(dirname "\$0")" && pwd)"
 export QT_PLUGIN_PATH="\$DIR/plugins"
 export QML2_IMPORT_PATH="\$DIR/qml"
 export LD_LIBRARY_PATH="\$DIR/lib:\${LD_LIBRARY_PATH:-}"
-exec "\$DIR/bin/gdei-connect" "\$@"
+exec "\$DIR/bin/gdei-auth-client" "\$@"
 EOF
-chmod +x "$PREFIX/gdei-connect.sh"
+chmod +x "$PREFIX/gdei-auth-client.sh"
 
 echo "==> 归档 Archive"
 mkdir -p "$(dirname "$ARCHIVE")"
-tar -czf "$ARCHIVE" -C "$SRC/artifacts/arch" "gdei-connect-linux-x64"
+tar -czf "$ARCHIVE" -C "$SRC/artifacts/arch" "gdei-auth-client-linux-x64"
 
 echo
 echo "完成。运行目录: $PREFIX"
-echo "启动: $PREFIX/gdei-connect.sh"
+echo "启动: $PREFIX/gdei-auth-client.sh"
 echo "归档: $ARCHIVE"
-echo "（解压后双击 gdei-connect.sh 或在终端运行即可，无需安装 Qt）"
+echo "（解压后双击 gdei-auth-client.sh 或在终端运行即可，无需安装 Qt）"

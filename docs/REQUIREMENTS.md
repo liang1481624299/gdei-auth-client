@@ -1,4 +1,4 @@
-# gdei-connect 基线需求清单（合并版）/ Merged Requirements
+# gdei-auth-client 基线需求清单（合并版）/ Merged Requirements
 
 最后核对：本地 CST(UTC+8) `2026-11-22 17:40:35` ｜ UTC/GMT `2026-11-22 09:40:35Z` ｜ UNIX `1795340435`；基线提交 `ad660a1`，并包含当前工作区改动。
 本文合并上传的开发规格与仓库现状，作为后续开发与验收的统一基准。状态含义：✅ 已实现 / 🟡 部分实现 / ❌ 未实现。详细差距与证据见 [GAP-REPORT.md](GAP-REPORT.md)。
@@ -19,7 +19,7 @@
 |---|---|---|---|
 | 2.1 | Windows exe 安装包 | ❌ | release.yml 产出 zip，未走 NSIS |
 | 2.2 | macOS dmg | 🟡 | macdeployqt + hdiutil 生成 dmg；未签名 / 未公证 |
-| 2.3 | Android apk | ✅ | 本地已产出 `artifacts/android/gdei-connect-android-arm64-v8a-debug.apk`；包信息、依赖、权限及 v2 Debug 签名已检查，真机安装与 CI 正式出包待验证 |
+| 2.3 | Android apk | ✅ | 本地已产出 `artifacts/android/gdei-auth-client-android-arm64-v8a-debug.apk`；包信息、依赖、权限及 v2 Debug 签名已检查，真机安装与 CI 正式出包待验证 |
 | 2.4 | Linux deb / rpm / Arch `pkg.tar.zst` | ❌ | 仅裸二进制 tar.gz；未在对应发行版容器打包 |
 | 2.5 | 打包脚本统一放 `packaging/` 目录 | ✅ | `packaging/windows|macos|linux/` 脚本收口，release.yml 调用 |
 | 2.6 | CMake 输出按 `build/<platform>/<arch>` 组织 | ❌ | 固定 `build/` 目录 |
