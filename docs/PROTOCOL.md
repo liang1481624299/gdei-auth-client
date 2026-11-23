@@ -2,7 +2,7 @@
 
 > 来源：2026-11-21 对 `nac.gdei.edu.cn` 真实浏览器抓包（H3C iMC Portal 体系）。
 > Captured from a real browser session against the live portal.
-> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-22 19:35:32` ｜ UTC/GMT `2026-11-22 11:35:32Z` ｜ UNIX `1795347332`。
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-23 12:49:52` ｜ UTC/GMT `2026-11-23 04:49:52Z` ｜ UNIX `1795409392`。
 
 ## 1. 地址 / Endpoints
 
@@ -173,6 +173,8 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 
 > 当前客户端成功判定只消费 `errorNumber` 与失败文案；心跳周期、会话序列号、接入端口等字段暂未纳入模型。`heartBeatCyc=0` 时沿用本地 150–210s 随机保活间隔；若后续服务端下发非 0 周期，再接入 `KeepAlive`。
 
+> **2026-11-23 二次复核 / re-verified**：在真实「未认证 → 上线」窗口从 `loginSucc.jsp?pl=` 再次解码成功报文，字段集合、类型与空值形态与本节样本一致——`clientPrivateIp` 为空串、`usermac` 为 `null`、`nasIp` 为空串；`serialNo` / `userStatus` 为整数（Int64），`ifNeedModifyPwd` 为布尔，`heartBeatCyc=0`、`heartBeatTimeoutMaxTime=0`。解码顺序仍为 Base64 → URL 解码 → JSON，与 `PortalClient::parsePayload` 一致。本次正常首登未触发图形验证码。
+
 ### 3.2 在线状态判定与一层 NAT 适配
 
 **多信号交叉判定（不按本机私网段下结论）**
@@ -198,7 +200,7 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 
 ## 5. 已知限制 / Notes
 
-- 连续输错密码后，门户会弹出**图形验证码**（`loginVerifyCode` / `id_verifyCode`），当前客户端不处理该分支；遇到时先用浏览器手动登录一次恢复正常。
+- 图形验证码（`loginVerifyCode` / `id_verifyCode`）：**连续输错密码后**门户才会弹出；2026-11-23 正常首登未触发。当前客户端不处理该分支；遇到时先用浏览器手动登录一次恢复正常。
 - 本部署未发现 `id_serviceType` 域名下拉，`inner_str` / `outer_str` 均为 `null`。
 
 ## 6. 自助服务门户 / Self-service portal（`:8080`）

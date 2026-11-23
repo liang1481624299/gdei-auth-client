@@ -2,9 +2,11 @@
 
 > 来源：2026-11-22 对公网可访问登录页、未登录跳转行为与前端脚本的静态分析。
 > Source: public-facing login pages, unauthenticated redirect behavior and frontend scripts analyzed from the public network.
-> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-22 17:40:35` ｜ UTC/GMT `2026-11-22 09:40:35Z` ｜ UNIX `1795340435`。
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-23 12:49:52` ｜ UTC/GMT `2026-11-23 04:49:52Z` ｜ UNIX `1795409392`。
 >
 > **环境限制 / Environment caveat**：调研分两轮，均**未持有登录会话**——早期在校外公网静态分析，本轮改为校园网直连（本机 `10.0.146.65`）后再次匿名探测。登录后的功能页、AJAX 提交端点、上网明细查询接口与真实返回 JSON 均**未实测**；未登录访问受保护页面仅返回 `meta refresh` 跳回 `login.jsf` 或 `302` 跳登录，猜测的常见页面名多为 `404`。需在校内网（gdei-wifi）、已登录 WebVPN 会话，或由用户在已登录浏览器 F12 抓包后补抓，见第 7 节。
+>
+> **2026-11-23 二次匿名复核**：captive 上线后再次匿名探测 8080，`/selfservice/login.jsf`、`/mselfservice/login.jsf` 仍为 200 登录页，两套表单字段与 3.1 / 3.2 一致；受保护页依旧 `302` / `404` 跳登录。自助 Web 会话与 captive 准入相互独立、不共享登录态，必须在 8080 单独登录。登录后页面、AJAX 端点与返回结构仍未取得。
 >
 > **合规红线 / Compliance**：账号余额、证件号码、电话、电子邮件、MAC 地址、在线记录等均为本人敏感信息，由客户端在用户登录后按账号**运行时拉取**，不得硬编码进仓库或文档；口令仅经系统密钥存储读取，不明文落盘、不写日志。本文档只记录**字段名与功能分层**，不记录任何真实取值。
 
@@ -29,7 +31,7 @@
 | 触屏版忘记密码 / mobile forget password | `http://nac.gdei.edu.cn:8080/mselfservice/user/forgetPassword.jsf` | 是 |
 | 设备用户忘记密码 / device-user forget password | `http://nac.gdei.edu.cn:8080/selfservice/mail/devUserForget.jsf` | 是 |
 | 公开 FAQ / public FAQ | `http://nac.gdei.edu.cn:8080/selfservice/preregister/unLoginFaqList.jsf` | 是（当前列表 0 条记录） |
-| 登录后首页 / post-login home | `http://nac.gdei.edu.cn:8080/selfservice/index.jsf` | 否，未登录 `meta refresh` 跳 `login.jsf` |
+| 登录后首页 / post-login home | `/selfservice/main/main.jsf`（代码 `SELF_PC_HOME_PATH` 暂用）；`/selfservice/index.jsf`、`index.xhtml` 为匿名空壳 | 否，未登录 `meta refresh` / `302` 跳 `login.jsf`；真实登录后首页路径待登录态复核 |
 
 PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理自助`、`忘记密码`、`FAQ`。页面自述功能特性：**网络自助服务、网络故障报修、上网信息查询、终端设备管理**。
 
@@ -86,7 +88,7 @@ PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理�
 | `j_id_h_SUBMIT` | hidden | ICEfaces 主表单提交标记，`1` |
 | `ice.window` / `ice.view` / `javax.faces.ViewState` | hidden | ICEfaces + JSF 视图状态，POST 须回传 |
 
-- 主表单 `id/name=j_id_h`，`action=/mselfservice/login.jsf;jsessionid=<JSESSIONID>`；页面另含两个 ICEfaces 内部表单 `vpp4m9uesi1-retrieve-update`、`vpp4m9uesi1-single-submit`，各带自身 `_SUBMIT=1` 与 ViewState。
+- 主表单 `id/name=j_id_h`，`action=/mselfservice/login.jsf;jsessionid=<JSESSIONID>`；页面另含两个 ICEfaces 内部表单，命名形如 `<随机前缀>-retrieve-update`、`<随机前缀>-single-submit`（前缀由 ICEfaces 每次渲染随机生成，如本轮 `vpp4m9ueskv-…`，**不可写死**），各带自身 `_SUBMIT=1` 与 ViewState。
 - 验证码图片：`/mselfservice/Kaptcha.jpg?<随机数>`，点击/触摸刷新。
 - 登录前前端校验：空帐号、空密码、空验证码分别弹提示框（`show_warning_panel`）。
 
@@ -181,10 +183,11 @@ PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理�
 
 - 本自助平台面向**已入网后的账户管理**（资料、费用、绑定、明细、报修），与仓库现有「校园网认证上线/保活」链路（captive portal 拨号登录）属于不同环节：前者是 NAC 自助 Web 台，后者是接入认证。
 - 客户端可在后续版本中以「账户中心」入口对接：登录态复用或独立跳转，先只读展示基本信息/余额/在线状态，再视需要开放改资料、改密、绑定 MAC 等写操作。
+- **2026-11-23 后端进展**：PC 账户客户端 `AccountPortalClient` 与口令编码 `SelfServiceCodec` 已纳入 CMake 构建，并经 `AccountController` 装配到应用层（QML 属性 `app.account`）；captive 下线（`sessionCleared`）时联动清理门户会话。登录后 `main.jsf` 的资料 / 余额 / 费用 / 明细解析（`parseProfile`）与对应 QML 展示仍待登录样本，当前为空占位，不臆造选择器。
 
 ## 7. 登录后待补抓清单 / Post-Login TODO
 
-- [ ] 登录后首页 `index.jsf` 左侧/顶部菜单的真实 `.jsf` 路径与页面标题映射；重点核对移动 `/mselfservice/user/` 与 PC `/selfservice/fee/`、`/selfservice/guest/` 下的实际文件名。
+- [ ] PC 登录后首页（代码暂用 `/selfservice/main/main.jsf`）左侧/顶部菜单的真实 `.jsf` 路径与页面标题映射；重点核对 PC `/selfservice/fee/`、`/selfservice/guest/` 下实际文件名。移动端 `/mselfservice/user/index.jsf` 已接入只读在线/历史列表，其子页与菜单路径仍需登录态复核。
 - [ ] 各模块列表与详情的 AJAX 端点、请求参数、分页/时间范围参数与返回 JSON 结构。
 - [ ] 上网明细查询的条件项、返回列与流量单位。
 - [ ] 修改密码、更新资料、报修、绑定/解绑 MAC 的提交字段名、校验规则与成功/失败响应。
