@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/app.png" width="96" alt="GDEI 校徽" />
+
 # gdei-connect · GDEI 校园网自动认证客户端
 
 面向广二师校园网（H3C iMC Portal）的跨平台自动认证客户端 —— **固定 Qt6 + QML + C++20，单一源码、单一 CMake**，内置四语言、掉线自动重连、系统保活与分级日志。
@@ -225,7 +227,8 @@ git push origin v0.2.1
 
 - [PROTOCOL.md](docs/PROTOCOL.md)：抓包协议逆向说明、时序与表单字段。
 - [COMPATIBILITY.md](docs/COMPATIBILITY.md)：兼容平台矩阵、Qt6 工具链与打包明细。
+- [THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md)：应用校徽与各平台品牌图标的来源、授权与商标归属。
 
 ## 许可证 / License
 
-**LGPL-3.0**。不引入 GPL 强传染依赖；使用方需遵守 LGPL 关于动态链接与源码提供的要求。
+**LGPL-3.0**。不引入 GPL 强传染依赖；使用方需遵守 LGPL 关于动态链接与源码提供的要求。应用内平台品牌图标仅作兼容标识，相关商标归各自厂商所有，详见第三方声明。
