@@ -23,18 +23,14 @@ PageScaffold {
                 width: parent.width
                 spacing: th.sp6
 
-                Rectangle {
-                    Layout.preferredWidth: 52
-                    Layout.preferredHeight: 52
+                Image {
+                    Layout.preferredWidth: th.dp(52)
+                    Layout.preferredHeight: th.dp(52)
                     Layout.alignment: Qt.AlignVCenter
-                    radius: th.radius
-                    color: th.blueFill
-                    Icon {
-                        anchors.centerIn: parent
-                        name: "power"
-                        iconSize: 26
-                        tint: th.primary
-                    }
+                    source: "../icons/app.png"
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    sourceSize: Qt.size(th.dp(52), th.dp(52))
                 }
 
                 ColumnLayout {

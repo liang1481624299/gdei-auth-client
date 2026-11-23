@@ -17,6 +17,14 @@ fi
 
 macdeployqt "$app"
 
+# 从 assets/app.iconset 生成 bundle 图标 app.icns 并放入 Contents/Resources。
+# Build the bundle icon app.icns from assets/app.iconset into Contents/Resources.
+iconset="$(cd "$(dirname "$0")/../../assets/app.iconset" && pwd)"
+if [ -d "$iconset" ]; then
+    mkdir -p "$app/Contents/Resources"
+    iconutil -c icns "$iconset" -o "$app/Contents/Resources/app.icns"
+fi
+
 staging="$DIST_DIR/dmg-staging"
 rm -rf "$staging"
 mkdir -p "$staging"

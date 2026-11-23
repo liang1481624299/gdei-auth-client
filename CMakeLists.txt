@@ -126,6 +126,18 @@ qt_add_executable(gdei-connect WIN32 MACOSX_BUNDLE ${APP_SOURCES} ${APP_HEADERS}
 
 target_include_directories(gdei-connect PRIVATE src)
 
+# ---- 应用图标 / Application icons ----
+# Windows: 多尺寸 ico 经资源脚本编译进 exe。
+if(WIN32)
+    target_sources(gdei-connect PRIVATE packaging/windows/app.rc)
+endif()
+# macOS: bundle 图标名；app.icns 由 packaging/macos/deploy.sh 从
+# assets/app.iconset 用 iconutil 生成并放入 Contents/Resources。
+if(APPLE)
+    set_target_properties(gdei-connect PROPERTIES
+        MACOSX_BUNDLE_ICON_FILE app.icns)
+endif()
+
 # ---- QML 模块 / QML module ----
 qt_add_qml_module(gdei-connect
     URI GdeiConnect
@@ -151,6 +163,7 @@ qt_add_qml_module(gdei-connect
         qml/components/DevicePanel.qml
         qml/components/LogPanel.qml
         qml/components/Icon.qml
+        qml/components/BrandIcon.qml
         qml/components/SoftShadow.qml
         qml/components/DisclosureGroup.qml
         qml/components/AppDialog.qml
@@ -195,6 +208,14 @@ qt_add_qml_module(gdei-connect
         qml/icons/eyeOff.svg
         qml/icons/trayOnline.svg
         qml/icons/trayOffline.svg
+        qml/icons/app.png
+        qml/icons/brand/windows.svg
+        qml/icons/brand/macos.svg
+        qml/icons/brand/android.svg
+        qml/icons/brand/linux.svg
+        qml/icons/brand/debian.svg
+        qml/icons/brand/arch.svg
+        qml/icons/brand/ubuntu.svg
 )
 
 target_link_libraries(gdei-connect PRIVATE

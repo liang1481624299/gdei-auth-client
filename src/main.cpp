@@ -19,6 +19,7 @@
 #include <QDateTime>
 #include <QMessageLogContext>
 #include <QStringConverter>
+#include <QIcon>
 
 #include "app/AppController.hpp"
 #include "app/AccountController.hpp"
@@ -75,6 +76,7 @@ int main(int argc, char* argv[]) {
     gcStage(QStringLiteral("app created"));
     app.setApplicationName(QStringLiteral("gdei-connect"));
     app.setOrganizationName(QStringLiteral("GDEI"));
+    app.setWindowIcon(QIcon(QStringLiteral(":/GdeiConnect/qml/icons/app.png")));
 
     // 强制 Basic 样式：本项目深度自定义了控件的 background / contentItem / indicator，
     // 只有非原生样式（Basic/Fusion/Material）才允许这些定制；原生样式会忽略定制，

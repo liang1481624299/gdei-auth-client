@@ -1,0 +1,5 @@
+// packaging/windows/app.rc
+// Windows 可执行文件图标资源 / Windows executable icon resource.
+// 多尺寸 ico 由 assets/app.ico 提供（16/24/32/48/64/128/256）。
+// Multi-size ICO is provided by assets/app.ico (16/24/32/48/64/128/256).
+IDI_APP_ICON ICON "../../assets/app.ico"

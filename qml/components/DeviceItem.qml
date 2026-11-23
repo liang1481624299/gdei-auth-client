@@ -61,14 +61,25 @@ Rectangle {
             }
         }
 
-        QQC.Label {
+        RowLayout {
             width: parent.width
-            text: root.joinNonEmpty([root.device.deviceType, root.device.ip,
-                                     root.device.os, root.device.service])
-            color: th.muted
-            font.pixelSize: th.fontFootnote
-            wrapMode: Text.WrapAnywhere
-            visible: text.length > 0
+            spacing: th.sp2
+
+            BrandIcon {
+                osText: (root.device.deviceType || "") + " " + (root.device.os || "")
+                iconSize: th.dp(16)
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            QQC.Label {
+                Layout.fillWidth: true
+                text: root.joinNonEmpty([root.device.deviceType, root.device.ip,
+                                         root.device.os, root.device.service])
+                color: th.muted
+                font.pixelSize: th.fontFootnote
+                wrapMode: Text.WrapAnywhere
+                visible: text.length > 0
+            }
         }
 
         QQC.Label {
