@@ -73,9 +73,9 @@ Item {
                 required property int level
 
                 // 显示时翻译，app.i18n.lang 作为依赖触发切语言刷新。
-                title: root.localized(toast.titleKey, toast.args)
-                message: root.localized(toast.messageKey, toast.args)
-                reason: root.localized(toast.reasonKey, toast.args)
+                readonly property string title: root.localized(titleKey, args)
+                readonly property string message: root.localized(messageKey, args)
+                readonly property string reason: root.localized(reasonKey, args)
 
                 property bool closing: false
                 property real slideY: -th.sp4
