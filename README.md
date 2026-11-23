@@ -57,16 +57,19 @@ gdei-auth-client/
 │   │   ├── SessionCookieJar.*#   完整 Cookie 会话管理
 │   │   ├── PortalClient.*    #   QNAM 门户认证客户端（CSRF / 表单 / 解码）
 │   │   ├── DevicePortalClient.*# 移动 ICEfaces 自助门户：验证码会话 + 设备只读列表
+│   │   ├── AccountPortalClient.*# PC PrimeFaces 自助门户：验证码会话 + 资料/服务占位
+│   │   ├── SelfServiceCodec.*  #   自助门户口令前端可逆编码
 │   │   ├── KeepAlive.*       #   随机间隔探测，掉线才重登
 │   │   └── I18n.*            #   四语言字典与切换
 │   └── app/                  # 应用层控制器，向 QML 暴露接口
 │       ├── AuthController.*  #   captive 在线态：组合门户客户端 + 保活
 │       ├── SessionController.*# 页面登录态：手动 / 自动认证 + 按需登录弹层
 │       ├── DeviceController.*# 移动自助门户会话与设备列表
+│       ├── AccountController.*# PC 自助门户账户会话与资料占位
 │       ├── LocalDeviceController.*# 本机本地设备档案
 │       ├── NetworkInfoController.*# 本机网卡 / 网络信息
 │       ├── LogController.*   #   日志面板适配层
-│       └── AppController.*   #   聚合 config / i18n / auth / session / devices / logs 暴露给 QML
+│       └── AppController.*   #   聚合 config / i18n / auth / session / devices / account / logs 暴露给 QML
 ├── qml/
 │   ├── Main.qml              # 主窗口
 │   ├── theme/Theme.qml       # 设计令牌（配色 / 圆角 / 阴影）

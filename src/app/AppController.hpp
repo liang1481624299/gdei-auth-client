@@ -13,6 +13,7 @@ class I18n;
 class AuthController;
 class LogController;
 class DeviceController;
+class AccountController;
 class SessionController;
 class LocalDeviceController;
 class NetworkInfoController;
@@ -30,13 +31,15 @@ class AppController : public QObject {
     Q_PROPERTY(QObject* events READ events CONSTANT)
     Q_PROPERTY(QObject* eventModel READ eventModel CONSTANT)
     Q_PROPERTY(QObject* portalDevices READ portalDevices CONSTANT)
+    Q_PROPERTY(QObject* account READ account CONSTANT)
 
 public:
     AppController(ConfigStore* config, Logger* logger, I18n* i18n,
                   AuthController* auth, LogController* logs,
                   SessionController* session, LocalDeviceController* localDevices,
                   NetworkInfoController* network, EventBus* events,
-                  DeviceController* portalDevices, QObject* parent = nullptr);
+                  DeviceController* portalDevices, AccountController* account,
+                  QObject* parent = nullptr);
 
     QObject* config() const;
     QObject* i18n() const;
@@ -48,6 +51,7 @@ public:
     QObject* events() const;
     QObject* eventModel() const;
     QObject* portalDevices() const;
+    QObject* account() const;
 
 private:
     ConfigStore* m_config;
@@ -59,6 +63,7 @@ private:
     NetworkInfoController* m_network;
     EventBus* m_events;
     DeviceController* m_portalDevices;
+    AccountController* m_account;
 };
 
 } // namespace gdei

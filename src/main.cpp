@@ -21,6 +21,7 @@
 #include <QStringConverter>
 
 #include "app/AppController.hpp"
+#include "app/AccountController.hpp"
 #include "app/AuthController.hpp"
 #include "app/DeviceController.hpp"
 #include "app/EventBridge.hpp"
@@ -94,6 +95,7 @@ int main(int argc, char* argv[]) {
     AuthController auth(&config, &logger, &i18n);
     LogController logs(&logger);
     DeviceController portalDevices(&config, &logger, &i18n);
+    AccountController account(&config, &logger, &i18n);
     SessionController session(&auth, &i18n);
     LocalDeviceController localDevices(&config, &auth, &i18n);
     NetworkInfoController network(&config);
@@ -101,7 +103,7 @@ int main(int argc, char* argv[]) {
     EventBridge eventBridge(&events, &auth, &session, &localDevices,
                             &portalDevices, &network, &config, &logger);
     AppController controller(&config, &logger, &i18n, &auth, &logs, &session,
-                             &localDevices, &network, &events, &portalDevices);
+                             &localDevices, &network, &events, &portalDevices, &account);
     gcStage(QStringLiteral("controller ready"));
 
     QQmlApplicationEngine engine;

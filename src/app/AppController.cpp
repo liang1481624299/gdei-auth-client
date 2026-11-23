@@ -1,4 +1,5 @@
 #include "app/AppController.hpp"
+#include "app/AccountController.hpp"
 #include "app/AuthController.hpp"
 #include "app/DeviceController.hpp"
 #include "app/EventBus.hpp"
@@ -16,13 +17,16 @@ AppController::AppController(ConfigStore* config, Logger* /*logger*/, I18n* i18n
                              AuthController* auth, LogController* logs,
                              SessionController* session, LocalDeviceController* localDevices,
                              NetworkInfoController* network, EventBus* events,
-                             DeviceController* portalDevices, QObject* parent)
+                             DeviceController* portalDevices, AccountController* account,
+                             QObject* parent)
     : QObject(parent), m_config(config), m_i18n(i18n), m_auth(auth), m_logs(logs),
       m_session(session), m_localDevices(localDevices), m_network(network),
-      m_events(events), m_portalDevices(portalDevices) {
+      m_events(events), m_portalDevices(portalDevices), m_account(account) {
     // 登出后清理自助门户会话，避免共享设备上的会话残留。
     connect(m_session, &SessionController::sessionCleared,
             m_portalDevices, &DeviceController::clearSession);
+    connect(m_session, &SessionController::sessionCleared,
+            m_account, &AccountController::clearSession);
 }
 
 QObject* AppController::config() const { return m_config; }
@@ -35,5 +39,6 @@ QObject* AppController::network() const { return m_network; }
 QObject* AppController::events() const { return m_events; }
 QObject* AppController::eventModel() const { return m_events->model(); }
 QObject* AppController::portalDevices() const { return m_portalDevices; }
+QObject* AppController::account() const { return m_account; }
 
 } // namespace gdei

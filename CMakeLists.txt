@@ -71,10 +71,13 @@ set(APP_SOURCES
     src/core/SessionCookieJar.cpp
     src/core/PortalClient.cpp
     src/core/DevicePortalClient.cpp
+    src/core/AccountPortalClient.cpp
+    src/core/SelfServiceCodec.cpp
     src/core/KeepAlive.cpp
     src/core/I18n.cpp
     src/app/AuthController.cpp
     src/app/DeviceController.cpp
+    src/app/AccountController.cpp
     src/app/LocalDeviceController.cpp
     src/app/NetworkInfoController.cpp
     src/app/SessionController.cpp
@@ -96,10 +99,13 @@ set(APP_HEADERS
     src/core/SessionCookieJar.hpp
     src/core/PortalClient.hpp
     src/core/DevicePortalClient.hpp
+    src/core/AccountPortalClient.hpp
+    src/core/SelfServiceCodec.hpp
     src/core/KeepAlive.hpp
     src/core/I18n.hpp
     src/app/AuthController.hpp
     src/app/DeviceController.hpp
+    src/app/AccountController.hpp
     src/app/LocalDeviceController.hpp
     src/app/NetworkInfoController.hpp
     src/app/SessionController.hpp
