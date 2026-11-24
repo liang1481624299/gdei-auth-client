@@ -73,7 +73,6 @@ Window {
 
                     // 0 概览
                     DashboardPage {
-                        onManageDevicesRequested: stack.currentIndex = 1
                         onOpenDiagnosticsRequested: stack.currentIndex = 7
                     }
                     // 1 设备管理

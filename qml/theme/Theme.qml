@@ -52,14 +52,16 @@ QtObject {
     readonly property color disabledText: isDark ? "#48484A" : "#C7C7CC"
     readonly property color disabledBackground: isDark ? "#2C2C2E" : "#E9E9EB"
 
-    // ---- 微信风格系统色 / WeChat system colors ----
-    readonly property color blue: isDark ? "#36C0FF" : "#10AEFF"
-    readonly property color green: isDark ? "#12D072" : "#07C160"
-    readonly property color orange: isDark ? "#FF9F0A" : "#FF9500"
-    readonly property color red: isDark ? "#FF6B6B" : "#FA5151"
+    // ---- 规范固定状态色 / Spec-fixed status colors ----
+    // 浅色态取规范基准色；深色态取同色相 400 级提亮，保证深色背景对比度。
+    // Light uses the spec base hex; dark uses the same hue lifted to level 400 for contrast.
+    readonly property color blue: isDark ? "#60A5FA" : "#3B82F6"
+    readonly property color green: isDark ? "#34D399" : "#10B981"
+    readonly property color orange: isDark ? "#FBBF24" : "#F59E0B"
+    readonly property color red: isDark ? "#F87171" : "#EF4444"
     readonly property color purple: isDark ? "#BF5AF2" : "#AF52DE"
     readonly property color indigo: isDark ? "#5E5CE6" : "#5856D6"
-    readonly property color gray: secondaryLabel
+    readonly property color gray: isDark ? "#A1A1AA" : "#9CA3AF"
 
     readonly property color primary: green
     readonly property color primaryHover: Qt.darker(green, isDark ? 0.92 : 1.08)

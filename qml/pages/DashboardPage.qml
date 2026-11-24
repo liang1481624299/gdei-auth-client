@@ -8,16 +8,8 @@ PageScaffold {
     id: root
     Theme { id: th }
 
-    signal manageDevicesRequested()
     // 跳转到网络诊断页 / Navigate to the diagnostics page.
     signal openDiagnosticsRequested()
-
-    property string pendingDeleteId: ""
-    readonly property var currentProfile: {
-        var selectedId = app.localDevices.selectedId;
-        app.localDevices.selectedName;
-        return selectedId.length > 0 ? app.localDevices.profile(selectedId) : ({});
-    }
 
     // 三层状态独立计算，互不混算：网卡层（本机链路）/ 会话层（账号登录）/ 探测层（外网可达）。
     // Three independent layers: local adapter, account session, external reachability.
@@ -34,11 +26,6 @@ PageScaffold {
     subtitle: "dashboard.subtitle"
     showBack: false
     contentMaxWidth: th.dp(480)
-
-    function requestDelete(id) {
-        pendingDeleteId = id;
-        deleteDialog.open();
-    }
 
     Component.onCompleted: app.network.refresh()
     onVisibleChanged: if (visible) app.network.refresh()
@@ -206,17 +193,6 @@ PageScaffold {
         }
     }
 
-    // 登出账号：调用门户下线接口，二次确认；红色仅用于该危险操作。
-    PrimaryButton {
-        text: (app.i18n.lang, app.i18n.text("btn.logout"))
-        variant: "danger"
-        bg: "transparent"
-        leadingIcon: "power"
-        Layout.fillWidth: true
-        visible: app.auth.online
-        onClicked: disconnectDialog.open()
-    }
-
     // 诊断入口：快速连通测试（不跳页）与进入网络诊断。
     Card {
         Layout.fillWidth: true
@@ -319,23 +295,6 @@ PageScaffold {
         }
     }
 
-    LocalDeviceCard {
-        id: currentDeviceCard
-        Layout.fillWidth: true
-        visible: app.localDevices.selectedId.length > 0
-        deviceId: root.currentProfile.id || ""
-        name: root.currentProfile.name || ""
-        username: root.currentProfile.username || ""
-        host: root.currentProfile.host || ""
-        ip: root.currentProfile.ip || ""
-        nasip: root.currentProfile.nasip || ""
-        selected: true
-        showSelect: false
-        onManageRequested: root.manageDevicesRequested()
-        onEditRequested: profileEditor.edit(deviceId)
-        onDeleteRequested: root.requestDelete(deviceId)
-    }
-
     Card {
         id: warnCard
         Layout.fillWidth: true
@@ -379,36 +338,5 @@ PageScaffold {
 
     NetworkInfoCard {
         Layout.fillWidth: true
-    }
-
-    LocalDeviceEditor {
-        id: profileEditor
-    }
-
-    AppDialog {
-        id: deleteDialog
-        title: (app.i18n.lang, app.i18n.text("profiles.deleteTitle"))
-        message: (app.i18n.lang, app.i18n.text("profiles.deleteMessage"))
-        confirmText: (app.i18n.lang, app.i18n.text("action.delete"))
-        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
-        showCancel: true
-        destructive: true
-        onAccepted: {
-            if (root.pendingDeleteId.length > 0)
-                app.localDevices.removeProfile(root.pendingDeleteId);
-            root.pendingDeleteId = "";
-        }
-        onRejected: root.pendingDeleteId = ""
-    }
-
-    AppDialog {
-        id: disconnectDialog
-        title: (app.i18n.lang, app.i18n.text("profile.logoutTitle"))
-        message: (app.i18n.lang, app.i18n.text("profile.logoutMessage"))
-        confirmText: (app.i18n.lang, app.i18n.text("profile.logout"))
-        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
-        showCancel: true
-        destructive: true
-        onAccepted: app.session.logout()
     }
 }

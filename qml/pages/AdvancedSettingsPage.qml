@@ -55,6 +55,7 @@ PageScaffold {
         id: numericRoot
 
         property string label: ""
+        property string helpText: ""
         property int value: 0
         property int minimum: 0
         property int maximum: 0
@@ -83,6 +84,14 @@ PageScaffold {
                 else
                     text = numericRoot.value;
             }
+        }
+        QQC.Label {
+            width: parent.width
+            visible: numericRoot.helpText.length > 0
+            text: numericRoot.helpText
+            color: th.tertiaryLabel
+            font.pixelSize: th.fontCaption
+            wrapMode: Text.Wrap
         }
     }
 
@@ -248,7 +257,16 @@ PageScaffold {
                             title: root.localized("action.insecureSsl")
                             Switch {
                                 checked: app.config.allowInsecureSsl
-                                onToggled: app.config.allowInsecureSsl = checked
+                                onToggled: function(checked) {
+                                    if (checked) {
+                                        // 高危项：开启前二次确认；先复位开关，待弹窗确认后再写入。
+                                        // High-risk: confirm before enabling; revert until accepted.
+                                        this.checked = false;
+                                        insecureDialog.open();
+                                    } else {
+                                        app.config.allowInsecureSsl = false;
+                                    }
+                                }
                             }
                         }
                         QQC.Label {
@@ -280,6 +298,7 @@ PageScaffold {
 
                 NumericField {
                     label: root.localized("advanced.minInterval")
+                    helpText: root.localized("help.minInterval")
                     value: root.minSec
                     minimum: 30
                     maximum: 600
@@ -288,6 +307,7 @@ PageScaffold {
                 }
                 NumericField {
                     label: root.localized("advanced.maxInterval")
+                    helpText: root.localized("help.maxInterval")
                     value: root.maxSec
                     minimum: 30
                     maximum: 600
@@ -296,6 +316,7 @@ PageScaffold {
                 }
                 NumericField {
                     label: root.localized("advanced.failThreshold")
+                    helpText: root.localized("help.failThreshold")
                     value: root.failThreshold
                     minimum: 1
                     maximum: 10
@@ -320,6 +341,7 @@ PageScaffold {
 
                 NumericField {
                     label: root.localized("advanced.connectTimeout")
+                    helpText: root.localized("help.connectTimeout")
                     value: root.connectTimeout
                     minimum: 1000
                     maximum: 60000
@@ -328,6 +350,7 @@ PageScaffold {
                 }
                 NumericField {
                     label: root.localized("advanced.probeTimeout")
+                    helpText: root.localized("help.probeTimeout")
                     value: root.probeTimeout
                     minimum: 1000
                     maximum: 60000
@@ -463,6 +486,19 @@ PageScaffold {
         title: (app.i18n.lang, app.i18n.text("adv.validationTitle"))
         confirmText: (app.i18n.lang, app.i18n.text("action.ok"))
         showCancel: false
+    }
+
+    property var insecureDialog: AppDialog {
+        title: (app.i18n.lang, app.i18n.text("adv.insecureConfirmTitle"))
+        message: (app.i18n.lang, app.i18n.text("adv.insecureConfirmMessage"))
+        confirmText: (app.i18n.lang, app.i18n.text("action.ok"))
+        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
+        showCancel: true
+        destructive: true
+        onAccepted: {
+            app.config.allowInsecureSsl = true;
+            app.config.save();
+        }
     }
 
     property var resetDialog: AppDialog {

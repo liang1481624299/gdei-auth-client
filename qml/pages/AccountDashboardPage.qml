@@ -194,8 +194,8 @@ PageScaffold {
 
         PrimaryButton {
             text: (app.i18n.lang, app.i18n.text("profile.signOut"))
-            variant: "secondary"
-            leadingIcon: "person"
+            variant: "danger"
+            leadingIcon: "trash"
             Layout.fillWidth: true
             visible: app.session.loggedIn
             onClicked: signOutDialog.open()
