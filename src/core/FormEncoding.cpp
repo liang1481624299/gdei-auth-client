@@ -12,6 +12,7 @@ namespace {
 QString normalizeEncoding(const QString& value) {
     QString normalized = value.trimmed().toUpper();
     normalized.remove(QLatin1Char('-'));
+    if (normalized == "AUTO" || normalized == "AUTODETECT") return QStringLiteral("AUTO");
     if (normalized == "ASCII") return QStringLiteral("ASCII");
     if (normalized == "GBK") return QStringLiteral("GBK");
     return QStringLiteral("UTF-8");
@@ -79,7 +80,9 @@ Result failed(Result result, Error error, const QString& key) {
 Result encode(const QString& body, const QString& encoding) {
     Result result;
     result.charset = normalizeEncoding(encoding);
-    if (result.charset == "UTF-8") {
+    // AUTO 尚未在登录流程回填探测结果前，按 UTF-8 兜底序列化表单。
+    // AUTO falls back to UTF-8 until the detected charset is backfilled by the login flow.
+    if (result.charset == "UTF-8" || result.charset == "AUTO") {
         result.body = body.toUtf8();
         return result;
     }

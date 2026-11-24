@@ -52,6 +52,7 @@ int clampInt(int v, int lo, int hi) { return qBound(lo, v, hi); }
 QString normalizeRequestEncoding(const QString& value) {
     QString normalized = value.trimmed().toUpper();
     normalized.remove(QLatin1Char('-'));
+    if (normalized == "AUTO" || normalized == "AUTODETECT") return QStringLiteral("AUTO");
     if (normalized == "ASCII") return QStringLiteral("ASCII");
     if (normalized == "GBK") return QStringLiteral("GBK");
     if (normalized == "UTF8") return QStringLiteral("UTF-8");
@@ -192,7 +193,7 @@ void ConfigStore::load() {
     const QString loadedHealth = s.value("health_url", constants::HEALTH_URL).toString().trimmed();
     m_healthUrl = (!loadedHealth.isEmpty() && isSafeProbeUrl(loadedHealth))
                       ? loadedHealth : constants::HEALTH_URL;
-    m_requestEncoding = normalizeRequestEncoding(s.value("request_encoding", "UTF-8").toString());
+    m_requestEncoding = normalizeRequestEncoding(s.value("request_encoding", "AUTO").toString());
 
     // 仅在记住密码时从平台安全存储还原口令 / restore from secure store only when remembered.
     m_password = m_rememberPassword ? SecretStore::instance().read(QStringLiteral("password"))
@@ -258,7 +259,7 @@ bool ConfigStore::resetToDefaults() {
     m_probeTimeoutMs = constants::PROBE_TIMEOUT_MS;
     m_probeUrl = constants::NCSI_URL;
     m_healthUrl = constants::HEALTH_URL;
-    m_requestEncoding = QStringLiteral("UTF-8");
+    m_requestEncoding = QStringLiteral("AUTO");
 
     // 仅移除全局设置自身写入的顶层键；localProfiles 设备配置组不在此列，予以保留。
     // Remove only the keys owned by global settings; keep the localProfiles group.

@@ -132,7 +132,7 @@ private:
     int m_probeTimeoutMs = constants::PROBE_TIMEOUT_MS;
     QString m_probeUrl = constants::NCSI_URL;
     QString m_healthUrl = constants::HEALTH_URL;
-    QString m_requestEncoding = QStringLiteral("UTF-8");
+    QString m_requestEncoding = QStringLiteral("AUTO");
 };
 
 } // namespace gdei

@@ -148,6 +148,7 @@ qt_add_qml_module(gdei-auth-client
         qml/pages/DashboardPage.qml
         qml/pages/DevicesPage.qml
         qml/pages/ProfilePage.qml
+        qml/pages/AccountDashboardPage.qml
         qml/pages/AdvancedSettingsPage.qml
         qml/pages/EventLogPage.qml
         qml/pages/AboutPage.qml

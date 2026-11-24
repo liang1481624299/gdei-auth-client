@@ -47,10 +47,19 @@ Rectangle {
             text: (app.i18n.lang, app.i18n.text("nav.profile"))
             iconName: "person"
             selected: root.currentIndex === 2
-            showBadge: app.events.unreadCount > 0
             Layout.fillWidth: true
             Layout.fillHeight: true
             onClicked: root.tabSelected(2)
+        }
+
+        AppTabButton {
+            text: (app.i18n.lang, app.i18n.text("nav.settings"))
+            iconName: "slider"
+            selected: root.currentIndex === 3
+            showBadge: app.events.unreadCount > 0
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            onClicked: root.tabSelected(3)
         }
     }
 }

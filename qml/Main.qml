@@ -68,46 +68,56 @@ Window {
                     Layout.fillHeight: true
 
                     onCurrentIndexChanged: {
-                        app.events.setEventPageVisible(currentIndex === 5);
+                        app.events.setEventPageVisible(currentIndex === 6);
                     }
 
+                    // 0 概览
                     DashboardPage {
                         onManageDevicesRequested: stack.currentIndex = 1
-                        onOpenDiagnosticsRequested: stack.currentIndex = 6
+                        onOpenDiagnosticsRequested: stack.currentIndex = 7
                     }
+                    // 1 设备管理
                     DevicesPage {
-                        onOpenRemoteRequested: stack.currentIndex = 3
+                        onOpenRemoteRequested: stack.currentIndex = 4
                     }
+                    // 2 仪表盘（账号业务数据）
+                    AccountDashboardPage {}
+                    // 3 设置（偏好与系统入口）
                     ProfilePage {
-                        onOpenAdvancedRequested: stack.currentIndex = 4
-                        onOpenEventsRequested: stack.currentIndex = 5
-                        onOpenLogsRequested: stack.currentIndex = 6
-                        onOpenAboutRequested: stack.currentIndex = 7
+                        onOpenAdvancedRequested: stack.currentIndex = 5
+                        onOpenEventsRequested: stack.currentIndex = 6
+                        onOpenLogsRequested: stack.currentIndex = 7
+                        onOpenAboutRequested: stack.currentIndex = 8
                     }
+                    // 4 远程设备
                     Loader {
-                        active: stack.currentIndex === 3
+                        active: stack.currentIndex === 4
                         sourceComponent: RemoteDevicesPage {
                             onBackRequested: stack.currentIndex = 1
                         }
                     }
+                    // 5 高级设置
                     AdvancedSettingsPage {
-                        onBackRequested: stack.currentIndex = 2
+                        onBackRequested: stack.currentIndex = 3
                     }
+                    // 6 事件记录
                     EventLogPage {
-                        onBackRequested: stack.currentIndex = 2
+                        onBackRequested: stack.currentIndex = 3
                     }
+                    // 7 网络诊断 / 日志
                     DiagnosticsPage {
-                        onBackRequested: stack.currentIndex = 2
+                        onBackRequested: stack.currentIndex = 3
                     }
+                    // 8 关于
                     AboutPage {
-                        onBackRequested: stack.currentIndex = 2
+                        onBackRequested: stack.currentIndex = 3
                     }
                 }
 
                 AppTabBar {
                     id: tabBar
-                    currentIndex: stack.currentIndex === 3 ? 1
-                                : stack.currentIndex > 3 ? 2 : stack.currentIndex
+                    currentIndex: stack.currentIndex === 4 ? 1
+                                : stack.currentIndex > 3 ? 3 : stack.currentIndex
                     Layout.fillWidth: true
                     onTabSelected: function(index) { stack.currentIndex = index; }
                 }
@@ -117,14 +127,14 @@ Window {
             Connections {
                 target: app.session
                 function onPendingActionReady(actionKey) {
-                    if (actionKey === "remote.open") stack.currentIndex = 3;
-                    else if (actionKey === "settings.save") stack.currentIndex = 4;
+                    if (actionKey === "remote.open") stack.currentIndex = 4;
+                    else if (actionKey === "settings.save") stack.currentIndex = 5;
                 }
                 // 登出后复位页面栈到首页，避免高级设置/日志等敏感页残留。
                 function onSessionCleared() { stack.currentIndex = 0; }
             }
 
-            Component.onCompleted: app.events.setEventPageVisible(stack.currentIndex === 5)
+            Component.onCompleted: app.events.setEventPageVisible(stack.currentIndex === 6)
             Component.onDestruction: app.events.setEventPageVisible(false)
         }
     }
