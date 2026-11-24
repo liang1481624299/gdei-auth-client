@@ -3,8 +3,21 @@ import QtQuick
 QtObject {
     id: theme
 
+    // 外观模式：0 跟随系统 / 1 浅色 / 2 深色，持久化于配置。
+    // Appearance mode: 0 follow system, 1 light, 2 dark, persisted in config.
+    property int mode: app.config.themeMode
+
     readonly property SystemPalette sysPalette: SystemPalette { colorGroup: SystemPalette.Active }
-    readonly property bool isDark: {
+
+    // 系统配色方案（Qt 6.5+）；Unknown 时回退到 SystemPalette 亮度反推。
+    // System color scheme; fall back to palette luminance when Unknown.
+    readonly property bool systemDark: {
+        var hints = Qt.application && Qt.application.styleHints;
+        if (hints) {
+            var cs = hints.colorScheme;
+            if (cs === Qt.DarkScheme) return true;
+            if (cs === Qt.LightScheme) return false;
+        }
         var w = sysPalette.window;
         var t = sysPalette.text;
         var lw = 0.299 * w.r + 0.587 * w.g + 0.114 * w.b;
@@ -12,42 +25,49 @@ QtObject {
         return lt > lw;
     }
 
-    readonly property color window: isDark ? "#101012" : "#F7F7F8"
+    // 手动浅色/深色优先；跟随系统时取 systemDark。
+    // Manual light/dark wins; follow-system uses systemDark.
+    readonly property bool isDark: mode === 2 ? true : mode === 1 ? false : systemDark
+
+    // ---- iOS HIG 系统背景层级 / iOS HIG background hierarchy ----
+    readonly property color window: isDark ? "#000000" : "#F2F2F7"
     readonly property color bg: window
-    readonly property color card: isDark ? "#1B1B1E" : "#FFFFFF"
+    readonly property color card: isDark ? "#1C1C1E" : "#FFFFFF"
     readonly property color surfaceElevated: card
-    readonly property color secondaryBg: isDark ? "#232326" : "#F4F4F5"
+    readonly property color secondaryBg: isDark ? "#2C2C2E" : "#FFFFFF"
     readonly property color surfaceMuted: secondaryBg
-    readonly property color field: isDark ? "#202023" : "#FAFAFA"
-    readonly property color controlHover: isDark ? "#2B2B2F" : "#EEEEF0"
-    readonly property color controlPressed: isDark ? "#343438" : "#E4E4E7"
-    readonly property color separator: isDark ? "#303034" : "#E4E4E7"
+    readonly property color field: isDark ? "#2C2C2E" : "#F2F2F7"
+    readonly property color controlHover: isDark ? "#3A3A3C" : "#EBEBF0"
+    readonly property color controlPressed: isDark ? "#48484A" : "#DCDCE2"
+    readonly property color separator: isDark ? "rgba(84,84,88,0.60)" : "rgba(60,60,67,0.12)"
     readonly property color border: separator
     readonly property color overlay: isDark ? Qt.rgba(0, 0, 0, 0.64) : Qt.rgba(0.05, 0.05, 0.07, 0.36)
 
-    readonly property color text: isDark ? "#FAFAFA" : "#18181B"
-    readonly property color secondaryLabel: isDark ? "#A1A1AA" : "#71717A"
+    // ---- iOS HIG Label 层级 / iOS HIG label hierarchy ----
+    readonly property color text: isDark ? "#FFFFFF" : "#000000"
+    readonly property color secondaryLabel: isDark ? "rgba(235,235,245,0.60)" : "rgba(60,60,67,0.60)"
     readonly property color muted: secondaryLabel
-    readonly property color tertiaryLabel: isDark ? "#71717A" : "#A1A1AA"
-    readonly property color quaternaryLabel: isDark ? "#52525B" : "#D4D4D8"
-    readonly property color disabledText: isDark ? "#626269" : "#A1A1AA"
-    readonly property color disabledBackground: isDark ? "#29292D" : "#E9E9EB"
+    readonly property color tertiaryLabel: isDark ? "rgba(235,235,245,0.30)" : "rgba(60,60,67,0.33)"
+    readonly property color quaternaryLabel: isDark ? "rgba(235,235,245,0.16)" : "rgba(60,60,67,0.18)"
+    readonly property color disabledText: isDark ? "rgba(235,235,245,0.28)" : "rgba(60,60,67,0.30)"
+    readonly property color disabledBackground: isDark ? "#2C2C2E" : "#E9E9EB"
 
-    readonly property color blue: isDark ? "#60A5FA" : "#2563EB"
-    readonly property color green: isDark ? "#4ADE80" : "#16A34A"
-    readonly property color orange: isDark ? "#FBBF24" : "#D97706"
-    readonly property color red: isDark ? "#F87171" : "#DC2626"
-    readonly property color purple: isDark ? "#C084FC" : "#9333EA"
-    readonly property color indigo: isDark ? "#818CF8" : "#4F46E5"
+    // ---- iOS HIG 系统色 / iOS HIG system colors ----
+    readonly property color blue: isDark ? "#0A84FF" : "#007AFF"
+    readonly property color green: isDark ? "#30D158" : "#34C759"
+    readonly property color orange: isDark ? "#FF9F0A" : "#FF9500"
+    readonly property color red: isDark ? "#FF453A" : "#FF3B30"
+    readonly property color purple: isDark ? "#BF5AF2" : "#AF52DE"
+    readonly property color indigo: isDark ? "#5E5CE6" : "#5856D6"
     readonly property color gray: secondaryLabel
 
     readonly property color primary: blue
     readonly property color primaryHover: Qt.darker(blue, isDark ? 0.92 : 1.08)
-    readonly property color primaryForeground: isDark ? "#101018" : "#FFFFFF"
+    readonly property color primaryForeground: "#FFFFFF"
     readonly property color success: green
     readonly property color warning: orange
     readonly property color danger: red
-    readonly property color dangerForeground: isDark ? "#18181B" : "#FFFFFF"
+    readonly property color dangerForeground: "#FFFFFF"
     readonly property color focusRing: Qt.rgba(blue.r, blue.g, blue.b, isDark ? 0.34 : 0.22)
 
     function fill(c, a) { return Qt.rgba(c.r, c.g, c.b, a); }

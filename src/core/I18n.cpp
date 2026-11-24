@@ -101,6 +101,10 @@ void I18n::buildDictionaries() {
     zhCN["btn.keepStart"] = "启动保活";
     zhCN["btn.keepStop"] = "停止保活";
     zhCN["label.language"] = "语言";
+    zhCN["theme.title"] = "外观";
+    zhCN["theme.modeSystem"] = "跟随系统";
+    zhCN["theme.modeLight"] = "浅色";
+    zhCN["theme.modeDark"] = "深色";
     zhCN["label.username"] = "账号";
     zhCN["label.password"] = "密码";
     zhCN["label.host"] = "门户";
@@ -342,6 +346,10 @@ void I18n::buildDictionaries() {
     zhTW["btn.keepStart"] = "啟動保活";
     zhTW["btn.keepStop"] = "停止保活";
     zhTW["label.language"] = "語言";
+    zhTW["theme.title"] = "外觀";
+    zhTW["theme.modeSystem"] = "跟隨系統";
+    zhTW["theme.modeLight"] = "淺色";
+    zhTW["theme.modeDark"] = "深色";
     zhTW["label.username"] = "帳號";
     zhTW["label.password"] = "密碼";
     zhTW["label.host"] = "入口";
@@ -582,6 +590,10 @@ void I18n::buildDictionaries() {
     enGB["btn.keepStart"] = "Start keep-alive";
     enGB["btn.keepStop"] = "Stop";
     enGB["label.language"] = "Language";
+    enGB["theme.title"] = "Appearance";
+    enGB["theme.modeSystem"] = "System";
+    enGB["theme.modeLight"] = "Light";
+    enGB["theme.modeDark"] = "Dark";
     enGB["label.username"] = "Username";
     enGB["label.password"] = "Password";
     enGB["label.host"] = "Host";
@@ -822,6 +834,10 @@ void I18n::buildDictionaries() {
     ja["btn.keepStart"] = "キープアライブ開始";
     ja["btn.keepStop"] = "停止";
     ja["label.language"] = "言語";
+    ja["theme.title"] = "外観";
+    ja["theme.modeSystem"] = "システムに従う";
+    ja["theme.modeLight"] = "ライト";
+    ja["theme.modeDark"] = "ダーク";
     ja["label.username"] = "ユーザー名";
     ja["label.password"] = "パスワード";
     ja["label.host"] = "ホスト";

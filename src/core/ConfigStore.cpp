@@ -32,6 +32,7 @@ QString ConfigStore::password() const { return m_password; }
 bool ConfigStore::rememberPassword() const { return m_rememberPassword; }
 bool ConfigStore::autoLogin() const { return m_autoLogin; }
 int ConfigStore::lang() const { return static_cast<int>(m_lang); }
+int ConfigStore::themeMode() const { return m_themeMode; }
 QString ConfigStore::host() const { return m_host; }
 QString ConfigStore::ip() const { return m_ip; }
 QString ConfigStore::nasip() const { return m_nasip; }
@@ -81,6 +82,13 @@ void ConfigStore::setLang(int v) {
     Lang l = static_cast<Lang>(v);
     if (m_lang == l) return;
     m_lang = l; emit langChanged();
+}
+void ConfigStore::setThemeMode(int v) {
+    // 主题模式收敛到 0 跟随系统 / 1 浅色 / 2 深色，越界回退跟随系统。
+    // Clamp theme mode to system/light/dark; out-of-range falls back to system.
+    int c = qBound(0, v, 2);
+    if (m_themeMode == c) return;
+    m_themeMode = c; emit themeModeChanged();
 }
 void ConfigStore::setHost(const QString& v) {
     const QString c = v.trimmed();
@@ -159,6 +167,7 @@ void ConfigStore::load() {
     m_rememberPassword = s.value("remember_password", false).toBool();
     m_autoLogin   = s.value("auto_login", false).toBool();
     m_lang        = static_cast<Lang>(s.value("lang", static_cast<int>(Lang::ZhCN)).toInt());
+    m_themeMode   = qBound(0, s.value("theme_mode", 0).toInt(), 2);
     m_host = s.value("host", constants::DEFAULT_HOST).toString();
     m_ip   = s.value("ip", constants::DEFAULT_IP).toString();
     m_nasip = s.value("nasip", constants::DEFAULT_NASIP).toString();
@@ -191,7 +200,7 @@ void ConfigStore::load() {
 
     emit usernameChanged(); emit passwordChanged();
     emit rememberPasswordChanged(); emit autoLoginChanged();
-    emit langChanged(); emit hostChanged(); emit ipChanged(); emit nasipChanged();
+    emit langChanged(); emit themeModeChanged(); emit hostChanged(); emit ipChanged(); emit nasipChanged();
     emit allowInsecureSslChanged();
     emit keepaliveMinSecChanged(); emit keepaliveMaxSecChanged(); emit offlineFailThresholdChanged();
     emit connectTimeoutMsChanged(); emit probeTimeoutMsChanged();
@@ -204,6 +213,7 @@ bool ConfigStore::save() {
     s.setValue("remember_password", m_rememberPassword);
     s.setValue("auto_login", m_autoLogin);
     s.setValue("lang", static_cast<int>(m_lang));
+    s.setValue("theme_mode", m_themeMode);
     s.setValue("host", m_host);
     s.setValue("ip", m_ip);
     s.setValue("nasip", m_nasip);
@@ -236,6 +246,7 @@ bool ConfigStore::resetToDefaults() {
     m_rememberPassword = false;
     m_autoLogin = false;
     m_lang = Lang::ZhCN;
+    m_themeMode = 0;
     m_host = constants::DEFAULT_HOST;
     m_ip = constants::DEFAULT_IP;
     m_nasip = constants::DEFAULT_NASIP;
@@ -255,6 +266,7 @@ bool ConfigStore::resetToDefaults() {
     static const QStringList ownedKeys = {
         QStringLiteral("username"),          QStringLiteral("remember_password"),
         QStringLiteral("auto_login"),        QStringLiteral("lang"),
+        QStringLiteral("theme_mode"),
         QStringLiteral("host"),              QStringLiteral("ip"),
         QStringLiteral("nasip"),             QStringLiteral("allow_insecure_ssl"),
         QStringLiteral("keepalive_min_sec"), QStringLiteral("keepalive_max_sec"),
@@ -271,7 +283,7 @@ bool ConfigStore::resetToDefaults() {
 
     emit usernameChanged(); emit passwordChanged();
     emit rememberPasswordChanged(); emit autoLoginChanged();
-    emit langChanged(); emit hostChanged(); emit ipChanged(); emit nasipChanged();
+    emit langChanged(); emit themeModeChanged(); emit hostChanged(); emit ipChanged(); emit nasipChanged();
     emit allowInsecureSslChanged();
     emit keepaliveMinSecChanged(); emit keepaliveMaxSecChanged(); emit offlineFailThresholdChanged();
     emit connectTimeoutMsChanged(); emit probeTimeoutMsChanged();

@@ -22,6 +22,9 @@ class ConfigStore : public QObject {
     Q_PROPERTY(bool rememberPassword READ rememberPassword WRITE setRememberPassword NOTIFY rememberPasswordChanged)
     Q_PROPERTY(bool autoLogin READ autoLogin WRITE setAutoLogin NOTIFY autoLoginChanged)
     Q_PROPERTY(int lang READ lang WRITE setLang NOTIFY langChanged)
+    // 外观主题：0 跟随系统 / 1 浅色 / 2 深色。
+    // Appearance theme: 0 follow system, 1 light, 2 dark.
+    Q_PROPERTY(int themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
     Q_PROPERTY(QString host READ host WRITE setHost NOTIFY hostChanged)
     Q_PROPERTY(QString ip READ ip WRITE setIp NOTIFY ipChanged)
     Q_PROPERTY(QString nasip READ nasip WRITE setNasip NOTIFY nasipChanged)
@@ -43,6 +46,7 @@ public:
     bool rememberPassword() const;
     bool autoLogin() const;
     int lang() const;
+    int themeMode() const;
     QString host() const;
     QString ip() const;
     QString nasip() const;
@@ -61,6 +65,7 @@ public:
     void setRememberPassword(bool v);
     void setAutoLogin(bool v);
     void setLang(int v);
+    void setThemeMode(int v);
     void setHost(const QString& v);
     void setIp(const QString& v);
     void setNasip(const QString& v);
@@ -95,6 +100,7 @@ signals:
     void rememberPasswordChanged();
     void autoLoginChanged();
     void langChanged();
+    void themeModeChanged();
     void hostChanged();
     void ipChanged();
     void nasipChanged();
@@ -115,6 +121,7 @@ private:
     bool m_autoLogin = false;
     bool m_allowInsecureSsl = false;
     Lang m_lang = Lang::ZhCN;
+    int m_themeMode = 0;   // 0 system / 1 light / 2 dark
     QString m_host;
     QString m_ip;
     QString m_nasip;

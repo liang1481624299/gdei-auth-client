@@ -159,6 +159,7 @@ qt_add_qml_module(gdei-auth-client
         qml/components/PrimaryButton.qml
         qml/components/Switch.qml
         qml/components/LangSelector.qml
+        qml/components/ThemeSelector.qml
         qml/components/DeviceItem.qml
         qml/components/DevicePanel.qml
         qml/components/LogPanel.qml

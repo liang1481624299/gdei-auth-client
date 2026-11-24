@@ -160,6 +160,12 @@ PageScaffold {
                 leadingIcon: "globe"
                 LangSelector {}
             }
+            SettingRow {
+                width: parent.width
+                title: (app.i18n.lang, app.i18n.text("theme.title"))
+                leadingIcon: "slider"
+                ThemeSelector {}
+            }
             Rectangle {
                 width: parent.width - th.sp12
                 height: 1
