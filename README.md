@@ -228,6 +228,7 @@ git push origin v0.2.1
 - [PROTOCOL.md](docs/PROTOCOL.md)：抓包协议逆向说明、时序与表单字段。
 - [COMPATIBILITY.md](docs/COMPATIBILITY.md)：兼容平台矩阵、Qt6 工具链与打包明细。
 - [THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md)：应用校徽与各平台品牌图标的来源、授权与商标归属。
+- [troubleshoot.md](docs/troubleshoot.md)：校园网常见异常现象、根因与自查排查步骤。
 
 ## 许可证 / License
 
