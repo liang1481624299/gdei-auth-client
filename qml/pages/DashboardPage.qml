@@ -10,6 +10,8 @@ PageScaffold {
 
     // 跳转到网络诊断页 / Navigate to the diagnostics page.
     signal openDiagnosticsRequested()
+    // 跳转到事件记录页 / Navigate to the event log page.
+    signal openEventsRequested()
 
     // 三层状态独立计算，互不混算：网卡层（本机链路）/ 会话层（账号登录）/ 探测层（外网可达）。
     // Three independent layers: local adapter, account session, external reachability.
@@ -252,7 +254,7 @@ PageScaffold {
                 implicitHeight: alertList.count > 0 ? alertList.contentHeight : noAlertRow.implicitHeight
 
                 TapHandler {
-                    onTapped: root.openDiagnosticsRequested()
+                    onTapped: root.openEventsRequested()
                 }
 
                 ListView {

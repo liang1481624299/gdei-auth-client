@@ -44,8 +44,8 @@ Rectangle {
         }
 
         AppTabButton {
-            text: (app.i18n.lang, app.i18n.text("nav.profile"))
-            iconName: "person"
+            text: (app.i18n.lang, app.i18n.text("nav.discover"))
+            iconName: "bolt"
             selected: root.currentIndex === 2
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -53,8 +53,8 @@ Rectangle {
         }
 
         AppTabButton {
-            text: (app.i18n.lang, app.i18n.text("nav.settings"))
-            iconName: "slider"
+            text: (app.i18n.lang, app.i18n.text("nav.profile"))
+            iconName: "person"
             selected: root.currentIndex === 3
             showBadge: app.events.unreadCount > 0
             Layout.fillWidth: true

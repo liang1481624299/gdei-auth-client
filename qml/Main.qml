@@ -71,22 +71,22 @@ Window {
                         app.events.setEventPageVisible(currentIndex === 6);
                     }
 
-                    // 0 概览
+                    // 0 主页
                     DashboardPage {
-                        onOpenDiagnosticsRequested: stack.currentIndex = 7
+                        onOpenDiagnosticsRequested: stack.currentIndex = 2
+                        onOpenEventsRequested: stack.currentIndex = 6
                     }
-                    // 1 设备管理
+                    // 1 设备
                     DevicesPage {
                         onOpenRemoteRequested: stack.currentIndex = 4
                     }
-                    // 2 仪表盘（账号业务数据）
-                    AccountDashboardPage {}
-                    // 3 设置（偏好与系统入口）
-                    ProfilePage {
+                    // 2 发现（网络诊断工具）
+                    DiagnosticsPage {}
+                    // 3 账号（账号数据 + 并入的偏好与系统入口）
+                    AccountDashboardPage {
                         onOpenAdvancedRequested: stack.currentIndex = 5
                         onOpenEventsRequested: stack.currentIndex = 6
-                        onOpenLogsRequested: stack.currentIndex = 7
-                        onOpenAboutRequested: stack.currentIndex = 8
+                        onOpenAboutRequested: stack.currentIndex = 7
                     }
                     // 4 远程设备
                     Loader {
@@ -103,11 +103,7 @@ Window {
                     EventLogPage {
                         onBackRequested: stack.currentIndex = 3
                     }
-                    // 7 网络诊断 / 日志
-                    DiagnosticsPage {
-                        onBackRequested: stack.currentIndex = 3
-                    }
-                    // 8 关于
+                    // 7 关于
                     AboutPage {
                         onBackRequested: stack.currentIndex = 3
                     }

@@ -8,8 +8,8 @@ PageScaffold {
 
     readonly property Theme th: Theme {}
 
-    title: "log.title"
-    showBack: true
+    title: "nav.discover"
+    showBack: false
 
     ColumnLayout {
         width: parent.width

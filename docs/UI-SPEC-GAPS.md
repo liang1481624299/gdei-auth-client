@@ -21,11 +21,11 @@
 
 | 规格条目 | 落地情况 | 落点 |
 | ---- | ---- | ---- |
-| P16 业务数据与设置分页，移除原「我的」Tab | ✅ Tab 由三改四：概览 / 设备管理 / 仪表盘 / 设置；账号业务数据归仪表盘，偏好与调试项归设置 | `qml/components/AppTabBar.qml`、`qml/Main.qml` |
-| P18 设置页分组边界 | ✅ 设置页拆「基础偏好」「系统」两张 Card，各带分组标题，不再平铺一长串 | `qml/pages/ProfilePage.qml` |
-| P19 高级设置为设置内子页面，不与语言 / 外观平级 | ✅ 高级设置走跳转子页（栈索引 5），设置页仅列入口行 | `ProfilePage.qml`、`Main.qml` |
-| P21 下拉选择与页面跳转控件图标区分 | ✅ 语言 / 外观下拉使用自身指示图标；页面跳转统一用 `chevronRight`，两套不混用 | `ProfilePage.qml` |
-| P14 未读红点落点 | ✅ 事件未读角标从原「我的」Tab 移到设置 Tab | `AppTabBar.qml` |
+| P16 业务数据与设置分页，移除原「我的」Tab | ✅ Tab 由三改四；本轮再次重构为 **主页 / 设备 / 发现 / 账号**：账号业务数据归账号页，偏好与系统入口并入账号页，网络诊断工具提升为发现 Tab | `qml/components/AppTabBar.qml`、`qml/Main.qml` |
+| P18 设置页分组边界 | ✅ 拆「基础偏好」「系统」两张 Card，各带分组标题，不再平铺一长串；原设置页内容已并入账号页 | `qml/pages/AccountDashboardPage.qml` |
+| P19 高级设置为设置内子页面，不与语言 / 外观平级 | ✅ 高级设置走跳转子页（栈索引 5），账号页仅列入口行 | `AccountDashboardPage.qml`、`Main.qml` |
+| P21 下拉选择与页面跳转控件图标区分 | ✅ 语言 / 外观下拉使用自身指示图标；页面跳转统一用 `chevronRight`，两套不混用 | `AccountDashboardPage.qml` |
+| P14 未读红点落点 | ✅ 事件未读角标挂账号 Tab | `AppTabBar.qml` |
 
 ### 仪表盘数据展示（P17、P20）
 
@@ -59,8 +59,8 @@
 | NAT 下对端 MAC 场景化文案 | ✅ 取不到时显示「NAT 路由环境下无法获取」，不再直出「未提供」 | `NetworkInfoCard.qml` |
 | 刷新网卡与连通测试两个按钮分开 | ✅ 「刷新网卡信息」调 `network.refresh()`；「连通测试」调 `auth.refreshStatus()` | `NetworkInfoCard.qml` |
 | 四态状态色令牌 | ✅ 绿正常 / 琥珀半残 / 蓝探测中 / 红错误；`info`（探测中蓝）语义别名 | `qml/theme/Theme.qml` |
-| 概览诊断入口 | ✅ 「快速连通测试」（原地探测）+「进入网络诊断」（跳转诊断页） | `DashboardPage.qml`、`Main.qml` |
-| 概览最近一条告警 + 未读红点 | ✅ 概览展示事件模型最新一条；点击进诊断页 | `DashboardPage.qml` |
+| 主页诊断入口 | ✅ 「快速连通测试」（原地探测）+「进入网络诊断」（跳转发现 Tab 的诊断页） | `DashboardPage.qml`、`Main.qml` |
+| 主页最近一条告警 + 未读红点 | ✅ 主页展示事件模型最新一条；点击进事件记录页 | `DashboardPage.qml` |
 | P15 浅色 / 深色预留 | ✅ 三态主题（跟随系统 / 浅色 / 深色）此前已落地 | `Theme.qml` |
 
 ## 二、待后端 / 新增能力补齐的缺口
