@@ -10,6 +10,7 @@
 namespace gdei {
 
 class AuthController;
+class ConfigStore;
 class I18n;
 
 class SessionController : public QObject {
@@ -33,8 +34,8 @@ public:
     };
     Q_ENUM(Operation)
 
-    explicit SessionController(AuthController* auth, I18n* i18n = nullptr,
-                               QObject* parent = nullptr);
+    explicit SessionController(AuthController* auth, ConfigStore* config,
+                               I18n* i18n = nullptr, QObject* parent = nullptr);
 
     bool loggedIn() const;
     bool busy() const;
@@ -46,6 +47,13 @@ public:
     Q_INVOKABLE void login();
     Q_INVOKABLE void loginAutomatically();
     Q_INVOKABLE void logout();
+    // 纯本地注销：停止保活、退出本机登录态并清空身份凭据；不调用 captive portal
+    // 踢线接口，现有在线会话不主动释放。8080/设备本地会话随 sessionCleared 联动清除。
+    // Local sign-out: stop keep-alive, leave the local session and clear stored
+    // credentials; the captive portal logout endpoint is NOT called, so the online
+    // session is released by the server on timeout. Account/device local sessions
+    // are cleared through the sessionCleared signal.
+    Q_INVOKABLE void signOutLocal();
     // 打开登录弹层（不立即发起认证，由表单提交后再登录）/ Open the login sheet without authenticating yet.
     Q_INVOKABLE void promptLogin();
     // 关闭登录弹层，返回公开浏览 / Dismiss the sheet and return to public browsing.
@@ -79,6 +87,7 @@ private:
     static QString reasonForMessage(const QString& message);
 
     AuthController* m_auth;
+    ConfigStore* m_cfg;
     I18n* m_i18n;
     bool m_loggedIn = false;
     bool m_busy = false;

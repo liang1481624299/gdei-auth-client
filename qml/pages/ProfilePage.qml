@@ -208,24 +208,24 @@ PageScaffold {
         }
 
         PrimaryButton {
-            text: (app.i18n.lang, app.i18n.text("profile.logout"))
+            text: (app.i18n.lang, app.i18n.text("profile.signOut"))
             variant: "danger"
             bg: "transparent"
             leadingIcon: "power"
             Layout.fillWidth: true
             visible: app.session.loggedIn
-            onClicked: logoutDialog.open()
+            onClicked: signOutDialog.open()
         }
     }
 
-    property var logoutDialog: AppDialog {
-        id: logoutDialog
-        title: (app.i18n.lang, app.i18n.text("profile.logoutTitle"))
-        message: (app.i18n.lang, app.i18n.text("profile.logoutMessage"))
-        confirmText: (app.i18n.lang, app.i18n.text("profile.logout"))
+    property var signOutDialog: AppDialog {
+        id: signOutDialog
+        title: (app.i18n.lang, app.i18n.text("profile.signOutTitle"))
+        message: (app.i18n.lang, app.i18n.text("profile.signOutMessage"))
+        confirmText: (app.i18n.lang, app.i18n.text("profile.signOut"))
         cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
         showCancel: true
         destructive: true
-        onAccepted: app.session.logout()
+        onAccepted: app.session.signOutLocal()
     }
 }

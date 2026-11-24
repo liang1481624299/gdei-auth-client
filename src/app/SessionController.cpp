@@ -1,5 +1,6 @@
 #include "app/SessionController.hpp"
 #include "app/AuthController.hpp"
+#include "core/ConfigStore.hpp"
 #include "core/I18n.hpp"
 #include "core/Types.hpp"
 
@@ -7,8 +8,9 @@
 
 namespace gdei {
 
-SessionController::SessionController(AuthController* auth, I18n* i18n, QObject* parent)
-    : QObject(parent), m_auth(auth), m_i18n(i18n) {
+SessionController::SessionController(AuthController* auth, ConfigStore* config,
+                                     I18n* i18n, QObject* parent)
+    : QObject(parent), m_auth(auth), m_cfg(config), m_i18n(i18n) {
     // 登录态由真变假（会话失效）时自动弹登录层，符合"登录失效切回登录"约束。
     // Auto prompt when the session becomes invalid, without touching explicit logout.
     connect(this, &SessionController::loggedInChanged, this, [this] {
@@ -89,6 +91,30 @@ void SessionController::logout() {
     begin(Logout);
 }
 
+void SessionController::signOutLocal() {
+    if (m_busy) return;
+    // 纯本地注销：停保活、退出本机登录态、清空身份凭据；不调用 captive portal 踢线
+    // 接口，现有在线会话由服务端超时自然释放。8080/设备本地会话随 sessionCleared
+    // 信号联动清除（AppController 已接线）。
+    // Local sign-out only: stop keep-alive, leave the local session and clear stored
+    // credentials. The captive portal logout endpoint is NOT called; the online
+    // session expires server-side. Account/device local sessions are cleared via
+    // the sessionCleared signal (wired in AppController).
+    m_auth->stopKeepAlive();
+    setOperation(Logout);   // 标记，避免 setLoggedIn(false) 触发"登录失效自动弹层"
+    setLoggedIn(false);
+    setLoginPromptOpen(false);
+    m_pendingAction.clear();
+    setLastError(QString());
+    if (m_cfg) m_cfg->clearCredentials();
+    setOperation(None);
+    emit sessionCleared();
+    emit eventRequested(static_cast<int>(LogLevel::Info),
+                        QStringLiteral("auth.signOut"),
+                        QStringLiteral("auth.signOutMessage"),
+                        QString(), QVariantMap{});
+}
+
 void SessionController::begin(Operation operation) {
     if (m_busy || m_auth->state() == static_cast<int>(AuthState::Authenticating)) return;
     setLastError(QString());
@@ -128,6 +154,9 @@ void SessionController::finish(Operation operation, bool ok, const QString& mess
         setLoggedIn(true);
         setLoginPromptOpen(false);
         setLastError(QString());
+        // 上线成功后自动启动保活，维持连接并在掉线时按阈值重连；start 内部幂等。
+        // Start keep-alive after a successful login; start() is idempotent.
+        m_auth->startKeepAlive();
         // 通过门禁触发的登录：成功后通知 QML 续做被延迟的动作（编辑/导出/设置等）。
         if (!m_pendingAction.isEmpty()) {
             const QString action = m_pendingAction;

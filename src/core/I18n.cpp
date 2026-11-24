@@ -156,6 +156,9 @@ void I18n::buildDictionaries() {
     zhCN["profile.logout"] = "下线";
     zhCN["profile.logoutTitle"] = "确认下线？";
     zhCN["profile.logoutMessage"] = "将停止保活并断开校园网连接。";
+    zhCN["profile.signOut"] = "注销";
+    zhCN["profile.signOutTitle"] = "确认注销本机账号？";
+    zhCN["profile.signOutMessage"] = "将退出本机账号并清除保存的登录信息；当前网络连接不会主动断开。";
     zhCN["about.title"] = "关于";
     zhCN["about.version"] = "版本";
     zhCN["about.description"] = "校园网自动认证与连接管理工具。";
@@ -240,6 +243,8 @@ void I18n::buildDictionaries() {
     zhCN["auth.logoutSuccessMessage"] = "已断开校园网连接。";
     zhCN["auth.logoutFailed"] = "下线失败";
     zhCN["auth.logoutFailedMessage"] = "未能完成下线。";
+    zhCN["auth.signOut"] = "已注销";
+    zhCN["auth.signOutMessage"] = "已退出本机账号并清除保存的登录信息。";
     zhCN["auth.loginSuccess"] = "认证成功";
     zhCN["auth.loginSuccessMessage"] = "已连接校园网。";
     zhCN["auth.loginFailed"] = "认证失败";
@@ -390,6 +395,9 @@ void I18n::buildDictionaries() {
     zhTW["profile.logout"] = "下線";
     zhTW["profile.logoutTitle"] = "確認下線？";
     zhTW["profile.logoutMessage"] = "將停止保活並中斷校園網連線。";
+    zhTW["profile.signOut"] = "登出";
+    zhTW["profile.signOutTitle"] = "確認登出本機帳號？";
+    zhTW["profile.signOutMessage"] = "將退出本機帳號並清除儲存的登入資訊；目前網路連線不會主動中斷。";
     zhTW["about.title"] = "關於";
     zhTW["about.version"] = "版本";
     zhTW["about.description"] = "校園網自動認證與連線管理工具。";
@@ -473,6 +481,8 @@ void I18n::buildDictionaries() {
     zhTW["auth.logoutSuccessMessage"] = "已中斷校園網連線。";
     zhTW["auth.logoutFailed"] = "下線失敗";
     zhTW["auth.logoutFailedMessage"] = "未能完成下線。";
+    zhTW["auth.signOut"] = "已登出";
+    zhTW["auth.signOutMessage"] = "已退出本機帳號並清除儲存的登入資訊。";
     zhTW["auth.loginSuccess"] = "認證成功";
     zhTW["auth.loginSuccessMessage"] = "已連線至校園網。";
     zhTW["auth.loginFailed"] = "認證失敗";
@@ -623,6 +633,9 @@ void I18n::buildDictionaries() {
     enGB["profile.logout"] = "Disconnect";
     enGB["profile.logoutTitle"] = "Disconnect from campus network?";
     enGB["profile.logoutMessage"] = "Keep-alive will stop and the campus network connection will close.";
+    enGB["profile.signOut"] = "Sign out";
+    enGB["profile.signOutTitle"] = "Sign out of this device?";
+    enGB["profile.signOutMessage"] = "This will leave the account on this device and clear saved sign-in info. The current network connection will not be closed.";
     enGB["about.title"] = "About";
     enGB["about.version"] = "Version";
     enGB["about.description"] = "A campus network authentication and connection manager.";
@@ -706,6 +719,8 @@ void I18n::buildDictionaries() {
     enGB["auth.logoutSuccessMessage"] = "Disconnected from the campus network.";
     enGB["auth.logoutFailed"] = "Disconnection failed";
     enGB["auth.logoutFailedMessage"] = "Could not disconnect from the campus network.";
+    enGB["auth.signOut"] = "Signed out";
+    enGB["auth.signOutMessage"] = "Signed out of this device and cleared saved sign-in info.";
     enGB["auth.loginSuccess"] = "Authenticated";
     enGB["auth.loginSuccessMessage"] = "Connected to the campus network.";
     enGB["auth.loginFailed"] = "Authentication failed";
@@ -856,6 +871,9 @@ void I18n::buildDictionaries() {
     ja["profile.logout"] = "切断";
     ja["profile.logoutTitle"] = "キャンパスネットワークから切断しますか？";
     ja["profile.logoutMessage"] = "キープアライブを停止し、キャンパスネットワークから切断します。";
+    ja["profile.signOut"] = "サインアウト";
+    ja["profile.signOutTitle"] = "この端末のアカウントからサインアウトしますか？";
+    ja["profile.signOutMessage"] = "この端末のアカウントを退出し、保存されたログイン情報を削除します。現在のネットワーク接続は切断されません。";
     ja["about.title"] = "情報";
     ja["about.version"] = "バージョン";
     ja["about.description"] = "キャンパスネットワークの自動認証と接続管理を行うツールです。";
@@ -939,6 +957,8 @@ void I18n::buildDictionaries() {
     ja["auth.logoutSuccessMessage"] = "キャンパスネットワークから切断しました。";
     ja["auth.logoutFailed"] = "切断に失敗";
     ja["auth.logoutFailedMessage"] = "キャンパスネットワークから切断できませんでした。";
+    ja["auth.signOut"] = "サインアウトしました";
+    ja["auth.signOutMessage"] = "この端末からアカウントを退出し、保存されたログイン情報を削除しました。";
     ja["auth.loginSuccess"] = "認証に成功";
     ja["auth.loginSuccessMessage"] = "キャンパスネットワークに接続しました。";
     ja["auth.loginFailed"] = "認証に失敗";

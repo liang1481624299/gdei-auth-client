@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
     LogController logs(&logger);
     DeviceController portalDevices(&config, &logger, &i18n);
     AccountController account(&config, &logger, &i18n);
-    SessionController session(&auth, &i18n);
+    SessionController session(&auth, &config, &i18n);
     LocalDeviceController localDevices(&config, &auth, &i18n);
     NetworkInfoController network(&config);
     EventBus events;

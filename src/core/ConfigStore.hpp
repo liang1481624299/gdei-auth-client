@@ -82,6 +82,12 @@ public:
     // Restore factory defaults: reset all global options, drop the stored
     // password and owned settings keys, keep the localProfiles group.
     Q_INVOKABLE bool resetToDefaults();
+    // 仅清除身份凭据（用户名 / 口令 / 记住密码 / 自动登录），保留服务器地址、语言、
+    // 保活与超时等网络及偏好配置；清安全存储口令并落盘。返回是否成功落盘。
+    // Clear only identity credentials (username/password/remember/auto-login),
+    // keep host, language, keep-alive and timeout settings; drop the stored secret
+    // and persist. Returns whether persistence succeeded.
+    Q_INVOKABLE bool clearCredentials();
 
 signals:
     void usernameChanged();

@@ -281,4 +281,28 @@ bool ConfigStore::resetToDefaults() {
     return save();
 }
 
+bool ConfigStore::clearCredentials() {
+    // 只清身份字段；服务器地址、语言、保活/超时、探测地址等网络与偏好配置保留。
+    // Clear identity fields only; keep host, language, keep-alive/timeout and probe prefs.
+    m_username.clear();
+    m_password.clear();
+    m_rememberPassword = false;
+    m_autoLogin = false;
+
+    QSettings s(constants::ORG_NAME, constants::APP_NAME);
+    s.remove(QStringLiteral("username"));
+    s.remove(QStringLiteral("remember_password"));
+    s.remove(QStringLiteral("auto_login"));
+    s.remove(QStringLiteral("password_ob"));
+    s.sync();
+    const bool settingsOk = (s.status() == QSettings::NoError);
+
+    // 清除安全存储中的已存口令 / drop the stored password from the secure store.
+    const bool secretOk = SecretStore::instance().clear(QStringLiteral("password"));
+
+    emit usernameChanged(); emit passwordChanged();
+    emit rememberPasswordChanged(); emit autoLoginChanged();
+    return settingsOk && secretOk;
+}
+
 } // namespace gdei

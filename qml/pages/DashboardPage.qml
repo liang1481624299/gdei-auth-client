@@ -91,6 +91,30 @@ PageScaffold {
         }
     }
 
+    PrimaryButton {
+        text: (app.i18n.lang, app.i18n.text("btn.login"))
+        leadingIcon: "power"
+        Layout.fillWidth: true
+        visible: !app.auth.online
+        busy: app.session.busy
+        onClicked: {
+            // 未登录先弹 portal 登录层；已登录但离线则直接重连。
+            // Signed out: prompt the portal login sheet; otherwise reconnect directly.
+            if (!app.session.loggedIn) app.session.promptLogin();
+            else app.session.login();
+        }
+    }
+
+    PrimaryButton {
+        text: (app.i18n.lang, app.i18n.text("btn.logout"))
+        variant: "danger"
+        bg: "transparent"
+        leadingIcon: "power"
+        Layout.fillWidth: true
+        visible: app.auth.online
+        onClicked: disconnectDialog.open()
+    }
+
     LocalDeviceCard {
         id: currentDeviceCard
         Layout.fillWidth: true
@@ -148,5 +172,16 @@ PageScaffold {
             root.pendingDeleteId = "";
         }
         onRejected: root.pendingDeleteId = ""
+    }
+
+    AppDialog {
+        id: disconnectDialog
+        title: (app.i18n.lang, app.i18n.text("profile.logoutTitle"))
+        message: (app.i18n.lang, app.i18n.text("profile.logoutMessage"))
+        confirmText: (app.i18n.lang, app.i18n.text("profile.logout"))
+        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
+        showCancel: true
+        destructive: true
+        onAccepted: app.session.logout()
     }
 }
