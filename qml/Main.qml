@@ -73,6 +73,7 @@ Window {
 
                     DashboardPage {
                         onManageDevicesRequested: stack.currentIndex = 1
+                        onOpenDiagnosticsRequested: stack.currentIndex = 6
                     }
                     DevicesPage {
                         onOpenRemoteRequested: stack.currentIndex = 3

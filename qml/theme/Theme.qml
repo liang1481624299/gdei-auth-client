@@ -66,12 +66,14 @@ QtObject {
     readonly property color primaryForeground: "#FFFFFF"
     readonly property color success: green
     readonly property color warning: orange
+    readonly property color info: blue
     readonly property color danger: red
     readonly property color dangerForeground: "#FFFFFF"
     readonly property color focusRing: Qt.rgba(green.r, green.g, green.b, isDark ? 0.34 : 0.22)
 
     function fill(c, a) { return Qt.rgba(c.r, c.g, c.b, a); }
     readonly property color blueFill: fill(blue, isDark ? 0.18 : 0.10)
+    readonly property color infoFill: blueFill
     readonly property color greenFill: fill(green, isDark ? 0.18 : 0.10)
     readonly property color orangeFill: fill(orange, isDark ? 0.18 : 0.10)
     readonly property color redFill: fill(red, isDark ? 0.18 : 0.10)
