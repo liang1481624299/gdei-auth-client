@@ -2,11 +2,13 @@
 
 > 来源：2026-11-22 对公网可访问登录页、未登录跳转行为与前端脚本的静态分析。
 > Source: public-facing login pages, unauthenticated redirect behavior and frontend scripts analyzed from the public network.
-> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-23 12:49:52` ｜ UTC/GMT `2026-11-23 04:49:52Z` ｜ UNIX `1795409392`。
+> 最后核对 / Last reviewed：`2026-11-24`（CST, UTC+8）。
 >
 > **环境限制 / Environment caveat**：调研分两轮，均**未持有登录会话**——早期在校外公网静态分析，本轮改为校园网直连（本机 `10.0.146.65`）后再次匿名探测。登录后的功能页、AJAX 提交端点、上网明细查询接口与真实返回 JSON 均**未实测**；未登录访问受保护页面仅返回 `meta refresh` 跳回 `login.jsf` 或 `302` 跳登录，猜测的常见页面名多为 `404`。需在校内网（gdei-wifi）、已登录 WebVPN 会话，或由用户在已登录浏览器 F12 抓包后补抓，见第 7 节。
 >
 > **2026-11-23 二次匿名复核**：captive 上线后再次匿名探测 8080，`/selfservice/login.jsf`、`/mselfservice/login.jsf` 仍为 200 登录页，两套表单字段与 3.1 / 3.2 一致；受保护页依旧 `302` / `404` 跳登录。自助 Web 会话与 captive 准入相互独立、不共享登录态，必须在 8080 单独登录。登录后页面、AJAX 端点与返回结构仍未取得。
+>
+> **2026-11-24 路径与截图补充**：用户提供 17 个登录后 `.jsf` 路径（见 2.2）与在线终端列表/详情两张截图（字段见 4.8）。本轮仍为匿名无会话探测：16 个 `302` 跳登录，仅 `boundIpList.jsf` 返回 200 匿名空壳（结构见 4.9）。截图补全了在线终端/详情的字段名认知，但真实 DOM 选择器、AJAX 端点、踢人/解绑等写报文仍需登录态抓包。
 >
 > **合规红线 / Compliance**：账号余额、证件号码、电话、电子邮件、MAC 地址、在线记录等均为本人敏感信息，由客户端在用户登录后按账号**运行时拉取**，不得硬编码进仓库或文档；口令仅经系统密钥存储读取，不明文落盘、不写日志。本文档只记录**字段名与功能分层**，不记录任何真实取值。
 
@@ -52,6 +54,32 @@ PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理�
 | `/selfservice/guest/guestPreRegister.jsf` | PC | 302（访客预注册） |
 
 移动版功能页集中在 `/mselfservice/user/` 目录；PC 端模块目录命名与移动版不同，匿名猜测多为 `404`，登录后需从左侧菜单/iframe `src` 取真实路径。
+
+### 2.2 受保护路径匿名探测（2026-11-24，未登录会话）
+
+> 环境：公网直连 `nac.gdei.edu.cn:8080`，匿名无会话；下列结果为 GET 首轮响应。`302 → login.jsf` 表示该前缀被会话过滤器拦截，**不代表文件一定存在**（可能是目录级过滤）；页面真实存在性、DOM 与 AJAX 仍需登录态复核。字段取值一律不落档。
+
+| # | 路径 | 端 | 功能 | 匿名结果 | 备注 |
+|---|---|---|---|---|---|
+| 1 | `/mselfservice/onlineuser/onlineUserList.jsf` | 移动 | 在线终端列表（截图 1） | 302 → 移动登录 | 终端卡片：类型图标/文案、服务名、MAC、接入时间、接入时长；点进详情为踢人页，见 4.8 |
+| 2 | `/mselfservice/snac/macList.jsf` | 移动 | 绑定 MAC 列表 | 302 → 移动登录 | 现有 `SELF_MAC_LIST_PATH` 取 `.xhtml` 变体，`.jsf` 文件名待登录态复核 |
+| 3 | `/mselfservice/billdetail/billDetailList.jsf` | 移动 | 账单明细 | 302 → 移动登录 | 与 PC `fee/billDetail.jsf` 对应 |
+| 4 | `/mselfservice/main/more.jsf` | 移动 | 更多菜单聚合页 | 302 → 移动登录 | 移动端导航入口 |
+| 5 | `/selfservice/maintain/main.jsf` | PC | 维护主页 / 账户资料概览 | 302 → PC 登录 | 登录后主页真实路径仍待复核（现有 `SELF_PC_HOME_PATH` 暂用此值） |
+| 6 | `/selfservice/maintain/modifyAcct.jsf` | PC | 修改账号资料 | 302 → PC 登录 | **写操作**；提交字段/校验待抓 |
+| 7 | `/selfservice/fee/userFeeInfo.jsf` | PC | 用户费用信息（余额/应缴） | 302 → PC 登录 | 对应 4.5 |
+| 8 | `/selfservice/fee/billDetail.jsf` | PC | 账单明细 | 302 → PC 登录 | 对应 4.6 |
+| 9 | `/selfservice/fee/onlineDetail.jsf` | PC | 上网明细（在线历史/流量） | 302 → PC 登录 | 查询条件、分页/时间范围、返回列待抓 |
+| 10 | `/selfservice/fee/paymentRecord.jsf` | PC | 缴费记录 | 302 → PC 登录 | 列表列与分页待抓 |
+| 11 | `/selfservice/fee/preServiceList.jsf` | PC | 已申请服务 / 预置业务 | 302 → PC 登录 | 对应 4.4 |
+| 12 | `/selfservice/trouble/troubleSubmit.jsf` | PC | 故障报修提交 | 302 → PC 登录 | **写操作**；表单字段与提交端点待抓 |
+| 13 | `/selfservice/trouble/troubleList.jsf` | PC | 报修记录列表 | 302 → PC 登录 | 列表列待抓 |
+| 14 | `/selfservice/faq/faqList.jsf` | PC | 常见问题（登录后） | 302 → PC 登录 | 公开 FAQ 另走 `/selfservice/preregister/unLoginFaqList.jsf` |
+| 15 | `/selfservice/snac/macList.jsf` | PC | MAC 绑定列表 | 302 → PC 登录 | 与移动 #2 对应 |
+| 16 | `/selfservice/boundIp/boundIpList.jsf` | PC | 静态 IP 绑定列表 | **200 空壳**（44080 B） | 会话过滤器放行但渲染匿名空壳，结构见 4.9 |
+| 17 | `/selfservice/snac/byodMacBoundDetail.jsf` | PC | BYOD MAC 绑定详情 | 302 → PC 登录 | 单终端绑定详情 |
+
+> 匿名壳页观察（#16）：顶栏显示「登录名：()」空括号、列表「未找到符合条件的记录，共有 0 条」；注销按钮 onclick 指向 `/Logout.jsf`（现有常量 `SELF_PC_LOGOUT_PATH=/selfservice/logout.xml`，**两处口径不一致，需登录态复核**）。模块导航均为 PrimeFaces ajax 按钮（`PrimeFaces.ab({source:'mainForm:<随机id>'})`），壳页内无静态 `.jsf` 超链接可提取路由映射。
 
 ## 3. 登录表单与提交 / Login Form & Submission
 
@@ -171,6 +199,55 @@ PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理�
 - 终端设备管理：绑定/解绑终端 MAC、查看在线设备。
 - 修改密码：登录后自助改密入口（与 3.3 忘记密码流程不同），表单与策略校验待抓包。
 
+### 4.8 在线终端与踢人（移动端 `/mselfservice/onlineuser/`）
+
+> 字段名来自已登录页面截图；取值一律不落档。报文结构与提交端点未抓取，**踢人为写操作，调研阶段不得对当前在线设备触发**。
+
+**在线终端列表 `onlineUserList.jsf`（截图 1）**
+
+| 字段 / Field | 说明 / Notes |
+|---|---|
+| 在线终端计数 | 标题括号内在线台数 |
+| 登录名 / 当前在线 IP | 列表顶部，属账号与网络标识，运行时读取并脱敏 |
+| 终端类型 | 图标 + 文案（PC / 手机等） |
+| 服务名 | 如「学生接入」 |
+| MAC 地址 | 终端网卡 |
+| 接入时间 | 上线时间 |
+| 接入时长 | 在线时长 |
+
+**终端详细信息（列表点入，踢人入口；截图 2）**
+
+| 字段 / Field | 说明 / Notes |
+|---|---|
+| 帐号名 | 只读账号 |
+| 登录名 | 登录标识 |
+| 用户姓名 | 实名，敏感 |
+| 服务名 | 接入服务 |
+| 上线时间 | 本次上线时间 |
+| 接入时长 | 在线时长 |
+| 终端类型 | PC / 手机等 |
+| 用户 IP 地址 | 在线 IP |
+| 用户 MAC 地址 | 终端网卡 |
+| 用户 SSID | 关联热点，可空 |
+| 「清除在线信息」按钮 | **踢人/远程下线该终端**，写操作；报文经 ICEfaces/PrimeFaces AJAX 提交，字段名、source、ViewState 与成功判定待抓包 |
+
+- 现有覆盖：`DevicePortalClient::parseOnline` 已从 `currentOnline` / `historyOnline` 取 `deviceType / mac / ip / duration / service / startTime / endTime`。
+- 缺口：详情页的**用户姓名、帐号名、SSID** 未建模；列表与详情是否同一 DOM 还是二次跳转、踢人按钮的 AJAX 报文均待登录态抓包。
+- 名额管理关联：并发上限内满员时，可对不保活/非本机终端执行踢人；但门户不暴露对端是否安装本客户端、是否保活，名额释放决策需产品规则另行定义（见任务 #85）。
+
+### 4.9 静态 IP 绑定（PC `/selfservice/boundIp/boundIpList.jsf`）
+
+> 该页匿名可访问但渲染空壳（4.9 结构取自 2026-11-24 匿名 200 响应；数据行需登录后填充）。
+
+| 项 / Item | 结论 / Finding |
+|---|---|
+| 列表表头 | IP 地址、MAC 地址、安全组、绑定时间、修改 |
+| 操作按钮 | 删除（`mainForm:delete`）、申请静态 IP 地址、行内修改 |
+| 行选择 | `mainForm:data_selection`（PrimeFaces 行选中）；删除前 `checkTableSelected('mainForm:data', '请至少选择一条记录。')` 校验 |
+| 列表组件 | `mainForm:data`，支持分页（8/15/50/100/200）与排序，均为 PrimeFaces partial submit |
+| 匿名空态 | 「未找到符合条件的记录。共有 0 条记录，当前第 0 - 0，第 1/1 页。」 |
+| 写操作 | 解绑 IP、申请静态 IP、修改绑定均走 PrimeFaces ajax（`PrimeFaces.ab({source:'mainForm:…'})`），具体 source、请求参数与响应待登录态抓包 |
+
 ## 5. 对接要点 / Integration Notes
 
 1. **会话保持**：JSF/ICEfaces 为有状态服务，POST 必须携带 `JSESSIONID` Cookie 与当前页 `javax.faces.ViewState`（触屏端另需 `ice.window`/`ice.view`）；ViewState 与会话绑定，刷新页面后须重新取页。
@@ -187,10 +264,14 @@ PC 登录页底部导航互链：`PC 版` ↔ `触屏版自助`、`访客管理�
 
 ## 7. 登录后待补抓清单 / Post-Login TODO
 
-- [ ] PC 登录后首页（代码暂用 `/selfservice/main/main.jsf`）左侧/顶部菜单的真实 `.jsf` 路径与页面标题映射；重点核对 PC `/selfservice/fee/`、`/selfservice/guest/` 下实际文件名。移动端 `/mselfservice/user/index.jsf` 已接入只读在线/历史列表，其子页与菜单路径仍需登录态复核。
+- [ ] PC 登录后首页（代码暂用 `/selfservice/main/main.jsf`）左侧/顶部菜单的真实 `.jsf` 路径与页面标题映射；重点核对 PC `/selfservice/fee/`、`/selfservice/guest/` 下实际文件名。移动端 `/mselfservice/user/index.jsf` 已接入只读在线/历史列表，其子页与菜单路径仍需登录态复核。2026-11-24 用户提供的 17 个登录后路径见 2.2 表，待登录态逐页核对真实存在性与 DOM。
 - [ ] 各模块列表与详情的 AJAX 端点、请求参数、分页/时间范围参数与返回 JSON 结构。
 - [ ] 上网明细查询的条件项、返回列与流量单位。
 - [ ] 修改密码、更新资料、报修、绑定/解绑 MAC 的提交字段名、校验规则与成功/失败响应。
+- [ ] 在线终端「清除在线信息」踢人按钮的 AJAX 报文（source、参数、ViewState、成功/失败判定），见 4.8；**调研阶段禁止对当前在线设备触发**。
+- [ ] 静态 IP 绑定列表（4.9）登录后数据行 DOM，以及解绑 / 申请静态 IP / 修改绑定的 PrimeFaces partial submit 报文。
+- [ ] PC 注销路径复核：匿名壳页注销 onclick 指向 `/Logout.jsf`，现有常量 `SELF_PC_LOGOUT_PATH=/selfservice/logout.xml`，两处口径需登录态统一。
+- [ ] 在线终端详情的用户姓名 / 帐号名 / SSID 字段选择器，补进设备模型（现有 `parseOnline` 未取这三项）。
 - [x] `imc_byod_function_base64_with_chinese` 完整函数体已从 `ssv.js` 取得并核对（见 3.1），`core/SelfServiceCodec.cpp` 已复刻。
 - [ ] 验证码生成/校验会话绑定方式，以及连续失败锁定策略。
 - [ ] 设备管理用户（`usertype=2`）与访客自助（`mlogin.jsf`）的专属功能与字段。
