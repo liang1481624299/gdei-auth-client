@@ -272,6 +272,7 @@ if(WIN32)
             COMMAND "${WINDEPLOYQT_EXECUTABLE}"
                     --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/qml"
                     --no-translations
+                    --no-compiler-runtime
                     "$<TARGET_FILE:gdei-auth-client>"
             COMMENT "windeployqt: 部署 Qt 运行时依赖到输出目录 (auto-bundle)"
             VERBATIM)
