@@ -82,7 +82,7 @@ PageScaffold {
                         Layout.preferredHeight: 48
                         Layout.alignment: Qt.AlignVCenter
                         radius: 24
-                        color: th.blueFill
+                        color: th.greenFill
                         Icon {
                             anchors.centerIn: parent
                             name: "person"

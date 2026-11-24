@@ -10,7 +10,7 @@ Rectangle {
     property int currentIndex: 0
     signal tabSelected(int index)
 
-    implicitHeight: th.dp(72)
+    implicitHeight: th.dp(49)
     color: th.card
 
     Rectangle {
@@ -23,8 +23,7 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: th.sp3
-        spacing: th.sp2
+        spacing: 0
 
         AppTabButton {
             text: (app.i18n.lang, app.i18n.text("nav.dashboard"))

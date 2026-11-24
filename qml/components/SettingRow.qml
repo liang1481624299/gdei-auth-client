@@ -13,18 +13,18 @@ Item {
     property string leadingIcon: ""
     default property alias content: trailing.children
 
-    implicitHeight: Math.max(th.touchTarget, row.implicitHeight + th.sp4)
+    implicitHeight: th.dp(56)
 
     RowLayout {
         id: row
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        spacing: th.sp6
+        spacing: th.sp5
 
         Icon {
             name: root.leadingIcon
-            iconSize: 18
+            iconSize: 22
             tint: th.muted
             visible: root.leadingIcon.length > 0
             Layout.alignment: Qt.AlignVCenter
@@ -38,8 +38,8 @@ Item {
             QQC.Label {
                 text: root.title
                 color: th.text
-                font.pixelSize: th.fontBody
-                font.weight: th.weightMedium
+                font.pixelSize: th.fontHeadline
+                font.weight: th.weightRegular
                 wrapMode: Text.Wrap
                 visible: text.length > 0
                 Layout.fillWidth: true

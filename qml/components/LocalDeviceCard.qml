@@ -44,16 +44,16 @@ Card {
             Layout.fillWidth: true
 
             Rectangle {
-                Layout.preferredWidth: th.touchTarget
-                Layout.preferredHeight: th.touchTarget
+                Layout.preferredWidth: th.dp(44)
+                Layout.preferredHeight: th.dp(44)
                 Layout.alignment: Qt.AlignTop
-                radius: th.radius
-                color: root.selected ? th.blueFill : th.secondaryBg
+                radius: th.radiusSmall
+                color: root.selected ? th.greenFill : th.field
 
                 Icon {
                     anchors.centerIn: parent
                     name: "server"
-                    iconSize: 21
+                    iconSize: 22
                     tint: root.selected ? th.primary : th.muted
                 }
             }
@@ -66,7 +66,7 @@ Card {
                     text: root.displayValue(root.name)
                     color: th.text
                     font.pixelSize: th.fontHeadline
-                    font.weight: th.weightSemibold
+                    font.weight: th.weightRegular
                     wrapMode: Text.WrapAnywhere
                     Layout.fillWidth: true
                 }

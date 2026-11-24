@@ -30,7 +30,7 @@ PageScaffold {
     title: "dashboard.title"
     subtitle: "dashboard.subtitle"
     showBack: false
-    contentMaxWidth: th.dp(860)
+    contentMaxWidth: th.dp(480)
 
     function requestDelete(id) {
         pendingDeleteId = id;

@@ -10,15 +10,15 @@ Window {
     id: root
     Theme { id: th }
 
-    readonly property int maxWindowWidth: th.dp(1040)
-    readonly property int maxWindowHeight: th.dp(860)
+    // 默认按手机竖屏比例开窗，可自由拖拽放大；内容栏在宽屏居中受限。
+    // Default phone-portrait size; resizable, content column stays centered on wide screens.
+    readonly property int defaultWindowWidth: th.dp(400)
+    readonly property int defaultWindowHeight: th.dp(720)
     readonly property int minWindowWidth: th.dp(320)
-    readonly property int minWindowHeight: th.dp(400)
+    readonly property int minWindowHeight: th.dp(480)
 
-    width: Math.min(maxWindowWidth, Screen.desktopAvailableWidth,
-                    Math.max(minWindowWidth, Math.round(Screen.desktopAvailableWidth * 0.90)))
-    height: Math.min(maxWindowHeight, Screen.desktopAvailableHeight,
-                     Math.max(minWindowHeight, Math.round(Screen.desktopAvailableHeight * 0.86)))
+    width: defaultWindowWidth
+    height: defaultWindowHeight
     minimumWidth: Math.min(minWindowWidth, Screen.desktopAvailableWidth)
     minimumHeight: Math.min(minWindowHeight, Screen.desktopAvailableHeight)
     visible: true

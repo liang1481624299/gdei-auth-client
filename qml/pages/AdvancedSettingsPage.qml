@@ -126,7 +126,7 @@ PageScaffold {
                         background: Rectangle {
                             radius: th.radiusSmall
                             color: highlighted || encodingCombo.currentIndex === index
-                                   ? th.blueFill : parent.hovered ? th.controlHover : "transparent"
+                                   ? th.greenFill : parent.hovered ? th.controlHover : "transparent"
                         }
                     }
                     popup: QQC.Popup {

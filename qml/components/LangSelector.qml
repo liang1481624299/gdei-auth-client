@@ -83,7 +83,7 @@ QQC.ComboBox {
         background: Rectangle {
             radius: th.radiusSmall
             color: control.highlightedIndex === index || control.currentIndex === index
-                   ? th.blueFill : parent.hovered ? th.controlHover : "transparent"
+                   ? th.greenFill : parent.hovered ? th.controlHover : "transparent"
         }
         contentItem: QQC.Label {
             text: modelData.name

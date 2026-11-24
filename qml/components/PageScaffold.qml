@@ -11,7 +11,7 @@ Item {
     property string title: ""
     property string subtitle: ""
     property bool showBack: false
-    property int contentMaxWidth: th.dp(1080)
+    property int contentMaxWidth: th.dp(480)
     signal backRequested()
 
     default property alias content: contentColumn.data
@@ -110,8 +110,9 @@ Item {
                             text: root.localized(root.title)
                             visible: root.title.length > 0
                             color: th.text
-                            font.pixelSize: th.fontTitle1
-                            font.weight: th.weightBold
+                            font.pixelSize: th.fontHeadline
+                            font.weight: th.weightSemibold
+                            horizontalAlignment: Text.AlignHCenter
                             wrapMode: Text.Wrap
                             Layout.fillWidth: true
                         }
@@ -120,7 +121,8 @@ Item {
                             text: root.localized(root.subtitle)
                             visible: root.subtitle.length > 0
                             color: th.muted
-                            font.pixelSize: th.fontBody
+                            font.pixelSize: th.fontSubhead
+                            horizontalAlignment: Text.AlignHCenter
                             wrapMode: Text.Wrap
                             Layout.fillWidth: true
                         }

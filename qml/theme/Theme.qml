@@ -29,46 +29,46 @@ QtObject {
     // Manual light/dark wins; follow-system uses systemDark.
     readonly property bool isDark: mode === 2 ? true : mode === 1 ? false : systemDark
 
-    // ---- iOS HIG 系统背景层级 / iOS HIG background hierarchy ----
-    readonly property color window: isDark ? "#000000" : "#F2F2F7"
+    // ---- 微信风格背景层级 / WeChat background hierarchy ----
+    readonly property color window: isDark ? "#000000" : "#EDEDED"
     readonly property color bg: window
     readonly property color card: isDark ? "#1C1C1E" : "#FFFFFF"
     readonly property color surfaceElevated: card
-    readonly property color secondaryBg: isDark ? "#2C2C2E" : "#FFFFFF"
+    readonly property color secondaryBg: isDark ? "#1C1C1E" : "#FFFFFF"
     readonly property color surfaceMuted: secondaryBg
     readonly property color field: isDark ? "#2C2C2E" : "#F2F2F7"
-    readonly property color controlHover: isDark ? "#3A3A3C" : "#EBEBF0"
-    readonly property color controlPressed: isDark ? "#48484A" : "#DCDCE2"
-    readonly property color separator: isDark ? "rgba(84,84,88,0.60)" : "rgba(60,60,67,0.12)"
+    readonly property color controlHover: isDark ? "#3A3A3C" : "#F2F2F7"
+    readonly property color controlPressed: isDark ? "#48484A" : "#E5E5E5"
+    readonly property color separator: isDark ? "#2C2C2E" : "#E5E5E5"
     readonly property color border: separator
     readonly property color overlay: isDark ? Qt.rgba(0, 0, 0, 0.64) : Qt.rgba(0.05, 0.05, 0.07, 0.36)
 
-    // ---- iOS HIG Label 层级 / iOS HIG label hierarchy ----
+    // ---- 微信风格文本层级 / WeChat label hierarchy ----
     readonly property color text: isDark ? "#FFFFFF" : "#000000"
-    readonly property color secondaryLabel: isDark ? "rgba(235,235,245,0.60)" : "rgba(60,60,67,0.60)"
+    readonly property color secondaryLabel: isDark ? "#989898" : "#888888"
     readonly property color muted: secondaryLabel
-    readonly property color tertiaryLabel: isDark ? "rgba(235,235,245,0.30)" : "rgba(60,60,67,0.33)"
-    readonly property color quaternaryLabel: isDark ? "rgba(235,235,245,0.16)" : "rgba(60,60,67,0.18)"
-    readonly property color disabledText: isDark ? "rgba(235,235,245,0.28)" : "rgba(60,60,67,0.30)"
+    readonly property color tertiaryLabel: isDark ? "#666666" : "#999999"
+    readonly property color quaternaryLabel: isDark ? "#48484A" : "#C7C7CC"
+    readonly property color disabledText: isDark ? "#48484A" : "#C7C7CC"
     readonly property color disabledBackground: isDark ? "#2C2C2E" : "#E9E9EB"
 
-    // ---- iOS HIG 系统色 / iOS HIG system colors ----
-    readonly property color blue: isDark ? "#0A84FF" : "#007AFF"
-    readonly property color green: isDark ? "#30D158" : "#34C759"
+    // ---- 微信风格系统色 / WeChat system colors ----
+    readonly property color blue: isDark ? "#36C0FF" : "#10AEFF"
+    readonly property color green: isDark ? "#12D072" : "#07C160"
     readonly property color orange: isDark ? "#FF9F0A" : "#FF9500"
-    readonly property color red: isDark ? "#FF453A" : "#FF3B30"
+    readonly property color red: isDark ? "#FF6B6B" : "#FA5151"
     readonly property color purple: isDark ? "#BF5AF2" : "#AF52DE"
     readonly property color indigo: isDark ? "#5E5CE6" : "#5856D6"
     readonly property color gray: secondaryLabel
 
-    readonly property color primary: blue
-    readonly property color primaryHover: Qt.darker(blue, isDark ? 0.92 : 1.08)
+    readonly property color primary: green
+    readonly property color primaryHover: Qt.darker(green, isDark ? 0.92 : 1.08)
     readonly property color primaryForeground: "#FFFFFF"
     readonly property color success: green
     readonly property color warning: orange
     readonly property color danger: red
     readonly property color dangerForeground: "#FFFFFF"
-    readonly property color focusRing: Qt.rgba(blue.r, blue.g, blue.b, isDark ? 0.34 : 0.22)
+    readonly property color focusRing: Qt.rgba(green.r, green.g, green.b, isDark ? 0.34 : 0.22)
 
     function fill(c, a) { return Qt.rgba(c.r, c.g, c.b, a); }
     readonly property color blueFill: fill(blue, isDark ? 0.18 : 0.10)
@@ -116,6 +116,7 @@ QtObject {
     readonly property int weightBold: 700
 
     readonly property int radiusSmall: dp(8)
+    readonly property int radiusButton: dp(10)
     readonly property int radius: dp(12)
     readonly property int radiusLarge: dp(16)
     readonly property int radiusPill: 999
@@ -138,8 +139,8 @@ QtObject {
     readonly property int wideBreakpoint: dp(960)
 
     readonly property color shadowColor: "#000000"
-    readonly property real shadowOpacityCard: isDark ? 0.24 : 0.055
-    readonly property real shadowOpacityCtrl: isDark ? 0.20 : 0.06
+    readonly property real shadowOpacityCard: isDark ? 0.20 : 0.03
+    readonly property real shadowOpacityCtrl: isDark ? 0.18 : 0.04
     readonly property real shadowElevCard: 0.4
     readonly property real disabledOpacity: 0.52
 

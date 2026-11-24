@@ -15,33 +15,30 @@ QQC.Button {
     readonly property color foregroundColor: !enabled ? th.disabledText
                                              : selected ? th.primary : th.muted
 
-    implicitWidth: th.dp(76)
-    implicitHeight: th.dp(60)
-    padding: th.sp3
+    implicitHeight: th.dp(49)
+    padding: 0
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
-    font.pixelSize: th.fontFootnote
-    font.weight: selected ? th.weightSemibold : th.weightMedium
+    font.pixelSize: th.fontCaption
+    font.weight: selected ? th.weightMedium : th.weightRegular
     opacity: enabled ? 1 : th.disabledOpacity
-    scale: down ? 0.985 : 1
-
-    Behavior on scale {
-        SpringAnimation { spring: 5; damping: 0.78; epsilon: 0.001 }
-    }
 
     contentItem: ColumnLayout {
-        spacing: th.dp(3)
+        spacing: th.dp(2)
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.alignment: Qt.AlignCenter
 
         Item {
-            Layout.preferredWidth: th.dp(30)
-            Layout.preferredHeight: th.dp(26)
+            Layout.preferredWidth: th.dp(26)
+            Layout.preferredHeight: th.dp(25)
             Layout.alignment: Qt.AlignHCenter
 
             Icon {
                 id: icon
                 anchors.centerIn: parent
                 name: control.iconName
-                iconSize: th.dp(22)
+                iconSize: th.dp(25)
                 tint: control.foregroundColor
                 Behavior on tint { ColorAnimation { duration: th.durationFast } }
             }
@@ -78,15 +75,6 @@ QQC.Button {
             border.color: th.focusRing
             opacity: control.activeFocus ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: th.durationFast } }
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            radius: th.radiusSmall
-            color: control.down ? th.controlPressed
-                 : control.hovered ? th.controlHover
-                 : control.selected ? th.blueFill : "transparent"
-            Behavior on color { ColorAnimation { duration: th.durationFast } }
         }
     }
 }

@@ -73,7 +73,7 @@ QQC.Button {
         Rectangle {
             anchors.fill: parent
             anchors.margins: -3
-            radius: th.radius
+            radius: th.radiusButton
             color: "transparent"
             border.width: 2
             border.color: th.focusRing
@@ -83,7 +83,7 @@ QQC.Button {
 
         Rectangle {
             anchors.fill: parent
-            radius: th.radiusSmall
+            radius: th.radiusButton
             color: {
                 if (!control.enabled)
                     return control.isFilled ? th.disabledBackground : "transparent";

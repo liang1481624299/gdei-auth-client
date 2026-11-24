@@ -8,13 +8,13 @@ Rectangle {
 
     Theme { id: th }
 
-    property int margins: 20
+    property int margins: 16
     property real shadowStrength: cardHover.hovered ? th.shadowOpacityCard * 1.5
                                                      : th.shadowOpacityCard
 
     color: th.card
     radius: th.radius
-    border.width: 1
+    border.width: 0
     border.color: th.separator
     implicitWidth: column.implicitWidth + margins * 2
     implicitHeight: column.implicitHeight + margins * 2
