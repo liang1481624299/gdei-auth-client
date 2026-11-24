@@ -270,6 +270,8 @@ void I18n::buildDictionaries() {
     zhCN["network.localUnavailableMessage"] = "请检查 Wi-Fi 或网线连接。";
     zhCN["network.reasonLocalUnavailable"] = "未检测到可用的本地网络连接。";
     zhCN["network.reasonUnknown"] = "未能确定离线原因，请查看日志。";
+    zhCN["troubleshoot.ax201Title"] = "网卡兼容自查";
+    zhCN["troubleshoot.ax201Message"] = "若 DNS 正常、网页能打开但极慢或卡死，且 ping 不通：校园网关会丢弃 ICMP，不代表离线。Intel AX201 等网卡可在设备管理器 → 网卡 → 高级，关闭 Large Send Offload v2 (IPv4/IPv6)、TCP 校验和卸载、ARP/NS Offload；电源管理取消「允许计算机关闭此设备以节约电源」，再重连 Wi-Fi 复测。";
     zhCN["portalDevices.sessionExpired"] = "门户会话已过期";
     zhCN["portalDevices.sessionExpiredMessage"] = "请重新登录设备门户。";
     zhCN["portalDevices.loginSuccess"] = "门户登录成功";
@@ -508,6 +510,8 @@ void I18n::buildDictionaries() {
     zhTW["network.localUnavailableMessage"] = "請檢查 Wi-Fi 或網路線連線。";
     zhTW["network.reasonLocalUnavailable"] = "未偵測到可用的本機網路連線。";
     zhTW["network.reasonUnknown"] = "未能確定離線原因，請查看日誌。";
+    zhTW["troubleshoot.ax201Title"] = "網卡相容性自查";
+    zhTW["troubleshoot.ax201Message"] = "若 DNS 正常、網頁可開啟但極慢或卡死，且 ping 不通：校園閘道會丟棄 ICMP，不代表離線。Intel AX201 等網卡可在裝置管理員 → 網卡 → 進階，關閉 Large Send Offload v2 (IPv4/IPv6)、TCP 總和檢查碼卸載、ARP/NS Offload；電源管理取消「允許電腦關閉此裝置以節省電源」，再重新連線 Wi-Fi 複測。";
     zhTW["portalDevices.sessionExpired"] = "入口網站工作階段已過期";
     zhTW["portalDevices.sessionExpiredMessage"] = "請重新登入裝置入口網站。";
     zhTW["portalDevices.loginSuccess"] = "入口網站登入成功";
@@ -746,6 +750,8 @@ void I18n::buildDictionaries() {
     enGB["network.localUnavailableMessage"] = "Check your Wi-Fi or Ethernet connection.";
     enGB["network.reasonLocalUnavailable"] = "No usable local network connection was detected.";
     enGB["network.reasonUnknown"] = "The cause of the disconnection is unknown. Check the log.";
+    enGB["troubleshoot.ax201Title"] = "NIC compatibility check";
+    enGB["troubleshoot.ax201Message"] = "If DNS works and pages load but are very slow or hang, and ping fails: the campus gateway drops ICMP, so it does not mean you are offline. On Intel AX201 and similar adapters, open Device Manager → adapter → Advanced, disable Large Send Offload v2 (IPv4/IPv6), TCP Checksum Offload, ARP/NS Offload; in Power Management uncheck \"Allow the computer to turn off this device\", then reconnect Wi-Fi and retest.";
     enGB["portalDevices.sessionExpired"] = "Portal session expired";
     enGB["portalDevices.sessionExpiredMessage"] = "Sign in to the device portal again.";
     enGB["portalDevices.loginSuccess"] = "Signed in to portal";
@@ -984,6 +990,8 @@ void I18n::buildDictionaries() {
     ja["network.localUnavailableMessage"] = "Wi-Fi または有線接続を確認してください。";
     ja["network.reasonLocalUnavailable"] = "利用可能なローカルネットワーク接続が検出されませんでした。";
     ja["network.reasonUnknown"] = "オフラインの原因を特定できません。ログを確認してください。";
+    ja["troubleshoot.ax201Title"] = "NIC 互換性チェック";
+    ja["troubleshoot.ax201Message"] = "DNS は通り、ページは開くが非常に遅いか停止し、ping が不通の場合: キャンパスゲートウェイが ICMP を破棄するため、オフラインとは限りません。Intel AX201 などのアダプタでは、デバイスマネージャー → アダプタ → 詳細設定で Large Send Offload v2 (IPv4/IPv6)、TCP チェックサムオフロード、ARP/NS Offload を無効化し、電源管理で「このデバイスの電源を切ることを許可する」をオフにして、Wi-Fi を再接続して再テストしてください。";
     ja["portalDevices.sessionExpired"] = "ポータルセッションの期限切れ";
     ja["portalDevices.sessionExpiredMessage"] = "デバイスポータルに再度ログインしてください。";
     ja["portalDevices.loginSuccess"] = "ポータルにログインしました";

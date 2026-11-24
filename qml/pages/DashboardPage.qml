@@ -133,6 +133,7 @@ PageScaffold {
     }
 
     Card {
+        id: warnCard
         Layout.fillWidth: true
         visible: root.showConnectivityWarning
         margins: th.sp6
@@ -146,6 +147,30 @@ PageScaffold {
                   : (app.i18n.lang, app.i18n.text("network.offlineMessage"))
             color: th.text
             font.pixelSize: th.fontBody
+            wrapMode: Text.Wrap
+        }
+
+        // 有本地链路但校园网离线/半连通时，附网卡 Offload 兼容自查指引；
+        // 本地网卡未连接时不展示（关闭卸载项无从谈起）。
+        // NIC offload self-check hint shown only when a local link exists but the
+        // campus network is offline/degraded; hidden when no adapter is connected.
+        readonly property bool showNicHint: app.network.available && root.genuinelyOffline
+
+        QQC.Label {
+            width: parent.width
+            visible: warnCard.showNicHint
+            text: (app.i18n.lang, app.i18n.text("troubleshoot.ax201Title"))
+            color: th.warning
+            font.pixelSize: th.fontFootnote
+            font.weight: th.weightSemibold
+            wrapMode: Text.Wrap
+        }
+        QQC.Label {
+            width: parent.width
+            visible: warnCard.showNicHint
+            text: (app.i18n.lang, app.i18n.text("troubleshoot.ax201Message"))
+            color: th.secondaryLabel
+            font.pixelSize: th.fontFootnote
             wrapMode: Text.Wrap
         }
     }
