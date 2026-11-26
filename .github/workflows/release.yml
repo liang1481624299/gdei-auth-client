@@ -162,7 +162,9 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
       - name: Install Qt 6.8.3 host tools
         uses: jurplel/install-qt-action@v4
