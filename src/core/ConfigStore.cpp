@@ -358,8 +358,8 @@ bool ConfigStore::systemDark() const {
     // colorScheme exists since Qt 6.5; older Qt falls back to light here.
     if (auto* app = qApp) {
         const Qt::ColorScheme cs = app->styleHints()->colorScheme();
-        if (cs == Qt::DarkScheme) return true;
-        if (cs == Qt::LightScheme) return false;
+        if (cs == Qt::ColorScheme::Dark) return true;
+        if (cs == Qt::ColorScheme::Light) return false;
     }
 #endif
     return false;
