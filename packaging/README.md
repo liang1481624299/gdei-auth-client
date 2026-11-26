@@ -19,7 +19,7 @@ packaging/
 
 | 平台 | 架构 | 目标产物 | 当前 CI 产物 | 说明 |
 |---|---|---|---|---|
-| Windows | x64 / ARM64 | NSIS exe 安装包 | x64：`gdei-auth-client-windows-x64.zip`；ARM64 实验性构建 | 已用 windeployqt 收集依赖；NSIS 安装包待 CPack 在带 NSIS 工具链的 Runner 生成；ARM64 产物名待按架构拆分 |
+| Windows | x64 / ARM64 | NSIS exe 安装包 | x64：`gdei-auth-client-windows-x64.zip`；ARM64 实验性构建 | windeployqt 收编 Qt 库/插件/QML，并 `--compiler-runtime` 部署编译器运行时；MSVC 链路额外从 VS Redist/VC Tools 兜底拷贝 msvcp140/vcruntime140/concrt140 等 CRT，保证干净机免装 VC++ Redist 即可启动；打包前做关键依赖 + 运行时二选一完整性校验，缺任一项直接失败；已移除未使用的 qsqlpsql/qsqlodbc 悬空驱动。NSIS 安装包待 CPack 在带 NSIS 工具链的 Runner 生成；ARM64 产物名待按架构拆分 |
 | macOS | x64（Intel）/ ARM64（Apple Silicon） | dmg | `gdei-auth-client-macos.dmg` | macdeployqt 收编后 hdiutil 打包；未签名 / 未公证，待补 |
 | Ubuntu 24.04 | x64 / ARM64 | 自包含 tar.gz（deb 可选） | 系统 Qt 构建产物归档 | 原生 runner 验证编译；ARM64 走 `ubuntu-24.04-arm` |
 | Debian (bookworm) | x64 | deb | CPack 生成的 `.deb`（可选） | 通用保底产物为自包含 `gdei-auth-client-linux-x64.tar.gz`（Qt 库 + 插件 + QML 已打包，解压即用）；deb 可在 Debian 容器内用 CPack 生成，`dpkg-shlibdeps` 声明系统动态依赖 |
@@ -28,6 +28,6 @@ packaging/
 
 ## 依赖分发原则
 
-- 应用级运行依赖（Qt 库、QML 插件、imageformats 等）随安装包分发，用户无需手动安装 Qt。
+- 应用级运行依赖（Qt 库、QML 插件、imageformats 等）随安装包分发，用户无需手动安装 Qt；Windows 下编译器运行时（MSVC CRT / MinGW 运行时三件套）也随包分发，解压即可运行。
 - 系统底层依赖（glibc、X11 / Wayland、dbus、Cocoa / Foundation / Security、Android 运行时）由目标设备系统提供，不强行静态打包。
 - 无法随包分发的系统级依赖，需在 README 与发布说明中列明，不宣称“完全零依赖”。

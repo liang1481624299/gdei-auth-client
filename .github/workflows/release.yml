@@ -21,20 +21,29 @@ jobs:
         include:
           - target: windows
             runner: windows-latest
+            arch: win64_msvc2022_64
           - target: macos
             runner: macos-latest
+            arch: clang_64
     runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.5.3'
+          version: '6.8.3'
+          arch: ${{ matrix.arch }}
           modules: qt5compat
           cache: true
+          setup-python: false
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
