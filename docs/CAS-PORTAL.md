@@ -2,9 +2,9 @@
 
 > 来源：2026-11-22 对公网可访问页面、门户前端 bundle（React/axios）的静态分析；2026-11-26 在可达统一认证中心的网络下**实测匿名链路**（外壳页、login2022 表单、校验端点、子系统 302 跳转、前端 bundle）；同日在**本人已登录门户会话**内复核了票据跳转链、会话 Cookie 与 `sessionStorage.userLogin` 全字段。
 > Source: public pages + portal bundle static analysis (2026-11-22); anonymous live probing (2026-11-26); logged-in session verification of ticket flow, session cookies and the merged `userLogin` object (2026-11-26).
-> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-26 17:58:00`。
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-26 23:00:00`。
 >
-> **登录后实测口径 / Logged-in scope**：CAS 登录链、会话 Cookie、门户 `userLogin` 资料字段已在本人账号登录会话中实测核对（字段名/类型/枚举见第 4.1 节，文档不落真实姓名学号等值）。**教务 jwxt / 数据门户 dsj 的学籍字段（专业、年级、学籍号、学籍状态、学院规范全称）尚未进入对应子系统抓包**，见第 4.2、9 节。
+> **登录后实测口径 / Logged-in scope**：CAS 登录链、会话 Cookie、门户 `userLogin` 资料字段已在本人账号登录会话中实测核对（字段名/类型/枚举见第 4.1 节，文档不落真实姓名学号等值）；jwxt / dsj 学籍字段已在早先成功进入子系统的会话中抓到（见 4.2、4.3）。jwxt 网关鉴权头目前为前端 bundle 静态推断，原始成功 XHR 头待可进入学生教务的会话复核（见 4.2、§9-1）。
 >
 > **合规红线 / Compliance**：个人信息一律由客户端在用户本人登录后按账号运行时拉取，**不得把学号、姓名、班级、学院、学籍号等真实个人信息硬编码进仓库或文档**；口令仅经系统密钥存储读取，不明文落盘。校徽/院徽等素材版权归学校，仅作客户端界面展示用途。
 
@@ -102,7 +102,7 @@
 
 以下路径提取自 `iportal.gdei.edu.cn/assets/js/app.3c2.js`，相对门户同源（无独立 baseURL）；**响应结构未鉴权实测**，登录后需复核。
 
-**鉴权方式（bundle + 登录会话实测）**：axios 实例 `withCredentials=true`，默认请求头 `X-Requested-With: XMLHttpRequest`（GET/POST/DELETE），POST 默认 `application/x-www-form-urlencoded`；请求拦截器还会按 `timestamp + GATEWAY_KEY` 生成 `csrfToken` 头（GET/POST 均带）。登录会话实测：当前域 JS 可见 Cookie 仅 `Authorization`（值为门户内部令牌），后端另有 Shiro HttpOnly 会话 Cookie（`document.cookie` 读不到）；主资料接口 `tryLoginUserInfo` 在请求头带 `Authorization: <令牌>` 与 `gatewayAppId: ly-upp`。响应拦截器把 `data.meta.status == 302` / 401 判为未登录。匿名调用被 SPA 兜底回首页 `index.html`，拿不到任何数据。
+**鉴权方式（bundle + 登录会话实测）**：axios 实例 `withCredentials=true`，默认请求头 `X-Requested-With: XMLHttpRequest`（GET/POST/DELETE），POST 默认 `application/x-www-form-urlencoded`。请求拦截器：`r = Date.now()`（毫秒时间戳），`csrfToken = 哈希("timestamp="+r+",key="+GATEWAY_KEY)`（GET/POST 均带 `csrfToken`，另带 `csrfTimestamp=r` 头；`GATEWAY_KEY` 为前端配置内签名密钥，文档不落其值，摘要哈希算法待复核）；登录后另带 `loginUserId=<userId>` 头。登录会话实测：当前域 JS 可见 Cookie 仅 `Authorization`（值为门户内部令牌），后端另有 Shiro HttpOnly 会话 Cookie（`document.cookie` 读不到）；主资料接口 `tryLoginUserInfo` 在请求头带 `Authorization: <令牌>` 与 `gatewayAppId: ly-upp`。响应拦截器把 `data.meta.status == 302` / 401 判为未登录。匿名调用被 SPA 兜底回首页 `index.html`，拿不到任何数据。
 
 ### 3.0 部门/头像等关联接口 / Lookup endpoints
 
@@ -183,7 +183,22 @@
 CAS 已有 TGC 单点会话时，访问教务 SSO 入口 `https://security.gdei.edu.cn/cas/jwxtsso.jsp` 可**免密**跳到教务 SPA `https://jwxt.gdei.edu.cn/#/jwxt/js/student/...`。教务后端经网关 `X-Application-Context: ly-api-gateway:10008`，响应统一 `{code:200, data:{...}}`。
 
 **主资料接口**：`GET /api/studentInfo/selectMyjwByid/<学生内部ID>`（`xsid`），页面路由 `#/jwxt/js/student/childServiceQuery/myStudentInfo`。
-> 鉴权注意：裸 `fetch` 重放缺网关鉴权头会返 `code:5100000「系统异常」`，客户端复现需先抓全该请求的鉴权/签名头（见 §9-2）。
+> 鉴权注意：裸 `fetch` 重放缺网关鉴权头会返 `code:5100000「系统异常」`。
+
+**网关鉴权 / 请求头（前端 bundle `jwxt.gdei.edu.cn/assets/js/app.3f76b.js` 静态分析）**：
+
+| 项 | 口径 / Notes |
+|---|---|
+| 会话凭证 | **后端 CAS 回调后 Set-Cookie 下发的会话 Cookie** 为主要鉴权凭证；axios 实例 `withCredentials=true` 自动携同域 Cookie。前端拦截器**未**注入 `Authorization` 令牌头 |
+| `X-Requested-With` | 默认 `XMLHttpRequest`（GET/POST/PUT/DELETE 均带） |
+| `csrfToken` 头 | 请求拦截器生成：`_t = Date.now()/1000`（秒级时间戳，同时作为 query 参数 `_t`）；`csrfToken = MD5(_t + tokenKey)`，`tokenKey="lyedu"`（配置 `tokenKey:"lyedu"`）；MD5 为标准十六进制摘要（bundle 内联 MD5 实现，初始向量 `0x67452301` 等可辨） |
+| 本地登录态 | 会话信息存 `sessionStorage` 的 `user` 对象；拦截器读 `user.userName` 判断是否已登录，为空且 URL 不在免鉴权白名单则判会话过期、拦截并跳登录。`user.userType`：`1` 教师（应用 appId `002`），其余为学生（appId `003`） |
+| `X-Auth-Token` | 仅出现在 CORS `Access-Control-Allow-Headers` 白名单（`Origin, Content-Type, X-Auth-Token`），前端默认**不发送**；是否存在备用令牌头需在成功会话 Network 复核 |
+| 不出现的头 | 本端**无**门户式 `Authorization` 头、无 `gatewayAppId`（那是 iportal `ly-upp` 专属，见 §3） |
+| 过期/异常码 | 响应拦截器：`401` + `code 53000010`、`510` + `code 51000010`、`401` + `code 53000012` 判会话过期跳登录；裸 fetch 缺头实测返 `5100000「系统异常」` |
+| 登录/回调配置 | `loginPattern="manager-login"`；`loginApi=/api/login`；`casLoginApi=/cas/login?pattern=teacher-login&returnUrl=<当前页>`；`casLogoutApi=/api/cas/logout?pattern=teacher-login`；`checkCas=/api/checkCas`。账号密码登录提交 `userName` / `token`(密码 Base64) / `target` / `vrifyCode` / `pattern` / `timestamp` |
+
+> **学生回调卡点（实测）**：本 bundle 为 gly 管理/教师端壳，CAS 回调 `pattern=teacher-login`；学生账号经该回调被 gly 后端拒绝，返 `{"code":50000500,"message":"单点登录失败"}`。前端 bundle 内未出现 `student-login` 等学生模式取值（0 命中），学生端正确回调 `pattern` 由后端应用库下发、未在静态资源中暴露。下表字段映射来自早先一次成功进入学生教务 SPA 的会话；本轮未能复现进入学生 SPA，故上述头清单为**前端静态推断**，原始成功 XHR 的实际 Request Headers（Cookie 名、是否带 `X-Auth-Token`、`csrfToken` 实测值）仍需在可进入学生教务的会话里从 Network 复核（见 §9-1）。
 
 **字段映射（拼音缩写 key，本人学生账号样本；文档只记字段名/含义/敏感级，不落真实值）**：
 
@@ -250,7 +265,7 @@ CAS 已有 TGC 单点会话时，访问教务 SSO 入口 `https://security.gdei.
 - 口令不入仓库、不写日志、不进截图；敏感字段沿用既有日志脱敏策略。
 - **最小化采集**：客户端上屏/落盘仅取展示所需身份字段（姓名、学号、班级、学院、专业方向、年级、性别、学籍状态、头像）。身份证号（`zjhm`）、手机号（`lxdh`）、考生号（`ksh`）、出生日期（`csrq`）、宿舍房间号、生源地等属高敏感个人信息，默认不采集、不上屏、不落本地库。
 - **信任锚边界**：NAC 门户仍是校园网入网认证与设备在线状态的信任根；CAS/iportal 仅用于在用户已入网、本人登录后**补全展示用账号资料**（姓名/部门等），不替代 NAC 入网认证，也不在离线/未入网时凭缓存资料对外鉴权。
-- 字段名以真实接口 JSON 为准；4.1 已在本人学生账号登录会话核对，教师账号（`userType=teacher`）字段填充情况接入前仍需另抓复核。
+- 字段名以真实接口 JSON 为准；4.1 已在本人学生账号登录会话核对。教师账号（`userType=teacher`）字段填充情况本项目不自行复核（本人为学生，见 §9-5），接入教师侧前需另用教师账号验证。
 
 ## 7. 素材清单 / Assets
 
@@ -284,11 +299,11 @@ CAS 已有 TGC 单点会话时，访问教务 SSO 入口 `https://security.gdei.
 
 **仍需补抓 / 复核**：
 
-1. **jwxt 网关鉴权头**：`selectMyjwByid` 裸 `fetch` 返 510 系统异常，需在 Network 完整记录该请求的鉴权/签名头（自定义 token / 签名 / 网关头），客户端用 Qt 复现登录链时才能通过网关校验。
+1. **jwxt 网关鉴权头（静态已推断，原始 Network 待复核）**：前端 bundle 已确认鉴权体系为「后端会话 Cookie（`withCredentials`）+ `X-Requested-With: XMLHttpRequest` + `csrfToken=MD5(秒级时间戳+"lyedu")`（时间戳同时放 query `_t`）」，无 `Authorization`/`gatewayAppId` 头；`X-Auth-Token` 仅在 CORS 白名单。待能进入学生教务 SPA 的会话里，从 Network 点开成功的 `selectMyjwByid` XHR 复核：实际会话 Cookie 名/属性、是否真的携带 `X-Auth-Token`、`csrfToken` 实测格式与 `_t` 口径。本轮学生账号经 gly `pattern=teacher-login` 回调被拒（50000500），未能进入学生 SPA 抓原始头。
 2. **教务其余 Tab 接口**：学生异动信息、注册信息、成绩信息三个 Tab 的接口路径与字段（与账号资料展示关系不大，按需再抓）；家庭信息 `selectFamListByxsid` 列表实测为空。
 3. **会话 Cookie 名细节**：Shiro HttpOnly 会话 Cookie 的具体名称/属性；jwxt、dsj 回调各自建立的会话 Cookie。命令行 CookieJar 复现完整登录链尚未跑通（`Invoke-WebRequest` 重定向拦截、`HttpWebRequest` TLS 握手、`HttpClient` 空 Content 均失败），客户端实现前需用 Qt 网络栈重新验证 Cookie 保留与 302 跟随。
 4. **门户令牌用途**：`tokenId` / `accessToken` / `refreshToken` / `authorization` 各自用途、有效期与客户端是否需要复用/刷新；`tryLoginUserInfo` 的 `Authorization` 头与 `Authorization` Cookie 的关系。
-5. **教师账号字段复核**：4.1 / 4.2 口径来自学生账号；教师（`userType=teacher`）的工号、部门、职称等字段填充情况需另抓。
+5. **教师账号字段复核（已关闭，不再推进）**：本人为学生账号，无法登录教师端；4.1 / 4.2 口径均来自学生样本。教师（`userType=teacher`）的工号、部门、职称等字段填充情况留待有教师账号时另抓，本项目不自行尝试获取。
 6. **头像落地策略**：`headPortrait` / `zxcpbase` 为 base64 data URI，客户端展示时的解码、缓存与缺省兜底方案。
 7. **WebVPN**：分析其登录接口与代理 URL 改写规则，判断客户端校外可达性方案。
 

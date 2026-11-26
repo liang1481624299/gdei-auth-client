@@ -153,7 +153,7 @@
 | F2 | 菜单 / 权限 / 部门树 | `/api/authc/users/menus`、`/api/authc/users/<id>/authority`、`/api/authc/users/selector`、`/api/authc/departments*` | 同上；权限数据不与本客户端设备 / 账户状态混用 | **P3** |
 | F3 | 消息 / 待办 / 日程 / 邮箱 / 应用商店 / 主题 / 附件等模块 | `api/uppinfo/infoCenter/*`、`api/uppmessage/message/*`、`api/uppflow/process/*`、`api/uppcard/affairCenter/*`、`api/bs-schedule/*`、`api/uppemail/*`、`api/upp/appStore/*`、`api/upp/theme/*`、`api/upp/attachmentManagement` | 远期若做融合门户再评估；本期仅登记，不建入口 | **P3** |
 | F4 | 更换头像、新手引导标记 | `api/authc/users/portraitChange`（POST）、`api/upp/userControl/guideHasUsed`（POST） | 个人资料写操作；独立 CAS 会话，本期不接 | **P3** |
-| F5 | 教务学籍字段：jwxt `GET /api/studentInfo/selectMyjwByid/<xsid>`（学院 `xymc`/专业方向 `zyfmc`/年级 `nj`/班级 `bjmc`/学籍状态 `xjztmc`/培养层次 `pyccmc`/校区 `xqmc`/学制 `xz`/入学日期 `rxrq` 等，§4.2）；dsj 画像 `queryserver.do`/`showreport.do`（§4.3） | 已登录会话实测字段名；jwxt 网关鉴权头、异动/注册/成绩 Tab 接口未补（`CAS-PORTAL.md` §9-1/2） | 身份展示字段以 jwxt 为准；身份证/手机/宿舍/生源地等高敏感项不采集；门户 `departments` 学生账号无权限 | **P3** |
+| F5 | 教务学籍字段：jwxt `GET /api/studentInfo/selectMyjwByid/<xsid>`（学院 `xymc`/专业方向 `zyfmc`/年级 `nj`/班级 `bjmc`/学籍状态 `xjztmc`/培养层次 `pyccmc`/校区 `xqmc`/学制 `xz`/入学日期 `rxrq` 等，§4.2）；dsj 画像 `queryserver.do`/`showreport.do`（§4.3） | 字段名已登录会话实测；jwxt 网关头静态推断为「会话 Cookie + `X-Requested-With` + `csrfToken=MD5(秒级时间戳+lyedu)`」，原始 XHR 头待可进学生教务的会话复核；异动/注册/成绩 Tab 接口未补（`CAS-PORTAL.md` §9-1/2） | 身份展示字段以 jwxt 为准；身份证/手机/宿舍/生源地等高敏感项不采集；门户 `departments` 学生账号无权限；教师账号字段本项目不复核 | **P3** |
 | F6 | 校外 WebVPN 可达链路（登录、双因素、绑定邮箱 / 手机 / OTP / 微信、改密 / 重置） | `webvpn.gdei.edu.cn` Vue SPA 路由 `/auth/*`；代理 URL 改写规则未抓（`CAS-PORTAL.md` §5、§9-4） | 属网络代理范畴；本客户端合规边界不含代理 / 翻墙，仅作远期可行性记录 | **P3**（边界外，谨慎评估） |
 
 ---
