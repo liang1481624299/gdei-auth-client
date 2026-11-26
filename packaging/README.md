@@ -17,13 +17,14 @@ packaging/
 
 ## 产物现状与目标 / Current vs Target
 
-| 平台 | 目标产物 | 当前 CI 产物 | 说明 |
-|---|---|---|---|
-| Windows | NSIS exe 安装包 | `gdei-auth-client-windows-x64.zip` | 已用 windeployqt 收集依赖；NSIS 安装包待 CPack 在带 NSIS 工具链的 Runner 上生成 |
-| macOS | dmg | `gdei-auth-client-macos.dmg` | macdeployqt 收编后 hdiutil 打包；未签名 / 未公证，待补 |
-| Debian (bookworm) | deb | CPack 生成的 `.deb`（可选） | 通用保底产物为自包含 `gdei-auth-client-linux-x64.tar.gz`（Qt 库 + 插件 + QML 已打包，解压即用）；deb 可在 Debian 容器内用 CPack 生成，`dpkg-shlibdeps` 声明系统动态依赖 |
-| Arch Linux | `pkg.tar.zst` | `gdei-auth-client-linux-x64.tar.gz`（自包含） | 自包含 tar.gz 解压即用，目标机无需预装 Qt；`pkg.tar.zst` 原生包待补 PKGBUILD |
-| Android | apk | 实验性脚手架，暂无 apk | Qt for Android + NDK / Gradle 工具链与真机验证待补，CI 中 `continue-on-error` 不阻塞主线 |
+| 平台 | 架构 | 目标产物 | 当前 CI 产物 | 说明 |
+|---|---|---|---|---|
+| Windows | x64 / ARM64 | NSIS exe 安装包 | x64：`gdei-auth-client-windows-x64.zip`；ARM64 实验性构建 | 已用 windeployqt 收集依赖；NSIS 安装包待 CPack 在带 NSIS 工具链的 Runner 生成；ARM64 产物名待按架构拆分 |
+| macOS | x64（Intel）/ ARM64（Apple Silicon） | dmg | `gdei-auth-client-macos.dmg` | macdeployqt 收编后 hdiutil 打包；未签名 / 未公证，待补 |
+| Ubuntu 24.04 | x64 / ARM64 | 自包含 tar.gz（deb 可选） | 系统 Qt 构建产物归档 | 原生 runner 验证编译；ARM64 走 `ubuntu-24.04-arm` |
+| Debian (bookworm) | x64 | deb | CPack 生成的 `.deb`（可选） | 通用保底产物为自包含 `gdei-auth-client-linux-x64.tar.gz`（Qt 库 + 插件 + QML 已打包，解压即用）；deb 可在 Debian 容器内用 CPack 生成，`dpkg-shlibdeps` 声明系统动态依赖 |
+| Arch Linux | x64 | `pkg.tar.zst` | `gdei-auth-client-linux-x64.tar.gz`（自包含） | 自包含 tar.gz 解压即用，目标机无需预装 Qt；`pkg.tar.zst` 原生包待补 PKGBUILD；ARM64 待自托管 runner |
+| Android | arm64-v8a / x86_64 | 双 ABI 合并 apk | 实验性脚手架，双 ABI Debug / Release-unsigned 产物 | Qt for Android + NDK r26b / JDK17 / Gradle 工具链与真机验证待补，CI 中 `continue-on-error` 不阻塞主线 |
 
 ## 依赖分发原则
 

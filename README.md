@@ -107,7 +107,7 @@ gdei-auth-client/
 | Windows | `scripts/build-windows.ps1` | `artifacts/windows/gdei-auth-client/`（整个文件夹自包含）+ `artifacts/windows/gdei-auth-client-windows-x64.zip` |
 | macOS | `scripts/build-macos.sh` | `artifacts/macos/gdei-auth-client-macos.dmg` |
 | Linux（Debian / Arch） | `scripts/build-linux.sh` | `artifacts/arch/gdei-auth-client-linux-x64/` + `.tar.gz`（自包含，目标机无需装 Qt） |
-| Android | `scripts/build-android.ps1` | `artifacts/android/gdei-auth-client-android-arm64-v8a-debug.apk`（需提供 Qt for Android + SDK/NDK + JDK17 路径） |
+| Android | `scripts/build-android.ps1` | `artifacts/android/gdei-auth-client-android-<arm64-v8a\|x86_64>-debug.apk`（需提供 Qt for Android + SDK/NDK + JDK17 路径；CI 出 arm64-v8a + x86_64 双 ABI 合并包） |
 
 Windows 示例（在项目根目录，PowerShell）：
 
@@ -135,7 +135,7 @@ cmake --build build --config Release
 | Windows | NSIS exe 安装包 | `gdei-auth-client-windows-x64.zip`（windeployqt 收集依赖） |
 | macOS | DragNDrop dmg（签名 / 公证待补） | `gdei-auth-client-macos.dmg`（macdeployqt + hdiutil） |
 | Linux | deb / rpm / Arch `pkg.tar.zst` | `gdei-auth-client-linux-x64.tar.gz`（自包含：Qt 库 + 插件 + QML，见 `scripts/build-linux.sh`） |
-| Android | apk（Qt for Android + NDK） | CI 仍为实验性脚手架；本地已产出 `artifacts/android/gdei-auth-client-android-arm64-v8a-debug.apk` |
+| Android | apk（Qt for Android + NDK） | CI 仍为实验性脚手架；arm64-v8a（真机）+ x86_64（模拟器）双 ABI 合并包，真机安装与正式出包待验证 |
 
 ```bash
 cd build
@@ -180,11 +180,12 @@ cpack -G <generator>
 
 | 平台 | 架构 | 版本底线 | 备注 |
 |---|---|---|---|
-| Windows | x86 / x64 / ARM64 | Windows 10 1509 ~ Windows 11 25H2 | NSIS 安装包；ARM64 需对应工具链交叉编译 |
-| macOS | x64 / ARM64 | macOS 10.15 Catalina 及以上 | dmg 打包 |
-| Android | ARM64 | Android 9（API 28）及以上 | 当前构建脚本目标为 arm64-v8a；其他 ABI 需另行构建验证，CI 仍为实验性 |
+| Windows | x64 / ARM64 | Windows 10 1509 ~ Windows 11 25H2 | NSIS 安装包；ARM64 走 `windows-11-arm` runner 实验性构建；Qt6 不支持 Windows 32 位（x86） |
+| macOS | x64（Intel）/ ARM64（Apple Silicon） | macOS 10.15 Catalina 及以上 | dmg 打包，x64 与 ARM64 分别构建 |
+| Ubuntu | x64 / ARM64 | 24.04 (noble) 及以上 | 原生 runner 系统 Qt 构建；ARM64 走 `ubuntu-24.04-arm` |
+| Android | arm64-v8a / x86_64 | Android 9（API 28）及以上 | CI 双 ABI 合并包；arm64-v8a 真机、x86_64 模拟器；其余 ABI 未纳入，CI 仍为实验性 |
 | Debian | x64 | bookworm 及以上 | 容器内 CPack 出 `.deb` |
-| Arch Linux | x64 | 滚动发行，内核 5.0+ | 容器内 tar.gz；`pkg.tar.zst` 待 PKGBUILD |
+| Arch Linux | x64 | 滚动发行，内核 5.0+ | 容器内 tar.gz；`pkg.tar.zst` 待 PKGBUILD；ARM64 待自托管 runner |
 
 详细工具链与打包说明见 [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md)。
 
@@ -192,7 +193,7 @@ cpack -G <generator>
 
 流水线定义在 `.github/workflows/`：
 
-- **`ci.yml`**：推送到 `main` 或 Pull Request 时，在 Windows / macOS 原生 Runner 与 Debian / Arch 容器内配置并构建 Qt6/QML 工程；Android 为实验性脚手架（`continue-on-error`）。产物作为 Actions 构件保留 14 天。
+- **`ci.yml`**：推送到 `main` 或 Pull Request 时，按矩阵在 Windows（x64/ARM64）、macOS（x64/ARM64）、Ubuntu（x64/ARM64）原生 Runner 与 Debian / Arch x64 容器内配置并构建 Qt6/QML 工程；Android 为 arm64-v8a + x86_64 双 ABI 实验性脚手架（`continue-on-error`）。产物作为 Actions 构件保留 14 天。
 - **`release.yml`**：推送 `v*` 标签时，按平台调用 [`packaging/`](packaging/README.md) 脚本打包（Windows zip / macOS dmg / Debian deb / Arch tar.gz），并自动挂到对应 **GitHub Release** 供下载。
 
 发版 / Cut a release：
@@ -202,7 +203,7 @@ git tag v0.3.0
 git push origin v0.3.0
 ```
 
-> 原生 Runner 用缓存 Qt SDK；Debian / Arch 容器使用系统 Qt 以减少重复下载。Android 本地构建链路已验证并产出 Debug APK；CI 正式出包、其他 ABI、真机验证与 Arch `pkg.tar.zst` 仍需对应工具链、设备或扩展 Runner。
+> 原生 Runner 用缓存 Qt SDK；Ubuntu / Debian / Arch 使用系统 Qt 以减少重复下载。Android CI 为 arm64-v8a + x86_64 双 ABI 实验性脚手架；CI 正式出包、真机验证、其余 ABI 与 Arch `pkg.tar.zst` 仍需对应工具链、设备或扩展 Runner。
 
 ## 保活机制 / Keep-alive
 

@@ -7,10 +7,10 @@
 
 | # | 需求 | 状态 | 现状 / 备注 |
 |---|---|---|---|
-| 1.1 | Windows 10 1509 ~ Win11 25H2，x86 / x64 / ARM64 | 🟡 | CI 仅出 x64；x86 / ARM64 待交叉工具链与实机验证 |
-| 1.2 | macOS 10.15 Catalina 及以上 | 🟡 | Runner 构建 arm64；未签名 / 未公证，未出通用二进制 |
-| 1.3 | Android 8.0（API 26）及以上 | 🟡 | 本地已产出 arm64-v8a Debug APK，当前 minSdk 28（Android 9）；API 26/27、其他 ABI 与真机运行待验证，前台服务未实现 |
-| 1.4 | Linux 内核 5.0 及以上 | 🟡 | CI x64 构建通过；未在旧内核 / 发行版实机验证 |
+| 1.1 | Windows 10 1509 ~ Win11 25H2，x64 / ARM64 | 🟡 | CI 出 x64；ARM64 走 `windows-11-arm` runner 实验性构建，待实机验证；Qt6 不支持 Windows 32 位（x86） |
+| 1.2 | macOS 10.15 Catalina 及以上，Intel x64 / Apple Silicon ARM64 | 🟡 | Runner 分别构建 x64（`macos-15-intel`）与 arm64（`macos-latest`）；未签名 / 未公证，未出通用二进制 |
+| 1.3 | Android 9（API 28）及以上，arm64-v8a / x86_64 | 🟡 | CI 双 ABI 合并包实验性产出；arm64-v8a 真机、x86_64 模拟器；API 26/27、ARM32/x86 32 位与真机运行待验证，前台服务未实现 |
+| 1.4 | Linux 内核 5.0 及以上：Ubuntu x64/ARM64、Debian x64、Arch x64 | 🟡 | CI x64 与 Ubuntu ARM64 构建；旧内核 / 其他发行版实机验证待补；Arch ARM64 待自托管 runner |
 | 1.5 | 同一套源码、单一 CMake 构建，不做 Qt 版本分支、不维护两套工程 | ✅ | 单一 `CMakeLists.txt`，固定 Qt6 / C++20 |
 
 ## 2. 输出产物与打包
@@ -19,7 +19,7 @@
 |---|---|---|---|
 | 2.1 | Windows exe 安装包 | ❌ | release.yml 产出 zip，未走 NSIS |
 | 2.2 | macOS dmg | 🟡 | macdeployqt + hdiutil 生成 dmg；未签名 / 未公证 |
-| 2.3 | Android apk | ✅ | 本地已产出 `artifacts/android/gdei-auth-client-android-arm64-v8a-debug.apk`；包信息、依赖、权限及 v2 Debug 签名已检查，真机安装与 CI 正式出包待验证 |
+| 2.3 | Android apk（arm64-v8a / x86_64 双 ABI） | 🟡 | CI 实验性产出双 ABI 合并 Debug / Release-unsigned 包；包信息、依赖、权限及 v2 Debug 签名曾检查，真机安装与 CI 正式出包待验证 |
 | 2.4 | Linux deb / rpm / Arch `pkg.tar.zst` | ❌ | 仅裸二进制 tar.gz；未在对应发行版容器打包 |
 | 2.5 | 打包脚本统一放 `packaging/` 目录 | ✅ | `packaging/windows|macos|linux/` 脚本收口，release.yml 调用 |
 | 2.6 | CMake 输出按 `build/<platform>/<arch>` 组织 | ❌ | 固定 `build/` 目录 |
