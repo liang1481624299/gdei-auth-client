@@ -28,7 +28,7 @@
 | 端 | 已接动作 | 后端门面 |
 |---|---|---|
 | captive 443 | 上线、下线、保活开关（start/stop）、刷新在线状态、刷新网卡、连通测试、登录、本地注销 | `app.auth`、`app.session` |
-| 8080 触屏设备 | 验证码拉取、验证码登录、刷新在线/历史/绑定列表、清空本地会话 | `app.portalDevices` |
+| 8080 触屏设备 | 验证码拉取、验证码登录、刷新在线/历史/绑定列表、清空本地会话；条目点击进设备详情页（骨架）；详情页分享 / 设置为置灰占位入口，未绑定动作 | `app.portalDevices` |
 | 8080 PC 账户 | 验证码拉取、验证码登录、刷新资料（`parseProfile` 空占位）、清空本地会话；余额 / 套餐 / 时长仅留 UI 槽位 | `app.account` |
 | 本地档案 | 增 / 删 / 选本地认证配置 | `app.localDevices` |
 | 证书 | 导入 PEM/DER、列表（主题/颁发者/有效期/过期/指纹）、按指纹删除、注入 CA 信任锚 | `app.certificates` |
@@ -94,7 +94,7 @@
 
 | # | 可接按钮 / 展示位 | 来源字段 | 后端现状 | 前置依赖 | 分级 |
 |---|---|---|---|---|---|
-| C1 | 在线终端详情补字段：用户姓名、帐号名、用户 SSID、在线项服务名（§4.8 截图 1/2） | `onlineUserList.jsf` 列表 / 详情页 | `parseOnline` 已取 deviceType/mac/ip/duration/startTime/endTime；`os`/`service`/`authStatus`/`lostStatus` 在线项置空；姓名、帐号名、SSID、服务名未建模 | 确认列表与详情是同一 DOM 还是二次跳转；抓详情选择器；姓名为实名敏感信息，运行时展示可脱敏 | **P1**（字段补齐）/ 详情跳转 **P2** |
+| C1 | 在线终端详情补字段：用户姓名、帐号名、用户 SSID、在线项服务名（§4.8 截图 1/2） | `onlineUserList.jsf` 列表 / 详情页 | 详情跳转骨架已落地：条目点击经 `DevicePanel → RemoteDevicesPage → 主栈索引 10` 进 `DeviceDetailPage.qml`；`parseOnline` 已取 deviceType/mac/ip/duration/startTime/endTime；`os`/`service`/`authStatus`/`lostStatus` 在线项置空；姓名、帐号名、SSID、服务名及主机名 / 节点密钥 / 版本等详情字段仍为「不可用」占位，未建模 | 确认列表与详情是同一 DOM 还是二次跳转；抓详情选择器；姓名为实名敏感信息，运行时展示可脱敏；字段产出后逐项接详情页占位槽位 | **P1**（字段补齐）；详情跳转 **✅ 骨架已落地** |
 | C2 | 绑定 / 在线终端补绑定信息字段：端口号、无线 SSID、计算机名称、Windows 域（§4.3） | `bindInfo.jsf`、绑定行 | 绑定行已取 deviceType/os/service/startTime(绑定时间)/authStatus(无感知)/lostStatus(终端状态)；端口、SSID、主机名、域未取 | 抓对应标签文本；缺失留空不崩溃（容错已有） | **P2** |
 | C3 | 绑定时间展示回归核对 | `macList.xhtml`（§6.3 标签 `boundTime`） | 后端 `parseBound` 已把「绑定时间」取入 `startTime`，卡片第三行已 join 展示；无新增解析工作 | 仅回归确认多语言 / 空态下展示正常 | **P1**（核对项） |
 
@@ -145,7 +145,7 @@
 
 ## F. CAS 融合门户（独立 SSO，远期方向，不混入本 NAC 客户端）
 
-> 依据：`docs/CAS-PORTAL.md`。属另一套统一认证（`security.gdei.edu.cn/cas`、`iportal.gdei.edu.cn`、`dsj.gdei.edu.cn`、`webvpn.gdei.edu.cn`），表单字段 / 加密 / 验证码 / 个人信息 JSON 均未实测。
+> 依据：`docs/CAS-PORTAL.md`。属另一套统一认证（`security.gdei.edu.cn/cas`、`iportal.gdei.edu.cn`、`jwxt.gdei.edu.cn`、`dsj.gdei.edu.cn`、`webvpn.gdei.edu.cn`）。2026-11-26 已匿名实测登录表单字段、RSA 加密、无图形验证码、校验端点 404 与子系统 302 回调；个人信息 JSON 与教务/学籍字段仍待登录会话补抓。
 
 | # | 方向 | 涉及接口（文档记录，未实测） | 口径 | 分级 |
 |---|---|---|---|---|
