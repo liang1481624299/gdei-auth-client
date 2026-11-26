@@ -30,7 +30,10 @@ jobs:
             experimental: false
           - target: macos-arm64
             runner: macos-latest
-            qt-arch: clang_arm64
+            # Qt macOS 预编译包为 universal2（x86_64+arm64），arch 名统一为 clang_64；
+            # 官方 6.8.3 仓库没有独立的 clang_arm64 目录，填它会在解析 XML 时找不到 qt_base。
+            # Qt macOS packages are universal2; there is no standalone clang_arm64 archive.
+            qt-arch: clang_64
             experimental: false
     continue-on-error: ${{ matrix.experimental == true }}
     runs-on: ${{ matrix.runner }}
