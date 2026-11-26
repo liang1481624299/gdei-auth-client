@@ -50,7 +50,7 @@ jobs:
       - name: Install Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.5.3'
+          version: '6.8.3'
           arch: ${{ matrix.qt-arch }}
           modules: qt5compat
           cache: true
@@ -142,7 +142,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed \
             git base-devel cmake ninja \
-            qt6-base qt6-declarative qt6-svg qt6-tools qt6-widgets qt6-5compat
+            qt6-base qt6-declarative qt6-svg qt6-tools qt6-5compat
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
