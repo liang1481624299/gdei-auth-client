@@ -20,6 +20,9 @@
 #include <QMessageLogContext>
 #include <QStringConverter>
 #include <QIcon>
+#include <QFontDatabase>
+#include <QFont>
+#include <QStringList>
 
 #include "app/AppController.hpp"
 #include "app/AccountController.hpp"
@@ -30,8 +33,11 @@
 #include "app/LocalDeviceController.hpp"
 #include "app/LogController.hpp"
 #include "app/NetworkInfoController.hpp"
+#include "app/DiagnosticsController.hpp"
 #include "app/SessionController.hpp"
+#include "core/CertificateStore.hpp"
 #include "core/ConfigStore.hpp"
+#include "core/PortalClient.hpp"
 #include "core/I18n.hpp"
 #include "core/Logger.hpp"
 #ifdef Q_OS_WIN
@@ -69,6 +75,36 @@ static void gcDiagnosticHandler(QtMsgType type, const QMessageLogContext&, const
     gcStage(QStringLiteral("[%1] %2").arg(QString::fromLatin1(level), msg));
 }
 
+// 内置字体：从编译进 qrc 的字体文件注册到 QFontDatabase，保证无外部字体依赖时
+// 中文 / 英文 / 日语 / 繁体中文都能正确渲染。资源前缀与 qt_add_qml_module 一致。
+// Bundled fonts: register qrc fonts into QFontDatabase so each CJK script and
+// Latin text render correctly even when the system lacks matching fonts.
+static void gcRegisterBundledFonts() {
+    // 资源路径用 ":/..." 形式；Qt 字体加载对 qrc:/ 前缀解析不可靠。
+    // Use the ":/..." form; the qrc:/ prefix is not reliably parsed by font loading.
+    const QStringList fonts = {
+        QStringLiteral(":/GdeiConnect/qml/fonts/SimSun.ttc"),
+        QStringLiteral(":/GdeiConnect/qml/fonts/SegoeUI.ttf"),
+        QStringLiteral(":/GdeiConnect/qml/fonts/SegoeUI-Bold.ttf"),
+        QStringLiteral(":/GdeiConnect/qml/fonts/Meiryo.ttc"),
+        QStringLiteral(":/GdeiConnect/qml/fonts/MicrosoftJhengHei.ttc")
+    };
+    for (const QString& path : fonts) {
+        if (!QFile::exists(path)) {
+            gcStage(QStringLiteral("[font] resource missing %1").arg(path));
+            continue;
+        }
+        const int id = QFontDatabase::addApplicationFont(path);
+        if (id < 0) {
+            gcStage(QStringLiteral("[font] failed to load %1").arg(path));
+            continue;
+        }
+        const QStringList fams = QFontDatabase::applicationFontFamilies(id);
+        gcStage(QStringLiteral("[font] loaded %1 -> %2")
+                    .arg(path, fams.join(QStringLiteral(", "))));
+    }
+}
+
 int main(int argc, char* argv[]) {
     qInstallMessageHandler(gcDiagnosticHandler);
     gcStage(QStringLiteral("=== main entered ==="));
@@ -77,6 +113,39 @@ int main(int argc, char* argv[]) {
     app.setApplicationName(QStringLiteral("gdei-connect"));
     app.setOrganizationName(QStringLiteral("GDEI"));
     app.setWindowIcon(QIcon(QStringLiteral(":/GdeiConnect/qml/icons/app.png")));
+
+    // 先注册内置字体，再设置全局字体与回退链；必须在 QML 加载前完成。
+    // Register bundled fonts before setting the global font and fallback chain.
+    gcRegisterBundledFonts();
+    {
+        // 主字体：Segoe UI 承载拉丁/英文；中文由回退链中的宋体补齐。
+        // Primary family carries Latin; CJK glyphs come from the fallback chain.
+        QFont baseFont(QStringLiteral("Segoe UI"));
+        baseFont.setPixelSize(13);
+        app.setFont(baseFont);
+
+        // 应用级字体回退：按书写系统（中文 / 日语）依次兜底，内置字体优先，
+        // 其次同语言系统字体，最后通用 sans-serif。繁简共用 Han 脚本，
+        // 内置宋体覆盖简体、Microsoft JhengHei 覆盖繁体，缺失字形再回退系统字体。
+        // Application-level fallback per script: bundled first, then system CJK,
+        // then generic sans-serif.
+        const QStringList han = {
+            QStringLiteral("SimSun"), QStringLiteral("Microsoft JhengHei"),
+            QStringLiteral("Microsoft JhengHei UI"), QStringLiteral("Microsoft YaHei"),
+            QStringLiteral("PingFang SC"), QStringLiteral("PingFang TC"),
+            QStringLiteral("Noto Sans CJK SC"), QStringLiteral("Noto Sans CJK TC"),
+            QStringLiteral("sans-serif")};
+        const QStringList ja = {
+            QStringLiteral("MS UI Gothic"), QStringLiteral("MS Gothic"),
+            QStringLiteral("Yu Gothic"), QStringLiteral("Noto Sans CJK JP"),
+            QStringLiteral("sans-serif")};
+        const QStringList latin = {
+            QStringLiteral("Segoe UI"), QStringLiteral("sans-serif")};
+        QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Common, latin);
+        QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Han, han);
+        QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Katakana, ja);
+        QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Hiragana, ja);
+    }
 
     // 强制 Basic 样式：本项目深度自定义了控件的 background / contentItem / indicator，
     // 只有非原生样式（Basic/Fusion/Material）才允许这些定制；原生样式会忽略定制，
@@ -101,11 +170,25 @@ int main(int argc, char* argv[]) {
     SessionController session(&auth, &config, &i18n);
     LocalDeviceController localDevices(&config, &auth, &i18n);
     NetworkInfoController network(&config);
+    DiagnosticsController diagnostics(&config);
+    // 用户导入的 CA 信任锚：只追加信任，不放宽证书校验。
+    CertificateStore certificates;
+    if (auth.portal()) {
+        auth.portal()->setCaCertificates(certificates.trustedCertificates());
+    }
+    QObject::connect(&certificates, &CertificateStore::changed, &certificates, [&] {
+        if (auth.portal()) {
+            auth.portal()->setCaCertificates(certificates.trustedCertificates());
+        }
+    });
     EventBus events;
     EventBridge eventBridge(&events, &auth, &session, &localDevices,
-                            &portalDevices, &network, &config, &logger);
+                            &portalDevices, &network, &config,
+                            auth.keepAlive(), auth.portal());
     AppController controller(&config, &logger, &i18n, &auth, &logs, &session,
-                             &localDevices, &network, &events, &portalDevices, &account);
+                             &localDevices, &network, &diagnostics, &events,
+                             &portalDevices, &account,
+                             &certificates);
     gcStage(QStringLiteral("controller ready"));
 
     QQmlApplicationEngine engine;

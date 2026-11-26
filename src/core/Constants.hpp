@@ -35,6 +35,23 @@ inline const QString HEALTH_URL =
 // 外网连通性探测 / external connectivity (NCSI).
 inline const QString NCSI_URL =
     "http://www.msftconnecttest.com/connecttest.txt";
+// 标准 generate_204 探测：在线回 204 No Content，被 captive 劫持时回 302/200 门户页。
+// Standard generate_204 probe: 204 when online, 302/200 portal body when hijacked.
+inline const QString NCSI_204_URL =
+    "http://edge-http.microsoft.com/captiveportal/generate_204";
+
+// ---- 诊断页探测兜底 / Diagnostics probe fallbacks ----
+// 仅用于诊断工具页的公开探测，不参与登录认证 / 报文提交链路。
+// Diagnostics-only public probes; never part of the authentication flow.
+// HTTP 短探测兜底地址（用户未自定义 probeUrl 时使用）。
+inline const QString DIAG_HTTP_FALLBACK_URL = "https://www.baidu.com";
+// 编码嗅探兜底门户基址（带自助服务端口）；config.host 为空时使用。
+inline const QString DIAG_PORTAL_HOST = "nac.gdei.edu.cn:8080";
+// 公共 DoH 对比端点（只读解析 example.com，仅测延迟与可达性）。
+inline const QString DOH_ALI_ENDPOINT =
+    "https://dns.alidns.com/resolve?name=example.com&type=A";
+inline const QString DOH_CF_ENDPOINT =
+    "https://cloudflare-dns.com/dns-query?name=example.com&type=A";
 
 // ---- 自助服务门户 / Self-service portal (:8080, 独立会话) ----
 inline const QString SELF_SERVICE_SCHEME = "http";
@@ -80,6 +97,16 @@ inline const QString PC_USERTYPE_DEVICE = "2";
 inline const QString USER_AGENT =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+
+// 浏览器风格 Accept / Accept-Language 头；实测门户过滤器要求两者同时存在，
+// 缺任一时回 200 空体。AJAX 提交与页面浏览分别对齐浏览器取值。
+// Browser-style headers: the portal filter requires both Accept and
+// Accept-Language present, otherwise it answers 200 with an empty body.
+inline const QString ACCEPT_HTML =
+    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+inline const QString ACCEPT_AJAX =
+    "application/json, text/javascript, */*; q=0.01";
+inline const QString ACCEPT_LANGUAGE = "en-US,en;q=0.9";
 
 // ---- 表单字段名 / Form field names ----
 inline constexpr const char* FIELD_FREE_OTP      = "freeOTP_secret_hidden";

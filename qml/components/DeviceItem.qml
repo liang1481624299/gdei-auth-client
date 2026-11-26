@@ -10,8 +10,8 @@ Rectangle {
 
     property var device
 
-    implicitWidth: 300
-    implicitHeight: body.implicitHeight + 20
+    implicitWidth: th.dp(300)
+    implicitHeight: body.implicitHeight + th.sp5 * 2
     height: implicitHeight
     color: th.field
     radius: th.radiusSmall
@@ -19,10 +19,9 @@ Rectangle {
     border.color: th.separator
 
     function catText(cat) {
-        app.i18n.lang;
-        if (cat === "history") return app.i18n.text("devices.cat.history");
-        if (cat === "bound") return app.i18n.text("devices.cat.bound");
-        return app.i18n.text("devices.cat.online");
+        if (cat === "history") return app.i18n.dictionary["devices.cat.history"];
+        if (cat === "bound") return app.i18n.dictionary["devices.cat.bound"];
+        return app.i18n.dictionary["devices.cat.online"];
     }
     function catColor(cat) {
         if (cat === "history") return th.muted;
@@ -35,9 +34,9 @@ Rectangle {
 
     Column {
         id: body
-        x: 10
-        y: 10
-        width: Math.max(0, parent.width - 20)
+        x: th.sp5
+        y: th.sp5
+        width: Math.max(0, parent.width - th.sp5 * 2)
         spacing: th.sp2
 
         GridLayout {
@@ -54,7 +53,7 @@ Rectangle {
                 wrapMode: Text.WrapAnywhere
                 Layout.fillWidth: true
             }
-            StatusBadge {
+            BaseBadge {
                 text: root.catText(root.device.category)
                 tint: root.catColor(root.device.category)
                 Layout.alignment: Qt.AlignVCenter | (root.width < th.dp(340) ? Qt.AlignLeft : Qt.AlignRight)
