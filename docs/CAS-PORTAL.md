@@ -103,7 +103,8 @@
 
 | 接口 / Endpoint | 方法 | 用途 / Purpose |
 |---|---|---|
-| `api/upp/userControl/getLoginInfo` | GET | 当前登录用户资料（核心个人信息来源） |
+| `api/upp/userControl/getLoginInfo` | GET | 当前登录用户资料（核心个人信息来源）；响应 `data` 落 `sessionStorage.userLogin` |
+| 补充接口（bundle 中紧随 `getLoginInfo` 调用，返回 `strategy`、`headPortrait` 合并进资料对象） | GET | 接口路径待登录抓包确认；`strategy` 同时驱动消息提醒分支 |
 | `api/upp/userControl/guideHasUsed` | POST | 新手引导是否已使用 |
 | `/api/authc/users/menus` | GET | 当前用户菜单权限 |
 | `/api/authc/users/<id>/authority` | GET | 指定用户权限 |
@@ -127,19 +128,21 @@
 
 ### 4.1 融合门户侧（bundle 消费 `getLoginInfo` 响应对象读取的 key，待登录 JSON 复核）
 
-bundle 中资料上报/展示对象从响应 `d` 读取：`d.userName`、`d.userNickname`、`d.userType`、`d.host`、`d.email`、`d.departmentId`。
+登录后资料对象 `d` 直接写入 `sessionStorage.userLogin`；前端上报/展示从 `d` 读取：`d.userName`、`d.userNickname`、`d.userType`、`d.host`、`d.email`、`d.departmentId`，头像与策略由第二个补充接口合并进 `d`。
 
 | 前端 key | 含义 / Meaning | 说明 / Notes |
 |---|---|---|
 | `userName` | 登录账号 | 学生一般为学号，教师为工号；待登录 JSON 复核 |
-| `userNickname` | 姓名 / 昵称 | 展示名 |
+| `userNickname` | 姓名 / 昵称 | 展示名（上报映射为 `nickName`） |
 | `userType` | 用户类型 | 学生 / 教师等分类（上报映射为 `operaCategory`） |
 | `email` | 邮箱 | |
 | `departmentId` | 部门 / 学院 ID | 响应对象只带 ID；部门名需调 `/api/authc/departments` 按 ID 关联 |
-| `host` | 登录 IP | 登录日志用 |
-| 头像 | `portrait` / `avatar` | 配合 `portraitChange` 接口；头像 URL 与鉴权待复核 |
+| `host` | 登录 IP | 登录日志用（上报映射为 `ip`） |
+| `headPortrait` | 头像 URL | bundle 实测头像主字段（非 `portrait`/`avatar`，后两者为兜底/历史命名）；由补充接口合并；头像 URL 拼装与鉴权待复核 |
+| `sex` | 性别 | 仅用于无头像时男/女默认头像兜底（`"1"` 男，其余女）；取值待 JSON 复核 |
+| `strategy` | 登录策略标记 | 由补充接口带回，默认 `"0"`；具体含义待复核 |
 
-> bundle 中**未出现** `className`、`grade`、`major`、`studentNo`、`collegeName`、`realName`、`jobNumber`、`loginName` 等学籍字段。
+> 复核结论：`departmentName` 在 bundle 中只出现在部门选择器 / 权限表格列，**不在** `getLoginInfo` 资料对象内，部门全称仍须按 `departmentId` 关联部门列表。bundle 中**未出现** `className`、`grade`、`major`、`studentNo`、`collegeName`、`realName`、`jobNumber`、`loginName`、`mobile`、`idCard`、`birthday` 等学籍/身份字段（`className` 高频命中均为 DOM `class`，与班级无关）。
 
 ### 4.2 教务 / 学工侧（门户前端未出现，需另抓）/ academic & student-affairs
 
@@ -195,12 +198,12 @@ bundle 中资料上报/展示对象从响应 `d` 读取：`d.userName`、`d.user
 
 ## 9. 待登录环境补全清单 / TODO After Login
 
-**2026-11-26 匿名已实测（无需再抓）**：CAS 外壳/sign/JSESSIONID 链路、`login2022` 表单字段、RSA 加密与隐藏域、无图形验证码、标准校验端点 404、三套子系统 302 回调、门户 axios 鉴权方式（Cookie + AJAX 头）、bundle 资料字段 key 与缺失字段。
+**2026-11-26 匿名已实测（无需再抓）**：CAS 外壳/sign/JSESSIONID 链路、`login2022` 表单字段、RSA 加密与隐藏域、无图形验证码、标准校验端点 404、三套子系统 302 回调、门户 axios 鉴权方式（Cookie + AJAX 头）；bundle 静态复核资料字段 `userName/userNickname/userType/host/email/departmentId/headPortrait/sex/strategy` 与缺失字段清单，确认 `departmentName` 不直返。
 
 **仍需已登录会话补抓**：
 
 1. **登录成功后的票据与会话**：POST `/cas/login` 成功 302 的完整 Location、`ticket` 形态与有效期；回调 `/shiro-cas` 建立的会话 Cookie 名/属性；jwxt、dsj 回调各自的会话 Cookie。
-2. **门户个人信息 JSON**：登录后调 `api/upp/userControl/getLoginInfo`，记录真实 JSON 全字段名与类型，校准第 4.1 节；确认 `departmentName` 是否直返、`userName` 是否即学号、`userType` 取值枚举、头像 URL 拼装与鉴权。
+2. **门户个人信息 JSON**：登录后调 `api/upp/userControl/getLoginInfo` 及其后紧随的补充接口，记录真实 JSON 全字段名与类型，校准第 4.1 节；确认 `userName` 是否即学号、`userType` 取值枚举、`sex` 取值、`strategy` 含义、`headPortrait` 头像 URL 拼装与鉴权；并定位第二个补充接口的真实路径。（静态复核已确认 `departmentName` 不在资料对象内，须按 `departmentId` 关联部门列表。）
 3. **主登录 RSA 公钥选择**：复核主提交用表单内嵌公钥还是 `/user/inc/api?opt=getkey` 动态公钥；记录密文编码（Base64）与是否需 `stamp`/`tokens` 服务端时效校验。
 4. **教务 / 学工字段**：在 jwxt（`/gly/api/cas/login` 回调）与 dsj 学生门户（`id=MH_XS`）抓学号、班级、学院、专业、年级、学籍号、学籍状态对应的接口路径与返回结构。
 5. **头像接口**：确认头像字段来源 URL 与鉴权方式。
