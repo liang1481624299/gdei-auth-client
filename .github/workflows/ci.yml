@@ -39,6 +39,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # install-qt-action 内部默认拉取 >=3.14 的 Python；aqtinstall 3.3 在 Python 3.15 下
+      # 解析 Qt 包元数据会失败（报 qt_base/qt5compat not found）。前置固定 3.12 并让
+      # action 复用该 Python（setup-python: false），避免它再装到 3.15。
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install Qt6
         uses: jurplel/install-qt-action@v4
         with:
@@ -46,6 +54,7 @@ jobs:
           arch: ${{ matrix.qt-arch }}
           modules: qt5compat
           cache: true
+          setup-python: false
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -133,7 +142,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed \
             git base-devel cmake ninja \
-            qt6-base qt6-declarative qt6-svg qt6-tools qt6-5compat
+            qt6-base qt6-declarative qt6-svg qt6-tools qt6-widgets qt6-5compat
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
