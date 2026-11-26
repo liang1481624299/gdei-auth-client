@@ -62,6 +62,15 @@ compile_commands.json
 config.json
 *.local.ini
 
+# ---- Android 签名密钥库 / signing keystore（私钥，绝不入库）----
+# Android signing keystore / private key must never be committed.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.keystore.b64
+*.jks.b64
+
 # ---- 日志 / logs ----
 *.log
 

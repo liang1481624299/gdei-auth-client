@@ -220,17 +220,42 @@ jobs:
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build
 
-      - name: Configure (Android dual ABI Release unsigned, experimental)
+      - name: Prepare Android signing (secrets -> env)
+        id: signing
+        # 仅当仓库配置了签名 Secrets 时解码 keystore 并启用正式签名；
+        # 缺 Secrets 时回退 debug 签名，APK 只作构件保留、不挂 Release。
+        # Decode the keystore from Secrets and enable release signing only when present;
+        # otherwise fall back to the debug key and keep the APK as a workflow artifact.
         run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            mkdir -p "$RUNNER_TEMP/android-sign"
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/android-sign/gdei-release.jks"
+            {
+              echo "QT_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/android-sign/gdei-release.jks"
+              echo "QT_ANDROID_KEYSTORE_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"
+              echo "QT_ANDROID_KEYSTORE_STORE_PASS=${{ secrets.ANDROID_KEYSTORE_STORE_PASS }}"
+              echo "QT_ANDROID_KEYSTORE_KEY_PASS=${{ secrets.ANDROID_KEY_PASSWORD }}"
+            } >> "$GITHUB_ENV"
+            echo "ANDROID_SIGNING_ENABLED=1" >> "$GITHUB_ENV"
+            echo "signing=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "ANDROID_SIGNING_ENABLED=0" >> "$GITHUB_ENV"
+            echo "signing=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure (Android dual ABI Release, experimental)
+        run: |
+          SIGN_APK="OFF"
+          if [ "$ANDROID_SIGNING_ENABLED" = "1" ]; then SIGN_APK="ON"; fi
           cmake -S . -B build-android -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="${{ steps.qt-arm64.outputs.qt-root-dir }}/lib/cmake/Qt6/qt.toolchain.cmake" \
             -DQT_HOST_PATH="${{ steps.qt-host.outputs.qt-root-dir }}" \
-            -DQT_ANDROID_SIGN_APK=OFF \
+            -DQT_ANDROID_SIGN_APK="$SIGN_APK" \
             -DQT_ANDROID_ABIS="arm64-v8a;x86_64" \
             -DQT_PATH_ANDROID_ABI_arm64-v8a="${{ steps.qt-arm64.outputs.qt-root-dir }}" \
             -DQT_PATH_ANDROID_ABI_x86_64="${{ steps.qt-x86.outputs.qt-root-dir }}" \
-            -DQT_ANDROID_MULTI_ABI_FORWARD_VARS="ANDROID_SDK_ROOT;ANDROID_NDK_ROOT;QT_HOST_PATH;JAVA_HOME" \
+            -DQT_ANDROID_MULTI_ABI_FORWARD_VARS="ANDROID_SDK_ROOT;ANDROID_NDK_ROOT;QT_HOST_PATH;JAVA_HOME;QT_ANDROID_KEYSTORE_PATH;QT_ANDROID_KEYSTORE_ALIAS;QT_ANDROID_KEYSTORE_STORE_PASS;QT_ANDROID_KEYSTORE_KEY_PASS" \
             -DANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
             -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
             -DANDROID_NDK_HOST=linux-x86_64 \
@@ -239,16 +264,32 @@ jobs:
       - name: Build APK (experimental)
         run: cmake --build build-android --target apk
 
-      - name: Stage unsigned Android Release APK (experimental)
+      - name: Stage Android Release APK (experimental)
         run: |
           cmake -E make_directory artifacts/android
+          if [ "$ANDROID_SIGNING_ENABLED" = "1" ]; then
+            SUFFIX="release-signed"
+          else
+            SUFFIX="release-unsigned"
+          fi
           cp build-android/android-build/gdei-auth-client.apk \
-            artifacts/android/gdei-auth-client-android-arm64-v8a-x86_64-release-unsigned.apk
+            "artifacts/android/gdei-auth-client-android-arm64-v8a-x86_64-${SUFFIX}.apk"
 
-      - name: Upload unsigned Android Release APK (experimental)
+      - name: Upload Android Release APK (experimental)
         uses: actions/upload-artifact@v4
         with:
-          name: gdei-auth-client-android-arm64-v8a-x86_64-release-unsigned
+          name: gdei-auth-client-android-arm64-v8a-x86_64-release
           path: artifacts/android/
           if-no-files-found: error
           retention-days: 7
+
+      # 仅 tag 触发且已配置正式签名时，才把 APK 挂到 GitHub Release；
+      # debug/兜底包只进工作流构件，不上 Release。
+      # Attach the signed APK to the Release only on a tag push with release signing configured.
+      - name: Upload signed APK to Release (tag only)
+        if: startsWith(github.ref, 'refs/tags/') && steps.signing.outputs.signing == '1'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/android/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

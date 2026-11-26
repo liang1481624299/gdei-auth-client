@@ -6,7 +6,8 @@
 #   3. JDK 17、CMake、Ninja。
 #
 # 默认产物：artifacts\android\gdei-auth-client-android-<abi>-debug.apk
-# Release 未配置签名，产物名会明确标记 release-unsigned。
+# 检测到 QT_ANDROID_KEYSTORE_PATH 等签名环境变量时按正式签名打包，产物名
+# 标记 release-signed；否则 Release 包标记 release-unsigned（debug 兜底）。
 param(
     [ValidateSet("arm64-v8a", "x86_64")]
     [string]$Abi = "arm64-v8a",
@@ -146,7 +147,12 @@ $env:ANDROID_NDK_ROOT = $ANDROID_NDK_ROOT
 $env:JAVA_HOME = $JAVA_HOME
 $env:Path = "$(Split-Path -Parent $javaExe);$env:Path"
 
-Write-Host "==> 配置 Qt $ExpectedQtVersion Android $Abi $BuildType"
+# 检测签名环境变量：配置了 keystore 路径才启用正式签名，否则回退 debug/未签名兜底。
+# Enable release signing only when a keystore path is provided via env; otherwise fall back.
+$signEnabled = -not [string]::IsNullOrWhiteSpace($env:QT_ANDROID_KEYSTORE_PATH)
+$signApk = if ($signEnabled) { "ON" } else { "OFF" }
+
+Write-Host "==> 配置 Qt $ExpectedQtVersion Android $Abi $BuildType（签名=$signApk）"
 $configureArgs = @(
     "-S", $SRC,
     "-B", $BuildDir,
@@ -155,7 +161,7 @@ $configureArgs = @(
     "-DCMAKE_MAKE_PROGRAM=$($ninja.Source)",
     "-DCMAKE_TOOLCHAIN_FILE=$toolchain",
     "-DQT_HOST_PATH=$QT_HOST_PATH",
-    "-DQT_ANDROID_SIGN_APK=OFF",
+    "-DQT_ANDROID_SIGN_APK=$signApk",
     "-DANDROID_ABI=$Abi",
     "-DQT_ANDROID_ABIS=$Abi",
     "-DANDROID_SDK_ROOT=$ANDROID_SDK_ROOT",
@@ -192,7 +198,9 @@ if ($null -eq $apk) {
 }
 
 New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
-$packageType = if ($BuildType -eq "Release") { "release-unsigned" } else { "debug" }
+if ($BuildType -eq "Debug") { $packageType = "debug" }
+elseif ($signEnabled)      { $packageType = "release-signed" }
+else                        { $packageType = "release-unsigned" }
 $destName = "gdei-auth-client-android-$Abi-$packageType.apk"
 $destApk = Join-Path $DistDir $destName
 Copy-Item -LiteralPath $apk.FullName -Destination $destApk -Force
@@ -205,7 +213,7 @@ Write-Host ""
 Write-Host "APK: $destApk"
 Write-Host "SHA256: $($hash.Hash)"
 Write-Host "校验文件: $hashPath"
-if ($BuildType -eq "Release") {
+if ($BuildType -eq "Release" -and -not $signEnabled) {
     Write-Warning "Release APK 未签名，需完成签名后才能安装或发布。"
 } else {
     Write-Host "安装验证：adb install -r `"$destApk`""

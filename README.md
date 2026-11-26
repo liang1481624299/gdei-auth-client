@@ -205,6 +205,19 @@ git push origin v0.3.2
 
 > 原生 Runner 用缓存 Qt SDK；Ubuntu / Debian / Arch 使用系统 Qt 以减少重复下载。Android CI 为 arm64-v8a + x86_64 双 ABI 实验性脚手架；CI 正式出包、真机验证、其余 ABI 与 Arch `pkg.tar.zst` 仍需对应工具链、设备或扩展 Runner。
 
+### Android 签名 / Android signing
+
+Release 挂包前，需在仓库 **Settings → Secrets and variables → Actions** 配置以下 Secrets；未配置时 Android 任务回退 debug 签名，APK 仅作工作流构件保留、不挂 Release：
+
+| Secret | 说明 |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | release keystore 整文件的 Base64 编码 |
+| `ANDROID_KEYSTORE_STORE_PASS` | 库口令 |
+| `ANDROID_KEY_ALIAS` | 密钥别名 |
+| `ANDROID_KEY_PASSWORD` | 私钥口令（可与库口令相同） |
+
+> keystore 与口令只存于 Secrets、不入库；本地 `*.jks / *.keystore / *.p12` 已在 `.gitignore` 排除。请离线备份 keystore，丢失后无法用同一签名身份覆盖安装旧版本。
+
 ## 保活机制 / Keep-alive
 
 1. 按随机抖动间隔访问 NCSI 探测地址，返回体含 `Microsoft` 判定在线（默认 150–210 秒，即 3 分钟 ±30 秒，可配置）；
