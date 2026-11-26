@@ -175,14 +175,25 @@ jobs:
           cache: true
           set-env: false
 
-      - name: Install Qt 6.8.3 for Android
+      - name: Install Qt 6.8.3 Android arm64-v8a
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.3'
           target: android
           arch: android_arm64_v8a
           modules: qt5compat
-          dir: ${{ runner.temp }}/qt-android
+          dir: ${{ runner.temp }}/qt-android-arm64
+          cache: true
+          set-env: false
+
+      - name: Install Qt 6.8.3 Android x86_64
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          target: android
+          arch: android_x86_64
+          modules: qt5compat
+          dir: ${{ runner.temp }}/qt-android-x86_64
           cache: true
           set-env: false
 
@@ -192,15 +203,17 @@ jobs:
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;26.1.10909125"
           echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
-      - name: Configure (Android arm64-v8a Release unsigned, experimental)
+      - name: Configure (Android dual ABI Release unsigned, experimental)
         run: |
           cmake -S . -B build-android -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/qt-android/6.8.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/qt-android-arm64/6.8.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake" \
             -DQT_HOST_PATH="$RUNNER_TEMP/qt-host/6.8.3/gcc_64" \
             -DQT_ANDROID_SIGN_APK=OFF \
-            -DANDROID_ABI=arm64-v8a \
-            -DQT_ANDROID_ABIS=arm64-v8a \
+            -DQT_ANDROID_ABIS="arm64-v8a;x86_64" \
+            -DQT_PATH_ANDROID_ABI_arm64-v8a="$RUNNER_TEMP/qt-android-arm64/6.8.3/android_arm64_v8a" \
+            -DQT_PATH_ANDROID_ABI_x86_64="$RUNNER_TEMP/qt-android-x86_64/6.8.3/android_x86_64" \
+            -DQT_ANDROID_MULTI_ABI_FORWARD_VARS="ANDROID_SDK_ROOT;ANDROID_NDK_ROOT;QT_HOST_PATH;JAVA_HOME" \
             -DANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
             -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
             -DANDROID_NDK_HOST=linux-x86_64 \
@@ -213,12 +226,12 @@ jobs:
         run: |
           cmake -E make_directory artifacts/android
           cp build-android/android-build/gdei-auth-client.apk \
-            artifacts/android/gdei-auth-client-android-arm64-v8a-release-unsigned.apk
+            artifacts/android/gdei-auth-client-android-arm64-v8a-x86_64-release-unsigned.apk
 
       - name: Upload unsigned Android Release APK (experimental)
         uses: actions/upload-artifact@v4
         with:
-          name: gdei-auth-client-android-arm64-v8a-release-unsigned
+          name: gdei-auth-client-android-arm64-v8a-x86_64-release-unsigned
           path: artifacts/android/
           if-no-files-found: error
           retention-days: 7

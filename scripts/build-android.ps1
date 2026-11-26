@@ -1,14 +1,14 @@
-﻿# build-android.ps1 — 构建 Qt 6.8.3 Android APK（arm64-v8a）。
+﻿# build-android.ps1 — 构建 Qt 6.8.3 Android APK（arm64-v8a / x86_64）。
 #
 # 前置条件：
 #   1. Qt 6.8.3 for Android 及同版本 host Qt（含 androiddeployqt）。
 #   2. Android SDK，以及 Qt 6.8.3 推荐的 NDK r26b（26.1.10909125）。
 #   3. JDK 17、CMake、Ninja。
 #
-# 默认产物：artifacts\android\gdei-auth-client-android-arm64-v8a-debug.apk
+# 默认产物：artifacts\android\gdei-auth-client-android-<abi>-debug.apk
 # Release 未配置签名，产物名会明确标记 release-unsigned。
 param(
-    [ValidateSet("arm64-v8a")]
+    [ValidateSet("arm64-v8a", "x86_64")]
     [string]$Abi = "arm64-v8a",
     [ValidateSet("Debug", "Release")]
     [string]$BuildType = "Debug",

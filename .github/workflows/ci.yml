@@ -1,5 +1,5 @@
-# CI：在 Windows / macOS / Debian / Arch 上配置并构建 Qt6/QML 工程；Android 为实验性脚手架。
-# CI: configure & build on Windows / macOS / Debian / Arch; Android is an experimental scaffold.
+# CI：Windows / macOS / Ubuntu / Arch 多架构配置构建；Android 双 ABI 实验性脚手架。
+# CI: configure & build Windows / macOS / Ubuntu / Arch across arches; Android dual-ABI scaffold.
 name: CI
 
 on:
@@ -9,18 +9,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ---- 原生 Runner：Windows / macOS，Qt 由 install-qt-action 缓存复用 ----
-  # Native runners: Qt cached via install-qt-action.
+  # ---- 原生 Runner：Windows / macOS，按 x64 / ARM 矩阵；Qt 由 install-qt-action 缓存 ----
+  # Native runners: Windows / macOS across x64 / ARM; Qt cached via install-qt-action.
   native:
     strategy:
       fail-fast: false
       matrix:
-        target: [windows, macos]
         include:
-          - target: windows
+          - target: windows-x64
             runner: windows-latest
-          - target: macos
+            qt-arch: win64_msvc2022_64
+            experimental: false
+          - target: windows-arm64
+            runner: windows-11-arm
+            qt-arch: win64_msvc2022_arm64
+            experimental: true
+          - target: macos-x64
+            runner: macos-15-intel
+            qt-arch: clang_64
+            experimental: false
+          - target: macos-arm64
             runner: macos-latest
+            qt-arch: clang_arm64
+            experimental: false
+    continue-on-error: ${{ matrix.experimental == true }}
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -31,6 +43,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.5.3'
+          arch: ${{ matrix.qt-arch }}
           modules: qt5compat
           cache: true
 
@@ -47,8 +60,47 @@ jobs:
           path: build
           retention-days: 14
 
-  # ---- 发行版容器：使用系统 Qt，避免在容器内重复下载整套 Qt ----
-  # Distro containers: use system Qt packages instead of re-downloading the Qt SDK.
+  # ---- Ubuntu 原生 Runner：x64 / arm64，使用系统 Qt 包 ----
+  # Ubuntu native runners: x64 / arm64, system Qt packages.
+  ubuntu:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: ubuntu-x64
+            runner: ubuntu-24.04
+          - target: ubuntu-arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ubuntu dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git build-essential cmake ninja-build pkg-config \
+            qt6-base-dev qt6-declarative-dev qt6-svg-dev qt6-tools-dev \
+            libqt6core5compat6-dev qml6-module-qtquick-controls qml6-module-qtquick-layouts \
+            qml6-module-qtquick-window
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdei-auth-client-${{ matrix.target }}
+          path: build
+          retention-days: 14
+
+  # ---- 发行版容器：Debian / Arch x64，使用系统 Qt，避免在容器内重复下载整套 Qt ----
+  # Distro containers: Debian / Arch x64, system Qt packages instead of re-downloading the Qt SDK.
   linux-distro:
     strategy:
       fail-fast: false
@@ -92,12 +144,12 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gdei-auth-client-${{ matrix.target }}
+          name: gdei-auth-client-${{ matrix.target }}-x64
           path: build
           retention-days: 14
 
-  # ---- Android：实验性工具链，暂不阻塞主线（APK 待真机 / 工具链验证）----
-  # Android: experimental toolchain, non-blocking until APK packaging is verified.
+  # ---- Android：arm64-v8a + x86_64 双 ABI，实验性工具链，暂不阻塞主线 ----
+  # Android: arm64-v8a + x86_64 dual ABI, experimental, non-blocking until verified on devices.
   android:
     name: Android (experimental)
     continue-on-error: true
@@ -127,14 +179,25 @@ jobs:
           cache: true
           set-env: false
 
-      - name: Install Qt 6.8.3 for Android
+      - name: Install Qt 6.8.3 Android arm64-v8a
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.3'
           target: android
           arch: android_arm64_v8a
           modules: qt5compat
-          dir: ${{ runner.temp }}/qt-android
+          dir: ${{ runner.temp }}/qt-android-arm64
+          cache: true
+          set-env: false
+
+      - name: Install Qt 6.8.3 Android x86_64
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          target: android
+          arch: android_x86_64
+          modules: qt5compat
+          dir: ${{ runner.temp }}/qt-android-x86_64
           cache: true
           set-env: false
 
@@ -144,15 +207,17 @@ jobs:
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;26.1.10909125"
           echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
-      - name: Configure (Android arm64-v8a Debug, experimental)
+      - name: Configure (Android dual ABI Debug, experimental)
         run: |
           cmake -S . -B build-android -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/qt-android/6.8.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/qt-android-arm64/6.8.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake" \
             -DQT_HOST_PATH="$RUNNER_TEMP/qt-host/6.8.3/gcc_64" \
             -DQT_ANDROID_SIGN_APK=OFF \
-            -DANDROID_ABI=arm64-v8a \
-            -DQT_ANDROID_ABIS=arm64-v8a \
+            -DQT_ANDROID_ABIS="arm64-v8a;x86_64" \
+            -DQT_PATH_ANDROID_ABI_arm64-v8a="$RUNNER_TEMP/qt-android-arm64/6.8.3/android_arm64_v8a" \
+            -DQT_PATH_ANDROID_ABI_x86_64="$RUNNER_TEMP/qt-android-x86_64/6.8.3/android_x86_64" \
+            -DQT_ANDROID_MULTI_ABI_FORWARD_VARS="ANDROID_SDK_ROOT;ANDROID_NDK_ROOT;QT_HOST_PATH;JAVA_HOME" \
             -DANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
             -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
             -DANDROID_NDK_HOST=linux-x86_64 \
@@ -164,7 +229,7 @@ jobs:
       - name: Upload Android Debug APK (experimental)
         uses: actions/upload-artifact@v4
         with:
-          name: gdei-auth-client-android-arm64-v8a-debug
+          name: gdei-auth-client-android-arm64-v8a-x86_64-debug
           path: build-android/android-build/gdei-auth-client.apk
           if-no-files-found: error
           retention-days: 14
