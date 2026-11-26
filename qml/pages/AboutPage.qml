@@ -13,14 +13,15 @@ PageScaffold {
     showBack: true
 
     ColumnLayout {
-        width: parent.width
+        Layout.fillWidth: true
         spacing: th.sp8
 
-        Card {
+        BaseCard {
             Layout.fillWidth: true
+            hoverable: false
 
             RowLayout {
-                width: parent.width
+                Layout.fillWidth: true
                 spacing: th.sp6
 
                 Image {
@@ -38,7 +39,7 @@ PageScaffold {
                     Layout.fillWidth: true
 
                     QQC.Label {
-                        text: (app.i18n.lang, app.i18n.text("app.title"))
+                        text: (app.i18n.dictionary["app.title"])
                         color: th.text
                         font.pixelSize: th.fontTitle3
                         font.weight: th.weightSemibold
@@ -46,7 +47,7 @@ PageScaffold {
                         Layout.fillWidth: true
                     }
                     QQC.Label {
-                        text: (app.i18n.lang, app.i18n.text("app.subtitle"))
+                        text: (app.i18n.dictionary["app.subtitle"])
                         color: th.muted
                         font.pixelSize: th.fontSubhead
                         wrapMode: Text.Wrap
@@ -56,24 +57,24 @@ PageScaffold {
             }
 
             Rectangle {
-                width: parent.width
+                Layout.fillWidth: true
                 height: 1
                 color: th.separator
             }
 
             RowLayout {
-                width: parent.width
+                Layout.fillWidth: true
                 spacing: th.sp4
 
                 QQC.Label {
-                    text: (app.i18n.lang, app.i18n.text("about.version"))
+                    text: (app.i18n.dictionary["about.version"])
                     color: th.muted
                     font.pixelSize: th.fontBody
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                 }
                 QQC.Label {
-                    text: "0.2.1"
+                    text: "0.3.0"
                     color: th.text
                     font.pixelSize: th.fontBody
                     font.weight: th.weightMedium
@@ -82,16 +83,16 @@ PageScaffold {
             }
 
             QQC.Label {
-                width: parent.width
-                text: (app.i18n.lang, app.i18n.text("about.description"))
+                Layout.fillWidth: true
+                text: (app.i18n.dictionary["about.description"])
                 color: th.text
                 font.pixelSize: th.fontBody
                 lineHeight: 1.35
                 wrapMode: Text.Wrap
             }
             QQC.Label {
-                width: parent.width
-                text: (app.i18n.lang, app.i18n.text("about.technology"))
+                Layout.fillWidth: true
+                text: (app.i18n.dictionary["about.technology"])
                 color: th.muted
                 font.pixelSize: th.fontFootnote
                 lineHeight: 1.35

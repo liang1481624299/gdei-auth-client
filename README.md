@@ -198,8 +198,8 @@ cpack -G <generator>
 发版 / Cut a release：
 
 ```bash
-git tag v0.2.1
-git push origin v0.2.1
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 > 原生 Runner 用缓存 Qt SDK；Debian / Arch 容器使用系统 Qt 以减少重复下载。Android 本地构建链路已验证并产出 Debug APK；CI 正式出包、其他 ABI、真机验证与 Arch `pkg.tar.zst` 仍需对应工具链、设备或扩展 Runner。

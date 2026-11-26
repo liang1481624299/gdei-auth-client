@@ -67,6 +67,8 @@ set(APP_SOURCES
     src/core/secretstore_fallback.cpp
     src/core/ConfigStore.cpp
     src/core/LocalDeviceStore.cpp
+    src/core/BodyDecoder.cpp
+    src/core/CertificateStore.cpp
     src/core/FormEncoding.cpp
     src/core/SessionCookieJar.cpp
     src/core/PortalClient.cpp
@@ -80,6 +82,7 @@ set(APP_SOURCES
     src/app/AccountController.cpp
     src/app/LocalDeviceController.cpp
     src/app/NetworkInfoController.cpp
+    src/app/DiagnosticsController.cpp
     src/app/SessionController.cpp
     src/app/EventBus.cpp
     src/app/EventModel.cpp
@@ -95,6 +98,8 @@ set(APP_HEADERS
     src/core/SecretStore.hpp
     src/core/ConfigStore.hpp
     src/core/LocalDeviceStore.hpp
+    src/core/BodyDecoder.hpp
+    src/core/CertificateStore.hpp
     src/core/FormEncoding.hpp
     src/core/SessionCookieJar.hpp
     src/core/PortalClient.hpp
@@ -108,6 +113,7 @@ set(APP_HEADERS
     src/app/AccountController.hpp
     src/app/LocalDeviceController.hpp
     src/app/NetworkInfoController.hpp
+    src/app/DiagnosticsController.hpp
     src/app/SessionController.hpp
     src/app/AppEvent.hpp
     src/app/EventBus.hpp
@@ -145,38 +151,50 @@ qt_add_qml_module(gdei-auth-client
     QML_FILES
         qml/Main.qml
         qml/pages/LoginPage.qml
-        qml/pages/DashboardPage.qml
+        qml/pages/OverviewPage.qml
         qml/pages/DevicesPage.qml
-        qml/pages/AccountDashboardPage.qml
+        qml/pages/DiscoverPage.qml
+        qml/pages/MinePage.qml
         qml/pages/AdvancedSettingsPage.qml
         qml/pages/EventLogPage.qml
+        qml/pages/LogPage.qml
         qml/pages/AboutPage.qml
         qml/pages/RemoteDevicesPage.qml
         qml/pages/DiagnosticsPage.qml
         qml/theme/Theme.qml
-        qml/components/Card.qml
-        qml/components/TextField.qml
-        qml/components/PrimaryButton.qml
-        qml/components/Switch.qml
+        qml/components/BaseCard.qml
+        qml/components/StatusListCard.qml
+        qml/components/BaseButton.qml
+        qml/components/BaseTextField.qml
+        qml/components/BaseSwitch.qml
+        qml/components/BaseComboBox.qml
+        qml/components/BaseCollapseGroup.qml
+        qml/components/BaseBadge.qml
+        qml/components/Banner.qml
+        qml/components/BaseSkeleton.qml
+        qml/components/DiagnosticToolCard.qml
         qml/components/LangSelector.qml
         qml/components/ThemeSelector.qml
         qml/components/DeviceItem.qml
         qml/components/DevicePanel.qml
+        qml/components/DeviceCard.qml
         qml/components/LogPanel.qml
         qml/components/Icon.qml
         qml/components/BrandIcon.qml
-        qml/components/SoftShadow.qml
-        qml/components/DisclosureGroup.qml
         qml/components/AppDialog.qml
         qml/components/SettingRow.qml
-        qml/components/StatusBadge.qml
         qml/components/PageScaffold.qml
         qml/components/AppTabBar.qml
         qml/components/AppTabButton.qml
-        qml/components/KeepAliveDial.qml
-        qml/components/LocalDeviceCard.qml
+        qml/components/NavEntryRow.qml
+        qml/components/TextLink.qml
+        qml/components/IconGrid.qml
+        qml/components/StatStrip.qml
+        qml/components/KeyValueRow.qml
+        qml/components/AvatarBlock.qml
         qml/components/LocalDeviceEditor.qml
         qml/components/NetworkInfoCard.qml
+        qml/components/LocalProfilesCard.qml
         qml/components/ToastHost.qml
         qml/components/EventListItem.qml
         qml/components/UnreadBadge.qml
@@ -209,6 +227,16 @@ qt_add_qml_module(gdei-auth-client
         qml/icons/eyeOff.svg
         qml/icons/trayOnline.svg
         qml/icons/trayOffline.svg
+        qml/icons/bell.svg
+        qml/icons/sun.svg
+        qml/icons/cog.svg
+        qml/icons/chart.svg
+        qml/fonts/NotoSansSC-VF.ttf
+        qml/fonts/SimSun.ttc
+        qml/fonts/SegoeUI.ttf
+        qml/fonts/SegoeUI-Bold.ttf
+        qml/fonts/Meiryo.ttc
+        qml/fonts/MicrosoftJhengHei.ttc
         qml/icons/app.png
         qml/icons/brand/windows.svg
         qml/icons/brand/macos.svg
@@ -229,10 +257,22 @@ target_link_libraries(gdei-auth-client PRIVATE
     Qt6::Core5Compat
 )
 
+# ---- QML 编译产物 / QML compiled output ----
+# 本项目大量通过 rootContext 对象 `app` 暴露 C++ 属性（i18n.lang、config.themeMode
+# 等）。qmlcachegen 的 AOT 原生代码无法解析这类上下文对象，会把相关绑定跳过原生编译，
+# 进而在部分路径上丢失对 langChanged / themeModeChanged 的重算，表现为切换语言不刷新、
+# 跟随系统主题失效。这里关闭 AOT 原生代码生成，仅保留字节码缓存（解释执行），
+# 让绑定回到 QML 引擎的常规依赖追踪；性能损失在本项目 UI 规模下可忽略。
+# AOT native code cannot resolve context object `app`; keep bytecode-only so the
+# QML engine tracks lang/theme property dependencies normally.
+set_target_properties(gdei-auth-client PROPERTIES
+    QT_QMLCACHEGEN_ARGUMENTS "--only-bytecode")
+
 # ---- Platform secure-storage libraries ----
 # Windows DPAPI (Crypt32) / macOS Keychain (Security framework).
+# Windows 另需 iphlpapi：NetworkInfoController 用 GetIpNetTable 读取邻接表获取网关 MAC。
 if(WIN32)
-    target_link_libraries(gdei-auth-client PRIVATE crypt32 Qt6::Widgets)
+    target_link_libraries(gdei-auth-client PRIVATE crypt32 iphlpapi Qt6::Widgets)
 elseif(APPLE)
     target_link_libraries(gdei-auth-client PRIVATE "-framework Security")
 endif()
@@ -256,8 +296,8 @@ if(ANDROID)
         QT_ANDROID_PACKAGE_NAME "org.gdei.connect"
         QT_ANDROID_MIN_SDK_VERSION 28
         QT_ANDROID_TARGET_SDK_VERSION 35
-        QT_ANDROID_VERSION_CODE 1
-        QT_ANDROID_VERSION_NAME "0.2.1")
+        QT_ANDROID_VERSION_CODE 2
+        QT_ANDROID_VERSION_NAME "0.3.0")
 endif()
 
 # ---- Qt 运行时自动部署 / Auto-deploy Qt runtime ----
@@ -308,7 +348,7 @@ endif()
 
 # ---- 打包 / Packaging (deb / rpm / Arch tar.zst / macOS dmg / Windows exe) ----
 set(CPACK_PACKAGE_NAME "gdei-auth-client")
-set(CPACK_PACKAGE_VERSION "0.2.1")
+set(CPACK_PACKAGE_VERSION "0.3.0")
 set(CPACK_PACKAGE_VENDOR "GDEI")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GDEI Network Client, campus network auto-authentication")
 set(CPACK_PACKAGE_CONTACT "liang1481624299 <liang1481624299@users.noreply.github.com>")
