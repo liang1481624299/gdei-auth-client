@@ -17,9 +17,9 @@
 | 教学机构 / colleges | `https://www.gdei.edu.cn/jxkyjg/list.htm` | 18 个二级学院，列表项 `img-src` 为空，院徽需进各子站 |
 | 统一认证 / CAS SSO | `https://security.gdei.edu.cn/cas/login?service=<回调>` | 各子系统共用同一认证中心 |
 | 融合门户 / integrated portal | `https://iportal.gdei.edu.cn/` | 雷神（ly-sky）React + antd + axios 门户，CAS 回调 `/shiro-cas` |
-| 学生数据门户 / data portal | `https://dsj.gdei.edu.cn/sjfx/eportal/pcportal/portal.do?id=MH_XS` | 未登录经 `/sso/ecas/login.do` → `/sso/sso/login` → 回 CAS，回调 `https://dsj.gdei.edu.cn/sso/sso/login`，数据按账号返回 |
-| 教务系统 / academic system | `https://jwxt.gdei.edu.cn/gly/api/cas/login?pattern=teacher-login` | 新教务 gly 后端 API；CAS 回调即此地址，`pattern` 区分师生 |
-| 教务选课 SSO 入口 / academic SSO entry | `https://security.gdei.edu.cn/cas/jwxtsso.jsp` | 主站导航入口，302 到 CAS 再回 jwxt 回调 |
+| 学生数据门户 / data portal | `https://dsj.gdei.edu.cn/sjfx/eportal/pcportal/portal.do?id=MH_XS` | 已登录会话实测免密进入「个人画像」；报表型 `.do` 端点（4.3） |
+| 教务系统 jwxt | `https://jwxt.gdei.edu.cn/gly/api/cas/login?pattern=teacher-login` | gly 后端经 `ly-api-gateway` 网关；学籍字段见 4.2 |
+| 教务选课 SSO 入口 / academic SSO entry | `https://security.gdei.edu.cn/cas/jwxtsso.jsp` | 已实测：CAS 有 TGC 时凭单点票据免密跳转 jwxt |
 | 图书馆 / library | `https://lib.gdei.edu.cn/` | 主站导航入口 |
 | WebVPN（校外入口） | `https://webvpn.gdei.edu.cn/` | Vue SPA，校外访问校内系统的代理入口 |
 
@@ -178,22 +178,60 @@
 
 > 字段缺口结论：门户 `userLogin` **未出现**独立的 `className`、`grade`、`major`、`collegeName`（学院全称）、`realName`、`jobNumber`、`mobile`、`idCard`、`birthday` 等学籍/身份字段；班级文本已含年级/专业/班拼接，但学院规范全称、专业、年级、学籍号、学籍状态需走教务 jwxt 或 dsj（见 4.2）。
 
-### 4.2 教务 / 学工侧（门户前端未出现，需另抓）/ academic & student-affairs
+### 4.2 教务系统 jwxt（登录会话实测）/ academic system
 
-> 以下字段不在融合门户前端 bundle 中，预期位于教务系统（jwxt SSO）或 dsj 学生数据门户，**需登录后在对应页面抓包确认字段名与来源接口**：
+CAS 已有 TGC 单点会话时，访问教务 SSO 入口 `https://security.gdei.edu.cn/cas/jwxtsso.jsp` 可**免密**跳到教务 SPA `https://jwxt.gdei.edu.cn/#/jwxt/js/student/...`。教务后端经网关 `X-Application-Context: ly-api-gateway:10008`，响应统一 `{code:200, data:{...}}`。
 
-| 目标字段 / Target field | 预期来源 / Likely source | 状态 / Status |
+**主资料接口**：`GET /api/studentInfo/selectMyjwByid/<学生内部ID>`（`xsid`），页面路由 `#/jwxt/js/student/childServiceQuery/myStudentInfo`。
+> 鉴权注意：裸 `fetch` 重放缺网关鉴权头会返 `code:5100000「系统异常」`，客户端复现需先抓全该请求的鉴权/签名头（见 §9-2）。
+
+**字段映射（拼音缩写 key，本人学生账号样本；文档只记字段名/含义/敏感级，不落真实值）**：
+
+| jwxt key | 含义 / Meaning | 备注 / Notes |
 |---|---|---|
-| 姓名 | 门户 `userName` 已可取（实测） | ✅ 门户侧已得（4.1） |
-| 学号 | 门户 `userId` 已可取（实测）；规范学号以教务为准 | ✅ 门户侧已得（4.1） |
-| 班级 | 门户 `departmentName` 已可取（实测，拼接文本）；规范班级编码以教务为准 | ✅ 门户侧已得（4.1） |
-| 性别 | 门户 `sex` 已可取（实测 `"1"` 男） | ✅ 门户侧已得（4.1） |
-| 头像 | 门户 `headPortrait`（base64 data URI） | ✅ 门户侧已得（4.1） |
-| 学院（规范全称） | 门户 `departments` 学生无权限；预期教务 jwxt / dsj | 待抓 |
-| 专业（独立字段） | 教务系统 jwxt；门户仅在班级文本中拼接 | 待抓 |
-| 年级（独立字段） | 教务 / 学工；门户仅在班级文本中拼接 | 待抓 |
-| 学籍号 | 学工 / 教务 | 待抓 |
-| 学籍状态（在读/休学等） | 学工 | 待抓 |
+| `xsid` | 学生内部 ID | 同时用于接口路径段 |
+| `xh` | 学号（教务学号） | |
+| `xm` | 姓名 | |
+| `xbmc` | 性别名称 | |
+| `mzmc` | 民族名称 | |
+| `zzmmm` | 政治面貌名称 | |
+| `csrq` | 出生日期 | `YYYYMMDD`；敏感 |
+| `zjzlmc` | 证件种类名称 | 如居民身份证 |
+| `zjhm` | 证件号码（身份证号） | **高敏感，客户端不得采集/上屏/落盘** |
+| `ksh` | 考生号 | 敏感，默认不采集 |
+| `lxdh` | 联系电话（手机） | 敏感，默认不采集 |
+| `nj` | 年级 | 独立年级字段 |
+| `xymc` | 学院名称（规范全称） | 门户拿不到的学院全称在此 |
+| `zyfmc` | 年级专业方向名称 | 专业 + 方向拼接文本 |
+| `bjmc` | 班级名称 | |
+| `xqmc` | 校区名称 | |
+| `xz` | 学制 | 数字（年） |
+| `pyccmc` | 培养层次名称 | 如本科 |
+| `rxrq` | 入学日期 | `YYYY-MM-DD` |
+| `xjztmc` | 学籍状态名称 | 如在校；对应在读/休学等 |
+| `sfzj` | 是否在校 | 标志 `1`/`0` |
+| `zxzt` | 在校状态 | 标志 `1`/`0` |
+| `xs1bmc` | 培养类别 | 如师范 |
+| `xxnx` | 在校年级/学期标志 | 实测 `-8`，确切含义待复核 |
+| `zxcpbase` | 在校照 | base64 data URI |
+| `byzbase` | 毕业照 | base64 data URI |
+| `bz` | 备注 | 多为数据导入时间戳 |
+
+**其余教务 Tab（接口未逐一展开）**：家庭信息 `GET selectFamListByxsid?pageNum=&xsid=`（列表，实测 0 条；表头含称谓/姓名等）；另有学生成绩信息、学生异动信息、注册信息三个 Tab，对应独立 `.do`/`/api/...` 接口，与账号资料展示关系不大，留待按需抓包。
+
+### 4.3 数据门户 dsj（学情画像，登录会话实测）/ data portal
+
+入口 `https://dsj.gdei.edu.cn/sjfx/eportal/pcportal/portal.do?id=MH_XS`，凭 CAS 会话免密进入「综合学情分析 · 个人画像」。后端为报表型 `.do` 端点（`portal.do`、`queryserver.do`、`showreport.do`、`reqmgr.do`），前端 echarts 渲染。展示字段与教务 jwxt 同源（姓名/学号/院系/专业/班级/年级），画像页另含：
+
+| 画像字段 | 含义 / Meaning | 备注 / Notes |
+|---|---|---|
+| 专业代码 / 班级代码 | 专业、班级的内部编码 | 教务基本信息接口未直接返回 |
+| 生源类型 / 生源地 | 招生来源 | 敏感个人背景，默认不采集 |
+| 宿舍房间号 | 在校宿舍 | **隐私敏感，客户端不得采集/上屏** |
+| 电子邮箱 | 邮箱 | 多为空 |
+| GPA、修读/优秀/及格/挂科课程数 | 课程成绩分析 | 学情统计，非身份字段 |
+
+> dsj 不提供独立于教务的身份学籍主数据；客户端若需学院/专业/年级/学籍状态，以 jwxt `selectMyjwByid` 为准。
 
 ## 5. 访问环境要求 / Access Environment
 
@@ -210,6 +248,7 @@
 - 口令需 RSA（JSEncrypt / PKCS#1 v1.5）加密后提交；`tokens`、`stamp` 必须从当次登录表单提取，不可跨会话复用；`username` 转小写。
 - 个人信息模型按“账号登录后拉取”设计：本地不持久化他人或历史个人信息；展示字段以登录后接口返回为准，前端做缺省兜底。
 - 口令不入仓库、不写日志、不进截图；敏感字段沿用既有日志脱敏策略。
+- **最小化采集**：客户端上屏/落盘仅取展示所需身份字段（姓名、学号、班级、学院、专业方向、年级、性别、学籍状态、头像）。身份证号（`zjhm`）、手机号（`lxdh`）、考生号（`ksh`）、出生日期（`csrq`）、宿舍房间号、生源地等属高敏感个人信息，默认不采集、不上屏、不落本地库。
 - **信任锚边界**：NAC 门户仍是校园网入网认证与设备在线状态的信任根；CAS/iportal 仅用于在用户已入网、本人登录后**补全展示用账号资料**（姓名/部门等），不替代 NAC 入网认证，也不在离线/未入网时凭缓存资料对外鉴权。
 - 字段名以真实接口 JSON 为准；4.1 已在本人学生账号登录会话核对，教师账号（`userType=teacher`）字段填充情况接入前仍需另抓复核。
 
@@ -241,14 +280,16 @@
 - 门户鉴权：`withCredentials` + `X-Requested-With` + `csrfToken` 头；会话含 JS 可见 `Authorization` Cookie 与 Shiro HttpOnly 会话。
 - 主资料接口 `tryLoginUserInfo` 与补充接口 `getLoginInfo` 的分工；`userLogin` 全字段名与取值口径（4.1）；`departments` 学生账号 500 无权限。
 - 主登录 RSA 用表单内嵌公钥，`getkey` 动态公钥仅弱口令分支。
+- jwxt 教务 SSO 免密进入；主资料接口 `/api/studentInfo/selectMyjwByid/<xsid>` 全量学籍字段映射（4.2）；dsj 学情画像入口与补充字段（4.3）。学院全称、专业方向、年级、学籍状态、培养层次、校区、学制、入学日期等身份字段均已在 jwxt 取到。
 
 **仍需补抓 / 复核**：
 
-1. **教务 / 学工学籍字段（P1）**：在 jwxt（`/gly/api/cas/login?pattern=...` 回调）与 dsj 学生门户（`id=MH_XS`）抓学院规范全称、专业、年级、学籍号、学籍状态对应的接口路径与返回结构；门户班级文本已含年级/专业/班拼接，但无独立字段。
-2. **会话 Cookie 名细节**：Shiro HttpOnly 会话 Cookie 的具体名称/属性；jwxt、dsj 回调各自建立的会话 Cookie。命令行 CookieJar 复现完整登录链尚未跑通（`Invoke-WebRequest` 重定向拦截、`HttpWebRequest` TLS 握手、`HttpClient` 空 Content 均失败），客户端实现前需用 Qt 网络栈重新验证 Cookie 保留与 302 跟随。
-3. **门户令牌用途**：`tokenId` / `accessToken` / `refreshToken` / `authorization` 各自用途、有效期与客户端是否需要复用/刷新；`tryLoginUserInfo` 的 `Authorization` 头与 `Authorization` Cookie 的关系。
-4. **教师账号字段复核**：4.1 口径来自学生账号；教师（`userType=teacher`）的工号、部门、职称等字段填充情况需另抓。
-5. **头像落地策略**：`headPortrait` 为 base64 data URI，客户端展示时的解码、缓存与缺省兜底方案。
-6. **WebVPN**：分析其登录接口与代理 URL 改写规则，判断客户端校外可达性方案。
+1. **jwxt 网关鉴权头**：`selectMyjwByid` 裸 `fetch` 返 510 系统异常，需在 Network 完整记录该请求的鉴权/签名头（自定义 token / 签名 / 网关头），客户端用 Qt 复现登录链时才能通过网关校验。
+2. **教务其余 Tab 接口**：学生异动信息、注册信息、成绩信息三个 Tab 的接口路径与字段（与账号资料展示关系不大，按需再抓）；家庭信息 `selectFamListByxsid` 列表实测为空。
+3. **会话 Cookie 名细节**：Shiro HttpOnly 会话 Cookie 的具体名称/属性；jwxt、dsj 回调各自建立的会话 Cookie。命令行 CookieJar 复现完整登录链尚未跑通（`Invoke-WebRequest` 重定向拦截、`HttpWebRequest` TLS 握手、`HttpClient` 空 Content 均失败），客户端实现前需用 Qt 网络栈重新验证 Cookie 保留与 302 跟随。
+4. **门户令牌用途**：`tokenId` / `accessToken` / `refreshToken` / `authorization` 各自用途、有效期与客户端是否需要复用/刷新；`tryLoginUserInfo` 的 `Authorization` 头与 `Authorization` Cookie 的关系。
+5. **教师账号字段复核**：4.1 / 4.2 口径来自学生账号；教师（`userType=teacher`）的工号、部门、职称等字段填充情况需另抓。
+6. **头像落地策略**：`headPortrait` / `zxcpbase` 为 base64 data URI，客户端展示时的解码、缓存与缺省兜底方案。
+7. **WebVPN**：分析其登录接口与代理 URL 改写规则，判断客户端校外可达性方案。
 
 > 院徽采集已完成（见第 7、8 节）：18 个学院站均无独立院徽，头部沿用校徽变体，映射见 `colleges.json`。

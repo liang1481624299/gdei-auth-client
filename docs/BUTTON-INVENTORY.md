@@ -145,7 +145,7 @@
 
 ## F. CAS 融合门户（独立 SSO，远期方向，不混入本 NAC 客户端）
 
-> 依据：`docs/CAS-PORTAL.md`。属另一套统一认证（`security.gdei.edu.cn/cas`、`iportal.gdei.edu.cn`、`jwxt.gdei.edu.cn`、`dsj.gdei.edu.cn`、`webvpn.gdei.edu.cn`）。2026-11-26 已匿名实测登录表单字段、RSA 加密、无图形验证码、校验端点 404 与子系统回调；同日在本人登录会话复核了票据跳转链、会话 Cookie 与门户 `userLogin` 字段（姓名/学号/班级/性别/头像已可取）；教务/学工学籍字段（学院全称/专业/年级/学籍号/学籍状态）仍待进 jwxt、dsj 抓包。
+> 依据：`docs/CAS-PORTAL.md`。属另一套统一认证（`security.gdei.edu.cn/cas`、`iportal.gdei.edu.cn`、`jwxt.gdei.edu.cn`、`dsj.gdei.edu.cn`、`webvpn.gdei.edu.cn`）。2026-11-26 已匿名实测登录表单字段、RSA 加密、无图形验证码、校验端点 404 与子系统回调；同日在本人登录会话复核了票据跳转链、会话 Cookie、门户 `userLogin` 字段，并经 SSO 免密进入 jwxt 教务与 dsj 画像，拿到学院全称/专业方向/年级/班级/学籍状态等学籍字段。身份证/手机/考生号/宿舍等敏感项不纳入客户端采集。
 
 | # | 方向 | 涉及接口（文档记录，门户侧已登录会话实测） | 口径 | 分级 |
 |---|---|---|---|---|
@@ -153,7 +153,7 @@
 | F2 | 菜单 / 权限 / 部门树 | `/api/authc/users/menus`、`/api/authc/users/<id>/authority`、`/api/authc/users/selector`、`/api/authc/departments*` | 同上；权限数据不与本客户端设备 / 账户状态混用 | **P3** |
 | F3 | 消息 / 待办 / 日程 / 邮箱 / 应用商店 / 主题 / 附件等模块 | `api/uppinfo/infoCenter/*`、`api/uppmessage/message/*`、`api/uppflow/process/*`、`api/uppcard/affairCenter/*`、`api/bs-schedule/*`、`api/uppemail/*`、`api/upp/appStore/*`、`api/upp/theme/*`、`api/upp/attachmentManagement` | 远期若做融合门户再评估；本期仅登记，不建入口 | **P3** |
 | F4 | 更换头像、新手引导标记 | `api/authc/users/portraitChange`（POST）、`api/upp/userControl/guideHasUsed`（POST） | 个人资料写操作；独立 CAS 会话，本期不接 | **P3** |
-| F5 | 教务 / 学工字段：学院全称、专业、年级、学籍号、学籍状态（姓名/学号/班级/性别/头像门户侧已得，见 F1 与 `CAS-PORTAL.md` §4.1）；数据门户 `dsj ... id=MH_XS`、教务 `jwxtsso.jsp` | 接口路径未抓，预期在教务系统 / dsj 学生门户（`CAS-PORTAL.md` §4.2、§9-1） | 与融合门户 bundle 字段不同源；需登录后逐系统抓包；门户 `departments` 学生账号无权限 | **P3** |
+| F5 | 教务学籍字段：jwxt `GET /api/studentInfo/selectMyjwByid/<xsid>`（学院 `xymc`/专业方向 `zyfmc`/年级 `nj`/班级 `bjmc`/学籍状态 `xjztmc`/培养层次 `pyccmc`/校区 `xqmc`/学制 `xz`/入学日期 `rxrq` 等，§4.2）；dsj 画像 `queryserver.do`/`showreport.do`（§4.3） | 已登录会话实测字段名；jwxt 网关鉴权头、异动/注册/成绩 Tab 接口未补（`CAS-PORTAL.md` §9-1/2） | 身份展示字段以 jwxt 为准；身份证/手机/宿舍/生源地等高敏感项不采集；门户 `departments` 学生账号无权限 | **P3** |
 | F6 | 校外 WebVPN 可达链路（登录、双因素、绑定邮箱 / 手机 / OTP / 微信、改密 / 重置） | `webvpn.gdei.edu.cn` Vue SPA 路由 `/auth/*`；代理 URL 改写规则未抓（`CAS-PORTAL.md` §5、§9-4） | 属网络代理范畴；本客户端合规边界不含代理 / 翻墙，仅作远期可行性记录 | **P3**（边界外，谨慎评估） |
 
 ---
