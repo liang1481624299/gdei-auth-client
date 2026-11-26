@@ -1,6 +1,11 @@
 ﻿# packaging/windows/deploy.ps1
-# Windows 部署打包：windeployqt 收集 Qt 运行库 / 插件 / QML，再归档 zip。
-# Windows packaging: windeployqt collects Qt runtime, plugins and QML, then zips.
+# Windows 部署打包：先把构建产物复制到暂存目录，再由 windeployqt 收集 Qt 运行库 /
+# 插件 / QML 到暂存目录，最后归档 zip。windeployqt 不得作用于编译树内的 exe，
+# 否则运行时 DLL 会被倾倒进 build 目录，污染后续编译器子进程的 DLL 加载。
+# Windows packaging: copy the build output to a staging dir first, then let windeployqt
+# collect Qt runtime / plugins / QML into that staging dir, and finally zip it.
+# windeployqt must NOT target the exe inside the build tree; otherwise runtime DLLs are
+# dumped into the build directory and break the compiler subprocess DLL resolution.
 param(
     [string]$BuildDir = "build",
     [string]$DistDir  = "artifacts/windows",
@@ -15,40 +20,18 @@ if (-not $exe) {
     throw "gdei-auth-client.exe not found under $BuildDir"
 }
 
-# 由对应编译套件的 windeployqt 收集 platforms / qml / imageformats 等插件目录。
-# Use the windeployqt matching the build kit to collect plugins and QML.
-windeployqt --release --qmldir $QmlDir $exe.FullName
-
-New-Item -ItemType Directory -Force $DistDir | Out-Null
-
-$exeDir = $exe.DirectoryName
 $staging = Join-Path $DistDir "gdei-auth-client"
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
 New-Item -ItemType Directory -Force $staging | Out-Null
 
-# 递归拷贝 windeployqt 收集的 DLL 与 platforms / styles / imageformats / qml 等插件子目录。
-# Recursively copy deployed DLLs and plugin subdirs (platforms/styles/imageformats/qml).
-# 排除 CMake/Ninja/Qt 构建中间产物目录与源码中间文件；项目 QML、图标、字体已内嵌 qrc，不拷磁盘副本。
-# Exclude CMake/Ninja/Qt build intermediates; app QML/icons/fonts are baked into the qrc.
-$excludeDirs = @(
-    ".qt", ".rcc", "CMakeFiles", "gdei-auth-client_autogen", "GdeiConnect",
-    "meta_types", "qmltooling", "qmltypes"
-)
-$excludeExt = @(".cpp", ".a", ".ninja", ".qrc", ".qmltypes")
-$excludeFiles = @(
-    ".ninja_deps", ".ninja_log", "build.ninja", "cmake_install.cmake",
-    "CMakeCache.txt", "CPackConfig.cmake", "CPackSourceConfig.cmake"
-)
+# 先把 exe 复制到暂存目录，再对暂存副本做收集，编译树保持干净。
+# Copy the exe into staging first, then collect against that staging copy,
+# leaving the build tree untouched.
+$stagingExe = Join-Path $staging $exe.Name
+Copy-Item $exe.FullName $stagingExe -Force
 
-Get-ChildItem $exeDir -Force |
-    Where-Object {
-        if ($_.PSIsContainer) {
-            $excludeDirs -notcontains $_.Name
-        } else {
-            ($excludeExt -notcontains $_.Extension) -and
-            ($excludeFiles -notcontains $_.Name)
-        }
-    } |
-    Copy-Item -Destination $staging -Recurse -Force
+# 由对应编译套件的 windeployqt 收集 platforms / qml / imageformats 等插件目录。
+# Use the windeployqt matching the build kit to collect plugins and QML.
+windeployqt --release --qmldir $QmlDir $stagingExe
 
 Compress-Archive -Path "$staging/*" -DestinationPath "$DistDir/gdei-auth-client-windows-x64.zip" -Force

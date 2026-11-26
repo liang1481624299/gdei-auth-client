@@ -128,7 +128,6 @@ PageScaffold {
                 visible: app.session.busy
                 implicitWidth: th.dp(40)
                 implicitHeight: th.dp(40)
-                color: root.powerRing
             }
 
             TapHandler {

@@ -1,6 +1,8 @@
 // src/app/NetworkInfoController.cpp
 #include "app/NetworkInfoController.hpp"
 #include "core/ConfigStore.hpp"
+#include "core/NicSelector.hpp"
+#include "platform/RouteBinder.hpp"
 
 #include <QAbstractSocket>
 #include <QFile>
@@ -118,7 +120,9 @@ int calculateSubnetStatus(const QString& sourceIp, const QString& targetIp,
 } // namespace
 
 NetworkInfoController::NetworkInfoController(ConfigStore* config, QObject* parent)
-    : QObject(parent), m_config(config) {
+    : QObject(parent), m_config(config),
+      m_nicSelector(new NicSelector(config, this)),
+      m_routeBinder(new RouteBinder(this)) {
     connect(m_config, &ConfigStore::ipChanged, this, &NetworkInfoController::updateTargetIp);
     refresh();
 }
@@ -132,6 +136,32 @@ QString NetworkInfoController::interfaceName() const { return m_interfaceName; }
 bool NetworkInfoController::available() const { return m_available; }
 int NetworkInfoController::subnetStatus() const { return m_subnetStatus; }
 QVariantList NetworkInfoController::interfaces() const { return m_interfaces; }
+
+QString NetworkInfoController::campusSourceIp() const {
+    return m_campusSelected.value(QStringLiteral("sourceIp")).toString();
+}
+QString NetworkInfoController::campusInterfaceName() const {
+    return m_campusSelected.value(QStringLiteral("interfaceName")).toString();
+}
+bool NetworkInfoController::campusReachable() const {
+    return m_campusSelected.value(QStringLiteral("reachable")).toBool();
+}
+bool NetworkInfoController::campusMismatch() const {
+    const QString campusIp = campusSourceIp();
+    return !campusIp.isEmpty() && campusIp != m_sourceIp;
+}
+QVariantList NetworkInfoController::campusNicList() const { return m_campusNicList; }
+QVariantMap NetworkInfoController::campusSelected() const { return m_campusSelected; }
+
+int NetworkInfoController::routeStatus() const {
+    return static_cast<int>(m_routeBinder->status());
+}
+QString NetworkInfoController::routeNote() const {
+    return m_routeBinder->note();
+}
+bool NetworkInfoController::routeBound() const {
+    return m_routeBinder->routeAdded();
+}
 
 void NetworkInfoController::refresh() {
     QString sourceIp;
@@ -217,6 +247,30 @@ void NetworkInfoController::refresh() {
     m_targetMac = targetMac;
     m_interfaces = interfaces;
 
+    // 校园网卡识别（C 层）：逐候选绑定源地址探测门户可达性。当前仅识别标注，
+    // 不修改路由、不替换门户客户端的传输连接；探测为同步短超时，暂在主线程执行。
+    // Campus NIC detection (layer C): probe portal reachability per candidate by binding
+    // the source address. Advisory only: no route change, no transport replacement yet.
+    m_nicSelector->refresh();
+    const QVariantList oldCampusList = m_campusNicList;
+    const QVariantMap oldCampusSelected = m_campusSelected;
+    m_campusNicList = m_nicSelector->nicList();
+    m_campusSelected = m_nicSelector->selected();
+
+    // 层 B：识别到可达校园网卡时尝试加临时主机路由；其余情况先清理上一轮路由。
+    // Layer B: add a temporary host route when a reachable campus NIC is found;
+    // otherwise release any route added previously.
+    if (!m_campusSelected.isEmpty() &&
+        m_campusSelected.value(QStringLiteral("reachable")).toBool()) {
+        m_routeBinder->bind(m_campusSelected, m_config->ip());
+    } else {
+        m_routeBinder->release();
+    }
+
+    const bool campusHasChange = (m_campusNicList != oldCampusList) ||
+                                 (m_campusSelected != oldCampusSelected) ||
+                                 m_routeBinder->routeAdded();
+
     if (sourceChanged) emit sourceIpChanged();
     if (targetChanged) emit targetIpChanged();
     if (hasNetmaskChange) emit netmaskChanged();
@@ -226,6 +280,7 @@ void NetworkInfoController::refresh() {
     if (subnetChanged) emit subnetStatusChanged();
     if (targetMacChangedFlag) emit targetMacChanged();
     if (hasInterfacesChange) emit interfacesChanged();
+    if (campusHasChange) emit campusChanged();
 }
 
 void NetworkInfoController::updateTargetIp() {

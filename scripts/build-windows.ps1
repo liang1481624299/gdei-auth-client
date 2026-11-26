@@ -6,10 +6,9 @@
 #   2) 优先复用本地已有的 Qt6 (MinGW) 与 MinGW 编译器；
 #      缺失时回退：Qt 走 aqtinstall，编译器走 MSYS2 (tuna 镜像，速度快)；
 #   3) CMake 配置 + Ninja 编译；
-#   4) CMake 的 POST_BUILD 自动调用 windeployqt，把全部 Qt 依赖
-#      （DLL / platforms 插件 / QML 模块 / imageformats 等）拷到 exe 旁；
-#   5) 把自包含目录整理到 artifacts\windows（剔除构建产物），刷新编译器运行库，
-#      做一次 3 秒存活冒烟测试，最后输出 zip。
+#   4) CMake 配置 + Ninja 编译（编译树保持干净，不在树内部署运行库）；
+#   5) 调用 deploy.ps1：exe 复制到暂存目录，对暂存副本跑 windeployqt 收集
+#      Qt 依赖 / 插件 / QML 模块，刷新编译器运行库，最后输出 zip。
 #
 # 产物： artifacts\windows\gdei-auth-client\gdei-auth-client.exe
 #        整个文件夹拷到任何 Windows 都能直接双击运行（不依赖本机是否装了 Qt）。
@@ -202,51 +201,16 @@ Run $cmake.FullName @("-S", $SRC, "-B", $BuildDir, "-G", "Ninja",
 Write-Host "==> 编译（POST_BUILD 会自动运行 windeployqt 打包全部依赖）"
 Run $cmake.FullName @("--build", $BuildDir, "--config", "Release")
 
-# ---------- 5. 整理到 artifacts\windows（剔除构建产物）、刷新运行库、冒烟测试、打包 ----------
-$exe = Get-ChildItem -Recurse $BuildDir -Filter "gdei-auth-client.exe" | Select-Object -First 1
-if (-not $exe) { Die "未找到 gdei-auth-client.exe" }
-$exeDir = $exe.DirectoryName
-
-# 关键文件自检（缺任一即说明 windeployqt 没跑成功 -> 打不开）
-$must = @("Qt6Core.dll", "Qt6Gui.dll", "Qt6Quick.dll", "Qt6Core5Compat.dll", "Qt6Widgets.dll", "platforms\qwindows.dll")
-foreach ($f in $must) {
-    $p = Join-Path $exeDir $f
-    if (-not (Test-Path $p)) { Die "缺少关键依赖 $p —— windeployqt 未正常执行，产物将无法打开！" }
-}
-Write-Host "依赖自检通过：Qt DLL + qwindows.dll 均已就位。"
+# ---------- 5. 暂存打包：exe 复制到暂存目录，对暂存副本跑 windeployqt，出 zip ----------
+# 编译树内不再部署 Qt 运行库（POST_BUILD 自动打包已移除）；否则 DLL 倾倒进 build
+# 目录会污染后续编译器子进程的 DLL 加载（MinGW g++ 静默退出）。捆绑统一交由
+# packaging/windows/deploy.ps1 在暂存目录完成，与 CI release.yml 流程一致。
+$deployScript = Join-Path $SRC "packaging\windows\deploy.ps1"
+& $deployScript -BuildDir $BuildDir -DistDir $DistDir -QmlDir (Join-Path $SRC "qml")
+if ($LASTEXITCODE -ne 0) { Die "打包脚本 deploy.ps1 失败 (exit $LASTEXITCODE)" }
 
 $staging = Join-Path $DistDir "gdei-auth-client"
-if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
-New-Item -ItemType Directory -Force $staging | Out-Null
-# 用 robocopy 镜像拷贝，排除构建产物（只保留运行时文件）
-$xd = @(".qt", ".rcc", "CMakeFiles", "gdei-auth-client_autogen", "GdeiConnect", "meta_types", "qmltypes")
-$xf = @(".ninja_deps", ".ninja_log", "build.ninja", "CMakeCache.txt", "cmake_install.cmake",
-        "CPackConfig.cmake", "CPackSourceConfig.cmake", "gdei-auth-client_qmltyperegistrations.cpp", "libgdei-auth-client.dll.a")
-& robocopy $exeDir $staging /MIR /XD $xd /XF $xf /NFL /NDL /NJH /NJS /NP | Out-Null
-if ($LASTEXITCODE -ge 8) { Die "robocopy 整理产物失败 (exit $LASTEXITCODE)" }
-
-# 刷新编译器运行库 DLL，使其与实际使用的 GCC 匹配（避免 windeployqt 拷入不同 ABI 的运行库）
-foreach ($d in @("libstdc++-6.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll")) {
-    $s = Join-Path $mingwBin $d
-    if (Test-Path $s) { Copy-Item $s (Join-Path $staging $d) -Force }
-}
-
-# 冒烟测试：启动 3 秒不崩溃，即视为能打开（窗口在真实桌面渲染）
-Write-Host "冒烟测试：启动产物 3 秒..."
-$sp = Start-Process -FilePath (Join-Path $staging "gdei-auth-client.exe") -WorkingDirectory $staging -PassThru
-Start-Sleep -Seconds 3
-if ($sp.HasExited) {
-    Write-Warning "产物启动后立即退出 (code $($sp.ExitCode))，请检查依赖是否齐全"
-} else {
-    Stop-Process -Id $sp.Id -Force -ErrorAction SilentlyContinue
-    Write-Host "冒烟测试通过：进程存活，窗口可正常打开。"
-}
-
-$zip = Join-Path $DistDir "gdei-auth-client-windows-x64.zip"
-if (Test-Path $zip) { Remove-Item $zip -Force }
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::CreateFromDirectory($DistDir, $zip,
-    [System.IO.Compression.CompressionLevel]::Optimal, $false)
+$zip     = Join-Path $DistDir "gdei-auth-client-windows-x64.zip"
 
 Write-Host ""
 Write-Host "==================== 完成 ===================="
@@ -255,5 +219,5 @@ Write-Host "  -> 双击其中的 gdei-auth-client.exe 即可运行（已打包�
 Write-Host "分发包 zip : $zip"
 Write-Host "  -> 拷到任何 Windows 机器解压即用"
 
-# robocopy 用 1 表示成功复制；显式归零，避免调用方把成功构建误判为失败。
+# 显式归零退出码，避免调用方把成功构建误判为失败。
 exit 0

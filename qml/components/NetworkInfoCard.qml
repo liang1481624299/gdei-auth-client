@@ -18,6 +18,7 @@ BaseCard {
     readonly property color headTint: app.network.available ? th.primary : th.muted
 
     readonly property bool compact: width < 520
+    readonly property int routeStatus: app.network.routeStatus
     readonly property int subnetStatus: app.network.subnetStatus
     readonly property string subnetKey: subnetStatus === 1 ? "network.subnetSame"
                                         : subnetStatus === 2 ? "network.subnetDifferent"
@@ -213,6 +214,118 @@ BaseCard {
                                 wrapMode: Text.WrapAnywhere
                                 Layout.fillWidth: true
                             }
+                        }
+                    }
+                }
+
+                // 校园网卡：识别层按门户可达性探测选出的出站网卡；与默认出站不一致时告警。
+                // Campus NIC: egress adapter picked by portal reachability probe; warn on mismatch.
+                ColumnLayout {
+                    visible: app.network.campusSourceIp
+                             && String(app.network.campusSourceIp).length > 0
+                    spacing: th.sp3
+                    Layout.fillWidth: true
+
+                    QQC.Label {
+                        text: root.localized("network.campusNic")
+                        color: th.text
+                        font.pixelSize: th.fontCallout
+                        font.weight: th.weightSemibold
+                        Layout.fillWidth: true
+                    }
+                    QQC.Label {
+                        text: root.localized("network.campusHint")
+                        color: th.muted
+                        font.pixelSize: th.fontCaption
+                        wrapMode: Text.WrapAnywhere
+                        Layout.fillWidth: true
+                    }
+
+                    GridLayout {
+                        columns: root.compact ? 1 : 2
+                        columnSpacing: th.sp8
+                        rowSpacing: th.sp5
+                        Layout.fillWidth: true
+
+                        ColumnLayout {
+                            spacing: th.sp2
+                            Layout.fillWidth: true
+                            QQC.Label {
+                                text: root.localized("network.sourceIp")
+                                color: th.muted
+                                font.pixelSize: th.fontFootnote
+                                Layout.fillWidth: true
+                            }
+                            QQC.Label {
+                                text: root.valueOrUnavailable(app.network.campusSourceIp)
+                                color: th.text
+                                font.pixelSize: th.fontBody
+                                wrapMode: Text.WrapAnywhere
+                                Layout.fillWidth: true
+                            }
+                        }
+                        ColumnLayout {
+                            spacing: th.sp2
+                            Layout.fillWidth: true
+                            QQC.Label {
+                                text: root.localized("network.interfaceName")
+                                color: th.muted
+                                font.pixelSize: th.fontFootnote
+                                Layout.fillWidth: true
+                            }
+                            QQC.Label {
+                                text: root.valueOrUnavailable(
+                                    app.network.campusSelected.humanName
+                                    || app.network.campusInterfaceName)
+                                color: th.text
+                                font.pixelSize: th.fontBody
+                                wrapMode: Text.WrapAnywhere
+                                Layout.fillWidth: true
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: th.sp4
+                        Layout.fillWidth: true
+
+                        BaseBadge {
+                            text: root.localized(app.network.campusReachable
+                                ? "network.campusReachable" : "network.campusUnreachable")
+                            iconName: app.network.campusReachable ? "check" : "info"
+                            tint: app.network.campusReachable ? th.success : th.danger
+                        }
+                    }
+
+                    // 层 B：主机路由强制状态；Idle 时不展示。
+                    // Layer B host-route status; hidden when Idle.
+                    RowLayout {
+                        visible: root.routeStatus !== 0
+                        spacing: th.sp4
+                        Layout.fillWidth: true
+
+                        BaseBadge {
+                            text: root.localized(root.routeStatus === 1
+                                ? "network.routeBound"
+                                : root.routeStatus === 3
+                                    ? "network.routeUnsupported"
+                                    : "network.routeDegraded")
+                            iconName: root.routeStatus === 1 ? "check" : "info"
+                            tint: root.routeStatus === 1 ? th.success
+                                : root.routeStatus === 3 ? th.muted : th.warning
+                        }
+                    }
+
+                    RowLayout {
+                        visible: app.network.campusMismatch
+                        spacing: th.sp4
+                        Layout.fillWidth: true
+
+                        BaseBadge {
+                            text: root.localized("network.campusMismatch")
+                            iconName: "info"
+                            tint: th.warning
+                            Layout.fillWidth: true
                         }
                     }
                 }

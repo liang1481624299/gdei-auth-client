@@ -74,6 +74,8 @@ set(APP_SOURCES
     src/core/PortalClient.cpp
     src/core/DevicePortalClient.cpp
     src/core/AccountPortalClient.cpp
+    src/core/NicSelector.cpp
+    src/platform/RouteBinder.cpp
     src/core/SelfServiceCodec.cpp
     src/core/KeepAlive.cpp
     src/core/I18n.cpp
@@ -105,6 +107,8 @@ set(APP_HEADERS
     src/core/PortalClient.hpp
     src/core/DevicePortalClient.hpp
     src/core/AccountPortalClient.hpp
+    src/core/NicSelector.hpp
+    src/platform/RouteBinder.hpp
     src/core/SelfServiceCodec.hpp
     src/core/KeepAlive.hpp
     src/core/I18n.hpp
@@ -231,7 +235,6 @@ qt_add_qml_module(gdei-auth-client
         qml/icons/sun.svg
         qml/icons/cog.svg
         qml/icons/chart.svg
-        qml/fonts/NotoSansSC-VF.ttf
         qml/fonts/SimSun.ttc
         qml/fonts/SegoeUI.ttf
         qml/fonts/SegoeUI-Bold.ttf
@@ -300,28 +303,17 @@ if(ANDROID)
         QT_ANDROID_VERSION_NAME "0.3.0")
 endif()
 
-# ---- Qt 运行时自动部署 / Auto-deploy Qt runtime ----
-# 修复"Windows 双击打不开"：构建后立即把所有 Qt 依赖（DLL / 插件 / QML 模块）
-# 拷贝到可执行文件旁，保证产物自包含、双击即跑。windeployqt / macdeployqt 等
-# 由 Qt 官方提供，比手拷依赖闭包更可靠。
-if(WIN32)
-    find_program(WINDEPLOYQT_EXECUTABLE
-        NAMES windeployqt
-        HINTS "${QT6_INSTALL_PREFIX}/bin" "${QT6_HOST_INFO_PREFIX}/bin")
-    if(WINDEPLOYQT_EXECUTABLE)
-        add_custom_command(TARGET gdei-auth-client POST_BUILD
-            COMMAND "${WINDEPLOYQT_EXECUTABLE}"
-                    --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/qml"
-                    --no-translations
-                    --no-compiler-runtime
-                    "$<TARGET_FILE:gdei-auth-client>"
-            COMMENT "windeployqt: 部署 Qt 运行时依赖到输出目录 (auto-bundle)"
-            VERBATIM)
-    else()
-        message(WARNING "windeployqt not found -> build will NOT auto-bundle Qt deps. "
-                        "Install a complete Qt6 (with the MinGW or MSVC kit matching your compiler).")
-    endif()
-endif()
+# ---- Qt 运行时部署 / Qt runtime deployment ----
+# 注意：不要在 POST_BUILD 阶段对编译树内的 exe 直接跑 windeployqt。那样会把
+# Qt DLL / 插件 / QML 模块倾倒进 out-of-source 编译目录，污染后续编译器子进程
+# 的 DLL 加载（MinGW g++ 子进程会在该目录加载到不符版本 DLL 而静默退出）。
+# 运行时捆绑统一交给打包阶段：packaging/windows/deploy.ps1 先把 exe 复制到
+# 暂存目录，再对暂存副本执行 windeployqt，编译树保持干净。
+# NOTE: do NOT run windeployqt against the in-tree exe in POST_BUILD. That dumps Qt
+# DLLs/plugins/QML into the out-of-source build dir and breaks later compiler
+# subprocess DLL resolution (MinGW g++ silently exits when loading mismatched DLLs
+# from that cwd). Bundling is deferred to packaging/windows/deploy.ps1, which copies
+# the exe to a staging dir and runs windeployqt on that staging copy.
 
 # CPack / `cmake --install` 路径的桌面部署（Windows / macOS / Linux 通用）。
 # Android 由 apk target 调用 androiddeployqt，不支持此桌面部署函数。
