@@ -13,8 +13,15 @@
 #include <QVariantMap>
 
 #ifdef Q_OS_WIN
-#include <iphlpapi.h>
+// 必须先包含 windows.h（经 qt_windows.h 包装），再包含 iphlpapi.h；
+// 否则 MSVC 下 ifmib.h/nldef.h 中的基础类型尚未定义，会报 C3646/C2143。
+// Include windows.h first, then iphlpapi.h; MSVC requires the base types
+// from windows.h to be defined before the MIB headers.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <qt_windows.h>
+#include <iphlpapi.h>
 #endif
 
 namespace gdei {
