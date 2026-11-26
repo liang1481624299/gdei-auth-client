@@ -177,7 +177,7 @@ jobs:
         with:
           version: '6.8.3'
           target: desktop
-          arch: gcc_64
+          arch: linux_gcc_64
           modules: qt5compat
           dir: ${{ runner.temp }}/qt-host
           cache: true
@@ -219,7 +219,7 @@ jobs:
           cmake -S . -B build-android -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/qt-android-arm64/6.8.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake" \
-            -DQT_HOST_PATH="$RUNNER_TEMP/qt-host/6.8.3/gcc_64" \
+            -DQT_HOST_PATH="$RUNNER_TEMP/qt-host/6.8.3/linux_gcc_64" \
             -DQT_ANDROID_SIGN_APK=OFF \
             -DQT_ANDROID_ABIS="arm64-v8a;x86_64" \
             -DQT_PATH_ANDROID_ABI_arm64-v8a="$RUNNER_TEMP/qt-android-arm64/6.8.3/android_arm64_v8a" \
