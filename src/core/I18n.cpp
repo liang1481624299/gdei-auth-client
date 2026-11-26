@@ -272,7 +272,7 @@ void I18n::buildDictionaries() {
     zhCN["layer.sessionDesc"] = "当前账号在门户侧的登录状态，与网卡链路相互独立。";
     zhCN["layer.probeDesc"] = "对外网探测地址的连通性检测结果。";
     zhCN["overview.title"] = "概览";
-    zhCN["overview.subtitle"] = "一屏查看网卡、会话与外网探测状态。";
+    zhCN["overview.subtitle"] = "查看本机链路状态，管理本地认证配置。";
     zhCN["overview.quickActions"] = "快捷操作";
     zhCN["overview.refreshStatus"] = "刷新状态";
     zhCN["overview.openDiagnostics"] = "网络诊断";
@@ -430,6 +430,8 @@ void I18n::buildDictionaries() {
     zhCN["home.disconnectTitle"] = "确认断开？";
     zhCN["home.connecting"] = "连接中…";
     zhCN["home.disconnecting"] = "断开中…";
+    zhCN["home.online"] = "已连接";
+    zhCN["home.offline"] = "未连接";
     zhCN["discover.subtitle"] = "网络工具与诊断入口。";
     zhCN["mine.subtitle"] = "账号资料、偏好与系统工具。";
     zhCN["mine.accountGroup"] = "账号资料";
@@ -718,7 +720,7 @@ void I18n::buildDictionaries() {
     zhTW["layer.sessionDesc"] = "目前帳號在入口網站端的登入狀態，與網路卡鏈路各自獨立。";
     zhTW["layer.probeDesc"] = "對外網探測位址的連通性檢測結果。";
     zhTW["overview.title"] = "概覽";
-    zhTW["overview.subtitle"] = "一屏查看網卡、工作階段與外網探測狀態。";
+    zhTW["overview.subtitle"] = "檢視本機連線狀態，管理本機認證設定。";
     zhTW["overview.quickActions"] = "快捷操作";
     zhTW["overview.refreshStatus"] = "重新整理狀態";
     zhTW["overview.openDiagnostics"] = "網路診斷";
@@ -875,6 +877,8 @@ void I18n::buildDictionaries() {
     zhTW["home.disconnectTitle"] = "確認斷開？";
     zhTW["home.connecting"] = "連線中…";
     zhTW["home.disconnecting"] = "斷開中…";
+    zhTW["home.online"] = "已連線";
+    zhTW["home.offline"] = "未連線";
     zhTW["discover.subtitle"] = "網路工具與診斷入口。";
     zhTW["mine.subtitle"] = "帳號資料、偏好與系統工具。";
     zhTW["mine.accountGroup"] = "帳號資料";
@@ -1162,7 +1166,7 @@ void I18n::buildDictionaries() {
     enGB["layer.sessionDesc"] = "Portal-side sign-in state of the current account, independent of the adapter link.";
     enGB["layer.probeDesc"] = "Connectivity result of the external probe URL.";
     enGB["overview.title"] = "Overview";
-    enGB["overview.subtitle"] = "Adapter, session and internet probe status at a glance.";
+    enGB["overview.subtitle"] = "View your local link status and manage saved profiles.";
     enGB["overview.quickActions"] = "Quick actions";
     enGB["overview.refreshStatus"] = "Refresh status";
     enGB["overview.openDiagnostics"] = "Network diagnostics";
@@ -1319,6 +1323,8 @@ void I18n::buildDictionaries() {
     enGB["home.disconnectTitle"] = "Disconnect from campus network?";
     enGB["home.connecting"] = "Connecting…";
     enGB["home.disconnecting"] = "Disconnecting…";
+    enGB["home.online"] = "Connected";
+    enGB["home.offline"] = "Not connected";
     enGB["discover.subtitle"] = "Network tools and diagnostics.";
     enGB["mine.subtitle"] = "Account profile, preferences and system tools.";
     enGB["mine.accountGroup"] = "Account profile";
@@ -1606,7 +1612,7 @@ void I18n::buildDictionaries() {
     ja["layer.sessionDesc"] = "現在のアカウントのポータル側サインイン状態（アダプタとは独立）。";
     ja["layer.probeDesc"] = "外部探索 URL への接続性の確認結果。";
     ja["overview.title"] = "概要";
-    ja["overview.subtitle"] = "アダプタ・セッション・外部探索の状態を一画面で確認します。";
+    ja["overview.subtitle"] = "ローカル接続状況を確認し、保存プロファイルを管理します。";
     ja["overview.quickActions"] = "クイック操作";
     ja["overview.refreshStatus"] = "状態を更新";
     ja["overview.openDiagnostics"] = "ネットワーク診断";
@@ -1763,6 +1769,8 @@ void I18n::buildDictionaries() {
     ja["home.disconnectTitle"] = "切断しますか？";
     ja["home.connecting"] = "接続中…";
     ja["home.disconnecting"] = "切断中…";
+    ja["home.online"] = "接続済み";
+    ja["home.offline"] = "未接続";
     ja["discover.subtitle"] = "ネットワークツールと診断の入口。";
     ja["mine.subtitle"] = "アカウント情報、設定、システムツール。";
     ja["mine.accountGroup"] = "アカウント情報";

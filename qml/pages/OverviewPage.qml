@@ -4,19 +4,12 @@ import QtQuick.Layouts
 import "../theme"
 import "../components"
 
-// 首页 / Home —— 一屏查看网卡、会话、外网探测三态连接情况，大圆钮切换连接 / 断开，
-// 下方为链路明细、本机认证配置与连通异常提示。
-// 三态绝对隔离（规范）：网卡物理层 / 账号会话态 / 外网连通态，不合并为单一指示灯。
-// Home: three isolated layers, a big toggle power button, link details and local profiles.
+// 首页 / Home —— 顶部状态胶囊 + 环形表盘主操作，下方依次为网络明细（默认全展开）、
+// 本地认证配置与连通异常提示。大圆钮切换连接 / 断开；在线点按走二次确认。
+// Home: status pill + circular dial, then full network details, local profiles and warning.
 PageScaffold {
     id: root
     Theme { id: th }
-
-    // ── 三层状态独立计算，互不混算 ──
-    readonly property bool nicUp: app.network.available
-    readonly property bool signedIn: app.session.loggedIn
-    readonly property bool sessionSuspect: signedIn && !app.auth.online && !app.session.busy
-    readonly property int probeState: app.auth.state
 
     readonly property bool genuinelyOffline: !app.auth.online && app.auth.state !== 2
                                             && !app.session.busy
@@ -45,95 +38,128 @@ PageScaffold {
         }
     }
 
-    // ── 三层状态卡片：网卡 / 会话 / 探测（纵向列表，复用通用卡片组件）──
-    // 网卡层：只反映本机是否存在可用链路，与认证结果无关。
-    StatusListCard {
-        id: nicCard
-        Layout.fillWidth: true
-        readonly property color sTint: root.nicUp ? th.success : th.danger
-        readonly property string sKey: root.nicUp ? "layer.nicUp" : "layer.nicDown"
-        iconSource: root.nicUp ? "wifi" : "wifiOff"
-        title: root.localized("layer.nic")
-        mainText: root.localized(sKey)
-        descText: root.localized("layer.nicDesc")
-        tagTint: sTint
-    }
-
-    // 会话层：账号是否在门户侧处于已登录态。
-    StatusListCard {
-        id: sessionCard
-        Layout.fillWidth: true
-        readonly property color sTint: root.sessionSuspect ? th.warning : root.signedIn ? th.success : th.muted
-        readonly property string sKey: root.sessionSuspect ? "layer.sessionSuspect"
-                                     : root.signedIn ? "layer.sessionIn" : "layer.sessionOut"
-        iconSource: root.sessionSuspect ? "shield" : root.signedIn ? "check" : "person"
-        title: root.localized("layer.session")
-        mainText: root.localized(sKey)
-        descText: root.localized("layer.sessionDesc")
-        tagTint: sTint
-    }
-
-    // 探测层：短超时外网探测结果；探测中用主色，在线成功绿，离线/未知灰红。
-    StatusListCard {
-        id: probeCard
-        Layout.fillWidth: true
-        readonly property bool pBusy: root.probeState === 2
-        readonly property bool pOnline: root.probeState === 3
-        readonly property bool pUnknown: root.probeState === 0
-        readonly property color pTint: pBusy ? th.info : pOnline ? th.success : pUnknown ? th.muted : th.danger
-        readonly property string pKey: pBusy ? "layer.probeBusy" : pOnline ? "layer.probeOnline"
-                                    : pUnknown ? "layer.probeUnknown" : "layer.probeOffline"
-        iconSource: pBusy ? "refresh" : pOnline ? "wifi" : "wifiOff"
-        title: root.localized("layer.probe")
-        mainText: root.localized(pKey)
-        descText: root.localized("layer.probeDesc")
-        tagTint: pTint
-    }
-
-    // ── 大圆主操作：切换式，离线点按连接，在线点按断开（断开走二次确认）──
-    ColumnLayout {
+    // ── 顶部状态胶囊：在线绿 / 离线红，对标参照图的 Protected 胶囊 ──
+    RowLayout {
         Layout.fillWidth: true
         spacing: th.sp4
 
         Rectangle {
-            id: powerButton
             Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: th.dp(160)
-            Layout.preferredHeight: th.dp(160)
-            radius: width / 2
-            color: th.fill(root.powerRing, th.isDark ? 0.16 : 0.10)
-            border.width: th.dp(2)
-            border.color: root.powerRing
-            opacity: app.session.busy ? 0.6 : 1.0
-            scale: powerTap.pressed ? 0.96 : 1.0
-            Behavior on scale { NumberAnimation { duration: th.durationFast; easing.type: Easing.OutCubic } }
+            implicitHeight: th.dp(34)
+            implicitWidth: pillRow.implicitWidth + th.sp6 * 2
+            radius: th.radiusPill
+            color: th.fill(root.powerOnline ? th.success : th.danger, th.isDark ? 0.16 : 0.10)
+            border.width: 1
+            border.color: th.fill(root.powerOnline ? th.success : th.danger, 0.30)
 
-            focusPolicy: Qt.StrongFocus
-            Keys.onReturnPressed: root.activatePower()
-            Keys.onSpacePressed: root.activatePower()
-            Accessible.role: Accessible.Button
-            Accessible.name: root.localized(root.powerOnline ? "home.disconnect" : "home.connect")
-            Accessible.focusable: true
-
-            Icon {
+            Row {
+                id: pillRow
                 anchors.centerIn: parent
-                name: "power"
-                iconSize: th.dp(56)
-                tint: root.powerRing
-                visible: !app.session.busy
+                spacing: th.sp3
+                Rectangle {
+                    width: th.dp(8)
+                    height: width
+                    radius: width / 2
+                    color: root.powerOnline ? th.success : th.danger
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                QQC.Label {
+                    text: root.localized(root.powerOnline ? "home.online" : "home.offline")
+                    color: root.powerOnline ? th.success : th.danger
+                    font.pixelSize: th.fontBody
+                    font.weight: th.weightSemibold
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
-            QQC.BusyIndicator {
-                anchors.centerIn: parent
-                running: app.session.busy
-                visible: app.session.busy
-                implicitWidth: th.dp(40)
-                implicitHeight: th.dp(40)
+        }
+    }
+
+    // ── 环形表盘主操作：外环轨道 + 装饰彩点，内圆大圆钮切换连接 / 断开 ──
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: th.sp6
+
+        Item {
+            id: dial
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: th.dp(216)
+            Layout.preferredHeight: th.dp(216)
+
+            // 外环轨道
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: "transparent"
+                border.width: th.dp(2)
+                border.color: th.fill(root.powerRing, 0.35)
             }
 
-            TapHandler {
-                id: powerTap
-                enabled: !app.session.busy
-                onTapped: root.activatePower()
+            // 轨道装饰彩点（参照图轨道彩珠）
+            Rectangle {
+                width: th.dp(10); height: width; radius: width / 2
+                color: th.success
+                anchors.top: parent.top; anchors.topMargin: 0
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+            Rectangle {
+                width: th.dp(10); height: width; radius: width / 2
+                color: th.primary
+                anchors.right: parent.right; anchors.rightMargin: 0
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Rectangle {
+                width: th.dp(10); height: width; radius: width / 2
+                color: th.warning
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 0
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+            Rectangle {
+                width: th.dp(10); height: width; radius: width / 2
+                color: th.muted
+                anchors.left: parent.left; anchors.leftMargin: 0
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Rectangle {
+                id: powerButton
+                anchors.centerIn: parent
+                width: th.dp(150)
+                height: width
+                radius: width / 2
+                color: th.fill(root.powerRing, th.isDark ? 0.16 : 0.10)
+                border.width: th.dp(2)
+                border.color: root.powerRing
+                opacity: app.session.busy ? 0.6 : 1.0
+                scale: powerTap.pressed ? 0.96 : 1.0
+                Behavior on scale { NumberAnimation { duration: th.durationFast; easing.type: Easing.OutCubic } }
+
+                focusPolicy: Qt.StrongFocus
+                Keys.onReturnPressed: root.activatePower()
+                Keys.onSpacePressed: root.activatePower()
+                Accessible.role: Accessible.Button
+                Accessible.name: root.localized(root.powerOnline ? "home.disconnect" : "home.connect")
+                Accessible.focusable: true
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: "power"
+                    iconSize: th.dp(52)
+                    tint: root.powerRing
+                    visible: !app.session.busy
+                }
+                QQC.BusyIndicator {
+                    anchors.centerIn: parent
+                    running: app.session.busy
+                    visible: app.session.busy
+                    implicitWidth: th.dp(38)
+                    implicitHeight: th.dp(38)
+                }
+
+                TapHandler {
+                    id: powerTap
+                    enabled: !app.session.busy
+                    onTapped: root.activatePower()
+                }
             }
         }
 
@@ -150,7 +176,7 @@ PageScaffold {
         }
     }
 
-    // 本机链路明细（IP / 掩码 / MAC / 出口信息），默认折叠；样式与上方三态卡对齐。
+    // 本机链路明细（IP / 掩码 / MAC / 出口 / 诊断字段），默认全展开、不可折叠。
     NetworkInfoCard {
         Layout.fillWidth: true
     }
