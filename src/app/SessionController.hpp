@@ -17,9 +17,7 @@ class SessionController : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool loggedIn READ loggedIn NOTIFY loggedInChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
-    Q_PROPERTY(QString route READ route NOTIFY loggedInChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
-    Q_PROPERTY(int operation READ operation NOTIFY operationChanged)
     // 登录弹层是否打开：主框架常驻，受保护操作按需弹出，不做全局登录门控。
     // Whether the login sheet is open: the shell stays mounted; login is prompted on demand.
     Q_PROPERTY(bool loginPromptOpen READ loginPromptOpen NOTIFY loginPromptOpenChanged)
@@ -39,10 +37,10 @@ public:
 
     bool loggedIn() const;
     bool busy() const;
-    QString route() const;
     QString lastError() const;
-    int operation() const;
     bool loginPromptOpen() const;
+    // 供内部桥接（EventBridge）读取当前操作类型，不作为 QML 属性暴露。
+    int operation() const;
 
     Q_INVOKABLE void login();
     Q_INVOKABLE void loginAutomatically();

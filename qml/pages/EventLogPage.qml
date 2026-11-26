@@ -19,10 +19,10 @@ PageScaffold {
     showBack: true
 
     ColumnLayout {
-        width: parent.width
+        Layout.fillWidth: true
         spacing: th.sp8
 
-        Card {
+        BaseCard {
             Layout.fillWidth: true
 
             GridLayout {
@@ -34,10 +34,10 @@ PageScaffold {
                 Repeater {
                     model: root.filterModel
 
-                    PrimaryButton {
+                    BaseButton {
                         required property var modelData
-                        text: (app.i18n.lang, app.i18n.text(modelData.key))
-                        variant: app.events.filterLevel === modelData.level ? "primary" : "secondary"
+                        text: app.i18n.dictionary[modelData.key]
+                        type: app.events.filterLevel === modelData.level ? "primary" : "secondary"
                         Layout.fillWidth: true
                         onClicked: app.events.filterLevel = modelData.level
                     }
@@ -55,26 +55,25 @@ PageScaffold {
                 SettingRow {
                     id: infoToastsRow
                     width: parent.width
-                    title: (app.i18n.lang, app.i18n.text("events.infoToasts"))
-                    Switch {
+                    title: (app.i18n.dictionary["events.infoToasts"])
+                    BaseSwitch {
                         checked: app.events.infoToasts
                         onToggled: app.events.infoToasts = checked
                     }
                 }
             }
 
-            PrimaryButton {
-                width: parent.width
-                text: (app.i18n.lang, app.i18n.text("events.clear"))
-                variant: "danger"
-                bg: "transparent"
+            BaseButton {
+                Layout.fillWidth: true
+                text: (app.i18n.dictionary["events.clear"])
+                type: "danger"
                 leadingIcon: "trash"
                 onClicked: clearDialog.open()
             }
         }
 
-        Card {
-            margins: th.sp3
+        BaseCard {
+            cardPadding: th.sp3
             Layout.fillWidth: true
 
             Item {
@@ -131,7 +130,7 @@ PageScaffold {
                 QQC.Label {
                     anchors.centerIn: parent
                     width: Math.max(0, parent.width - th.sp12)
-                    text: (app.i18n.lang, app.i18n.text("events.empty"))
+                    text: (app.i18n.dictionary["events.empty"])
                     color: th.tertiaryLabel
                     font.pixelSize: th.fontSubhead
                     horizontalAlignment: Text.AlignHCenter
@@ -144,10 +143,10 @@ PageScaffold {
 
     property var clearDialog: AppDialog {
         id: clearDialog
-        title: (app.i18n.lang, app.i18n.text("events.clearTitle"))
-        message: (app.i18n.lang, app.i18n.text("events.clearMessage"))
-        confirmText: (app.i18n.lang, app.i18n.text("events.clear"))
-        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
+        title: (app.i18n.dictionary["events.clearTitle"])
+        message: (app.i18n.dictionary["events.clearMessage"])
+        confirmText: (app.i18n.dictionary["events.clear"])
+        cancelText: (app.i18n.dictionary["action.cancel"])
         showCancel: true
         destructive: true
         onAccepted: app.events.clear()

@@ -4,131 +4,108 @@ import QtQuick.Layouts
 import "../theme"
 import "."
 
-Item {
+// PageScaffold —— 页面骨架：左对齐标题区 + 可滚动内容 + 底部粘性区。
+// 保留旧 API：title / subtitle / showBack / backText / back() / sticky / content / contentMaxWidth / localized()。
+Rectangle {
     id: root
     Theme { id: th }
 
     property string title: ""
     property string subtitle: ""
     property bool showBack: false
-    property int contentMaxWidth: th.dp(480)
-    signal backRequested()
+    property string backText: ""
+    signal back()
+    property Component sticky: null
+    property int contentMaxWidth: th.contentMaxWidth
+    default property alias content: contentCol.data
 
-    default property alias content: contentColumn.data
+    function localized(key) { return app.i18n.localize(key) }
 
-    readonly property bool compact: width < th.compactBreakpoint
-    readonly property int pagePadding: compact ? th.sp6 : th.sp12
+    color: "transparent"
 
-    function localized(key) {
-        if (key.length === 0) return "";
-        app.i18n.lang;
-        return app.i18n.text(key);
-    }
-
-    QQC.ScrollView {
-        id: scroll
+    Flickable {
+        id: flick
         anchors.fill: parent
+        contentWidth: width
+        contentHeight: contentColumn.implicitHeight + (stickyLoader.item ? stickyLoader.item.height + th.sp6 : 0) + th.sp12
         clip: true
-        contentWidth: availableWidth
-        contentHeight: page.height
-        QQC.ScrollBar.vertical.policy: QQC.ScrollBar.AsNeeded
-        QQC.ScrollBar.horizontal.policy: QQC.ScrollBar.AlwaysOff
-        background: Rectangle { color: "transparent" }
+        boundsBehavior: Flickable.StopAtBounds
+        QQC.ScrollBar.vertical: QQC.ScrollBar { policy: QQC.ScrollBar.AsNeeded }
 
-        Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
+        Column {
+            id: contentColumn
+            width: Math.min(flick.width - th.pageSideMargin * 2, root.contentMaxWidth)
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 0
 
-        WheelHandler {
-            onWheel: function(event) {
-                var delta = event.pixelDelta.y;
-                if (Math.abs(delta) < 0.01)
-                    delta = event.angleDelta.y / 120 * th.wheelStep;
-                if (Math.abs(delta) < 0.01)
-                    return;
+            // 顶部安全区
+            Item { width: parent.width; height: th.sp6 }
 
-                var flickable = scroll.contentItem;
-                var maximumY = Math.max(0, flickable.contentHeight - flickable.height);
-                var nextY = Math.max(0, Math.min(maximumY, flickable.contentY - delta));
-                if (Math.abs(nextY - flickable.contentY) < 0.01) {
-                    event.accepted = false;
-                    return;
+            // 标题区（左对齐）
+            Row {
+                width: parent.width
+                spacing: th.sp4
+                visible: root.showBack || root.title.length > 0 || root.subtitle.length > 0
+
+                QQC.Button {
+                    visible: root.showBack
+                    flat: true
+                    hoverEnabled: true
+                    padding: 0
+                    implicitWidth: Math.max(contentItem.implicitWidth + th.sp4, th.touchTarget)
+                    implicitHeight: th.touchTarget
+                    onClicked: root.back()
+                    contentItem: Row {
+                        spacing: th.sp2
+                        Icon { name: "chevronLeft"; iconSize: th.dp(18); tint: th.text; anchors.verticalCenter: parent.verticalCenter }
+                        QQC.Label { text: root.backText; color: th.text; font.pixelSize: th.fontBody; anchors.verticalCenter: parent.verticalCenter; visible: text.length > 0 }
+                    }
+                    background: Rectangle { color: parent.hovered ? th.controlHover : "transparent"; radius: th.radiusControl }
                 }
-                flickable.contentY = nextY;
-                event.accepted = true;
-            }
-        }
 
-        Item {
-            id: page
-            width: scroll.availableWidth
-            height: contentColumn.implicitHeight + root.pagePadding * 2
+                Column {
+                    width: parent.width - (root.showBack ? th.touchTarget : 0)
+                    spacing: th.sp2
+                    QQC.Label {
+                        text: root.localized(root.title)
+                        visible: text.length > 0
+                        color: th.textPrimary
+                        font.pixelSize: th.fontTitle3
+                        font.weight: th.weightBold
+                        wrapMode: Text.WordWrap
+                        width: parent.width
+                    }
+                    QQC.Label {
+                        text: root.localized(root.subtitle)
+                        visible: text.length > 0
+                        color: th.secondaryLabel
+                        font.pixelSize: th.fontFootnote
+                        wrapMode: Text.WordWrap
+                        width: parent.width
+                    }
+                }
+            }
+
+            Item { width: parent.width; height: th.sp8 }
 
             ColumnLayout {
-                id: contentColumn
-                anchors.top: parent.top
-                anchors.topMargin: root.pagePadding
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(root.contentMaxWidth,
-                                Math.max(0, parent.width - root.pagePadding * 2))
+                id: contentCol
+                width: parent.width
                 spacing: th.sp8
-
-                RowLayout {
-                    visible: root.showBack || root.title.length > 0 || root.subtitle.length > 0
-                    spacing: th.sp4
-                    Layout.fillWidth: true
-
-                    QQC.Button {
-                        id: backButton
-                        visible: root.showBack
-                        implicitWidth: th.touchTarget
-                        implicitHeight: th.touchTarget
-                        padding: 0
-                        hoverEnabled: true
-                        Accessible.name: root.localized("action.back")
-                        onClicked: root.backRequested()
-
-                        contentItem: Icon {
-                            name: "chevronLeft"
-                            iconSize: 21
-                            tint: backButton.down || backButton.hovered ? th.primary : th.text
-                        }
-
-                        background: Rectangle {
-                            radius: th.radiusSmall
-                            color: backButton.down ? th.controlPressed
-                                 : backButton.hovered ? th.controlHover : "transparent"
-                            border.width: backButton.activeFocus ? 2 : 0
-                            border.color: th.focusRing
-                            Behavior on color { ColorAnimation { duration: th.durationFast } }
-                        }
-                    }
-
-                    ColumnLayout {
-                        spacing: th.sp2
-                        Layout.fillWidth: true
-
-                        QQC.Label {
-                            text: root.localized(root.title)
-                            visible: root.title.length > 0
-                            color: th.text
-                            font.pixelSize: th.fontHeadline
-                            font.weight: th.weightSemibold
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.Wrap
-                            Layout.fillWidth: true
-                        }
-
-                        QQC.Label {
-                            text: root.localized(root.subtitle)
-                            visible: root.subtitle.length > 0
-                            color: th.muted
-                            font.pixelSize: th.fontSubhead
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.Wrap
-                            Layout.fillWidth: true
-                        }
-                    }
-                }
             }
+
+            Item { width: parent.width; height: th.sp12 }
         }
+    }
+
+    // 底部粘性区
+    Loader {
+        id: stickyLoader
+        sourceComponent: root.sticky
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: th.pageSideMargin
+        anchors.rightMargin: th.pageSideMargin
     }
 }

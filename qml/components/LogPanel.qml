@@ -4,12 +4,13 @@ import QtQuick.Layouts
 import "../theme"
 import "."
 
-Card {
+BaseCard {
     id: root
     readonly property Theme th: Theme {}
 
     property real viewportHeight: 220
     readonly property bool compact: width < th.compactBreakpoint
+    cardPadding: th.sp8
 
     function levelColor(level) {
         if (level === 1) return th.primary;
@@ -19,7 +20,7 @@ Card {
     }
 
     ColumnLayout {
-        width: parent.width
+        Layout.fillWidth: true
         spacing: th.sp6
 
         GridLayout {
@@ -31,9 +32,9 @@ Card {
             RowLayout {
                 spacing: th.sp4
                 Layout.fillWidth: true
-                Icon { name: "list"; iconSize: 18; tint: th.primary; Layout.alignment: Qt.AlignVCenter }
+                Icon { name: "list"; iconSize: th.dp(18); tint: th.primary; Layout.alignment: Qt.AlignVCenter }
                 QQC.Label {
-                    text: (app.i18n.lang, app.i18n.text("log.title"))
+                    text: (app.i18n.dictionary["log.title"])
                     color: th.text
                     font.weight: th.weightSemibold
                     font.pixelSize: th.fontHeadline
@@ -41,17 +42,17 @@ Card {
                     Layout.fillWidth: true
                 }
             }
-            PrimaryButton {
-                text: (app.i18n.lang, app.i18n.text("log.export"))
-                variant: "secondary"
+            BaseButton {
+                text: (app.i18n.dictionary["log.export"])
+                type: "secondary"
                 leadingIcon: "download"
                 Layout.fillWidth: root.compact
                 Layout.alignment: Qt.AlignVCenter | (root.compact ? Qt.AlignLeft : Qt.AlignRight)
                 onClicked: {
                     var path = app.logs.exportLog("");
                     exportDialog.message = path.length > 0
-                            ? (app.i18n.lang, app.i18n.text("log.exported"))
-                            : (app.i18n.lang, app.i18n.text("log.exportFailed"));
+                            ? (app.i18n.dictionary["log.exported"])
+                            : (app.i18n.dictionary["log.exportFailed"]);
                     exportDialog.detail = path;
                     exportDialog.open();
                 }
@@ -72,7 +73,7 @@ Card {
                 anchors.fill: parent
                 anchors.margins: th.sp2
                 clip: true
-                spacing: 2
+                spacing: th.sp1
                 model: app.logs.entries
                 boundsBehavior: Flickable.StopAtBounds
                 QQC.ScrollBar.vertical: QQC.ScrollBar {
@@ -117,17 +118,17 @@ Card {
                         x: th.sp4
                         y: th.sp3
                         width: Math.max(0, parent.width - th.sp8)
-                        spacing: 2
+                        spacing: th.sp1
 
                         RowLayout {
                             width: parent.width
                             spacing: th.sp4
 
                             Rectangle {
-                                Layout.preferredWidth: 7
-                                Layout.preferredHeight: 7
+                                Layout.preferredWidth: th.dp(7)
+                                Layout.preferredHeight: th.dp(7)
                                 Layout.alignment: Qt.AlignVCenter
-                                radius: 3.5
+                                radius: th.dp(3.5)
                                 color: root.levelColor(modelData.level)
                             }
                             QQC.Label {
@@ -135,7 +136,7 @@ Card {
                                 color: th.tertiaryLabel
                                 font.pixelSize: th.fontFootnote
                                 elide: Text.ElideRight
-                                Layout.preferredWidth: 62
+                                Layout.preferredWidth: th.dp(62)
                             }
                             QQC.Label {
                                 text: modelData.levelText
@@ -160,7 +161,7 @@ Card {
                 Icon {
                     anchors.centerIn: parent
                     name: "list"
-                    iconSize: 26
+                    iconSize: th.dp(26)
                     tint: th.quaternaryLabel
                     visible: listView.count === 0
                 }
@@ -179,8 +180,8 @@ Card {
     }
 
     property var exportDialog: AppDialog {
-        title: (app.i18n.lang, app.i18n.text("log.export"))
-        confirmText: (app.i18n.lang, app.i18n.text("action.ok"))
+        title: (app.i18n.dictionary["log.export"])
+        confirmText: (app.i18n.dictionary["action.ok"])
         showCancel: false
     }
 }

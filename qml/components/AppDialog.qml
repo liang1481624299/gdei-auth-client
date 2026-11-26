@@ -59,7 +59,7 @@ QQC.Dialog {
 
             QQC.Label {
                 text: dialog.title
-                color: th.text
+                color: th.textPrimary
                 font.pixelSize: th.fontTitle3
                 font.weight: th.weightSemibold
                 wrapMode: Text.Wrap
@@ -89,25 +89,25 @@ QQC.Dialog {
         spacing: th.sp4
 
         Item { Layout.fillWidth: true }
-        PrimaryButton {
+        BaseButton {
             text: dialog.cancelText
-            variant: "ghost"
+            type: "ghost"
             visible: dialog.showCancel && text.length > 0
             onClicked: dialog.reject()
         }
-        PrimaryButton {
+        BaseButton {
             text: dialog.confirmText
-            variant: dialog.destructive ? "danger" : "primary"
+            type: dialog.destructive ? "danger" : "primary"
             visible: text.length > 0
             onClicked: dialog.accept()
         }
     }
 
     background: Rectangle {
-        radius: th.radiusLarge
-        color: th.surfaceElevated
+        radius: th.radiusCard
+        color: th.card
         border.width: 1
-        border.color: th.separator
+        border.color: th.border
     }
 
     enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: th.durationNormal } }

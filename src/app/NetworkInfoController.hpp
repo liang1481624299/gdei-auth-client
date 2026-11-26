@@ -16,7 +16,7 @@ class NetworkInfoController : public QObject {
     Q_PROPERTY(QString targetIp READ targetIp NOTIFY targetIpChanged)
     Q_PROPERTY(QString netmask READ netmask NOTIFY netmaskChanged)
     Q_PROPERTY(QString localMac READ localMac NOTIFY localMacChanged)
-    Q_PROPERTY(QString targetMac READ targetMac CONSTANT)
+    Q_PROPERTY(QString targetMac READ targetMac NOTIFY targetMacChanged)
     Q_PROPERTY(QString interfaceName READ interfaceName NOTIFY interfaceNameChanged)
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(int subnetStatus READ subnetStatus NOTIFY subnetStatusChanged)
@@ -45,6 +45,7 @@ signals:
     void interfaceNameChanged();
     void availableChanged();
     void subnetStatusChanged();
+    void targetMacChanged();
     void interfacesChanged();
 
 private:
@@ -55,6 +56,7 @@ private:
     QString m_targetIp;
     QString m_netmask;
     QString m_localMac;
+    QString m_targetMac;
     QString m_interfaceName;
     bool m_available = false;
     int m_subnetStatus = 0;

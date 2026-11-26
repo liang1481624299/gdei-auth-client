@@ -6,15 +6,16 @@
 #include "app/NetworkInfoController.hpp"
 #include "app/SessionController.hpp"
 #include "core/ConfigStore.hpp"
-#include "core/Logger.hpp"
+#include "core/KeepAlive.hpp"
+#include "core/PortalClient.hpp"
 #include "core/Types.hpp"
 
 namespace gdei {
 
 EventBridge::EventBridge(EventBus* events, AuthController* auth, SessionController* session,
                          LocalDeviceController* localDevices, DeviceController* portalDevices,
-                         NetworkInfoController* network, ConfigStore* config, Logger* logger,
-                         QObject* parent)
+                         NetworkInfoController* network, ConfigStore* config,
+                         KeepAlive* keepAlive, PortalClient* portal, QObject* parent)
     : QObject(parent), m_events(events), m_auth(auth), m_session(session), m_network(network) {
     connect(session, &SessionController::eventRequested, this,
             [this](int level, const QString& title, const QString& message,
@@ -67,7 +68,44 @@ EventBridge::EventBridge(EventBus* events, AuthController* auth, SessionControll
                 QStringLiteral("config.certificateWarningMessage"),
                 QStringLiteral("config.reasonInsecureEnabled"));
     });
-    connect(logger, &Logger::logAdded, this, &EventBridge::onLogAdded);
+    // 保活/证书事件走结构化信号，不再解析英文日志前缀。
+    // Keep-alive/certificate events come from typed signals, not log text matching.
+    connect(keepAlive, &KeepAlive::probeFailed, this,
+            [this](int failed, int threshold) {
+                publish(static_cast<int>(LogLevel::Warning), QStringLiteral("keepalive"),
+                        QStringLiteral("keepalive.probeFailed"),
+                        QStringLiteral("keepalive.probeFailedMessage"),
+                        QStringLiteral("keepalive.reasonProbeFailed"),
+                        {{QStringLiteral("failed"), failed},
+                         {QStringLiteral("threshold"), threshold}});
+            });
+    connect(keepAlive, &KeepAlive::reconnectScheduled, this,
+            [this](int attempt, int delaySec) {
+                publish(static_cast<int>(LogLevel::Warning), QStringLiteral("keepalive"),
+                        QStringLiteral("keepalive.retry"),
+                        QStringLiteral("keepalive.retryMessage"),
+                        QStringLiteral("keepalive.reasonProbeFailed"),
+                        {{QStringLiteral("attempt"), attempt},
+                         {QStringLiteral("delay"), delaySec}});
+            });
+    connect(keepAlive, &KeepAlive::reconnectSucceeded, this, [this](int attempts) {
+        publish(static_cast<int>(LogLevel::Info), QStringLiteral("keepalive"),
+                QStringLiteral("keepalive.reconnectSucceeded"),
+                QStringLiteral("keepalive.reconnectSucceededMessage"), QString(),
+                {{QStringLiteral("attempts"), attempts}});
+    });
+    connect(keepAlive, &KeepAlive::keepAliveError, this, [this](const QString& reasonKey) {
+        publish(static_cast<int>(LogLevel::Error), QStringLiteral("keepalive"),
+                QStringLiteral("keepalive.reconnectExhausted"),
+                QStringLiteral("keepalive.reconnectExhaustedMessage"), reasonKey);
+    });
+    connect(portal, &PortalClient::insecureSslSkipped, this, [this](const QString& host) {
+        publish(static_cast<int>(LogLevel::Warning), QStringLiteral("config"),
+                QStringLiteral("config.certificateWarning"),
+                QStringLiteral("config.certificateWarningMessage"),
+                QStringLiteral("config.reasonInsecureEnabled"),
+                {{QStringLiteral("host"), host}});
+    });
 }
 
 void EventBridge::publish(int level, const QString& source, const QString& titleKey,
@@ -100,26 +138,6 @@ void EventBridge::onPortalDevicesFinished(bool ok, const QString& message) {
             expired ? QStringLiteral("portalDevices.reasonSessionExpired")
                     : (encoding ? message : (ok ? QString()
                                                 : QStringLiteral("portalDevices.reasonUnknown"))));
-}
-
-void EventBridge::onLogAdded(int level, const QString& message) {
-    Q_UNUSED(level)
-    if (message.startsWith(QLatin1String("Offline probe failed"))) {
-        publish(static_cast<int>(LogLevel::Warning), QStringLiteral("keepalive"),
-                QStringLiteral("keepalive.probeFailed"),
-                QStringLiteral("keepalive.probeFailedMessage"),
-                QStringLiteral("keepalive.reasonProbeFailed"));
-    } else if (message.startsWith(QLatin1String("Offline after"))) {
-        publish(static_cast<int>(LogLevel::Warning), QStringLiteral("keepalive"),
-                QStringLiteral("keepalive.retry"),
-                QStringLiteral("keepalive.retryMessage"),
-                QStringLiteral("keepalive.reasonProbeFailed"));
-    } else if (message.startsWith(QLatin1String("SSL verification skipped by config"))) {
-        publish(static_cast<int>(LogLevel::Warning), QStringLiteral("config"),
-                QStringLiteral("config.certificateWarning"),
-                QStringLiteral("config.certificateWarningMessage"),
-                QStringLiteral("config.reasonInsecureEnabled"));
-    }
 }
 
 } // namespace gdei

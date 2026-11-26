@@ -19,8 +19,7 @@ Item {
     function localized(key, args) {
         if (key === undefined || key === null || String(key).length === 0)
             return "";
-        app.i18n.lang;
-        var value = app.i18n.text(String(key));
+        var value = app.i18n.dictionary[String(key)];
         if (args && args.name !== undefined && args.name !== null && value.indexOf("%1") >= 0)
             value = value.arg(String(args.name));
         return value;
@@ -120,18 +119,19 @@ Item {
                     }
                 }
 
-                Card {
+                BaseCard {
                     id: card
                     width: parent.width
-                    margins: th.sp5
+                    cardPadding: th.sp5
+                    hoverable: false
 
                     RowLayout {
-                        width: parent.width
+                        Layout.fillWidth: true
                         spacing: th.sp4
 
                         Icon {
                             name: "info"
-                            iconSize: 18
+                            iconSize: th.dp(18)
                             tint: root.levelColor(toast.level)
                             Layout.alignment: Qt.AlignTop
                         }
@@ -173,13 +173,13 @@ Item {
                             implicitHeight: th.touchTarget
                             padding: 0
                             hoverEnabled: true
-                            Accessible.name: (app.i18n.lang, app.i18n.text("common.close"))
+                            Accessible.name: (app.i18n.dictionary["common.close"])
                             Layout.alignment: Qt.AlignTop
                             onClicked: toast.dismiss()
 
                             contentItem: Icon {
                                 name: "xmark"
-                                iconSize: 16
+                                iconSize: th.dp(16)
                                 tint: closeButton.hovered ? th.text : th.muted
                             }
                             background: Rectangle {

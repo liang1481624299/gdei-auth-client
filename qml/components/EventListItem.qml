@@ -35,8 +35,7 @@ Rectangle {
 
     function localized(key, args) {
         if (key.length === 0) return "";
-        app.i18n.lang;
-        var value = app.i18n.text(key);
+        var value = app.i18n.dictionary[key];
         if (args && args.name !== undefined && args.name !== null && value.indexOf("%1") >= 0)
             value = value.arg(String(args.name));
         return value;
@@ -63,7 +62,7 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
             }
 
-            StatusBadge {
+            BaseBadge {
                 text: root.localized(root.levelKey, null)
                 tint: root.levelColor
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight

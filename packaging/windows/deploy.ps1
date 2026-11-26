@@ -28,8 +28,27 @@ New-Item -ItemType Directory -Force $staging | Out-Null
 
 # 递归拷贝 windeployqt 收集的 DLL 与 platforms / styles / imageformats / qml 等插件子目录。
 # Recursively copy deployed DLLs and plugin subdirs (platforms/styles/imageformats/qml).
+# 排除 CMake/Ninja/Qt 构建中间产物目录与源码中间文件；项目 QML、图标、字体已内嵌 qrc，不拷磁盘副本。
+# Exclude CMake/Ninja/Qt build intermediates; app QML/icons/fonts are baked into the qrc.
+$excludeDirs = @(
+    ".qt", ".rcc", "CMakeFiles", "gdei-auth-client_autogen", "GdeiConnect",
+    "meta_types", "qmltooling", "qmltypes"
+)
+$excludeExt = @(".cpp", ".a", ".ninja", ".qrc", ".qmltypes")
+$excludeFiles = @(
+    ".ninja_deps", ".ninja_log", "build.ninja", "cmake_install.cmake",
+    "CMakeCache.txt", "CPackConfig.cmake", "CPackSourceConfig.cmake"
+)
+
 Get-ChildItem $exeDir -Force |
-    Where-Object { $_.Extension -ne ".pdb" } |
+    Where-Object {
+        if ($_.PSIsContainer) {
+            $excludeDirs -notcontains $_.Name
+        } else {
+            ($excludeExt -notcontains $_.Extension) -and
+            ($excludeFiles -notcontains $_.Name)
+        }
+    } |
     Copy-Item -Destination $staging -Recurse -Force
 
 Compress-Archive -Path "$staging/*" -DestinationPath "$DistDir/gdei-auth-client-windows-x64.zip" -Force

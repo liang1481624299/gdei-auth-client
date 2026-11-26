@@ -11,6 +11,9 @@ Item {
     property string title: ""
     property string description: ""
     property string leadingIcon: ""
+    // 图标是否置于圆角底色方块内（参考功能行样式）；默认 false 保持裸图标。
+    // Wrap the leading icon in a rounded tinted block; false keeps the bare icon.
+    property bool iconContainer: false
     default property alias content: trailing.children
 
     implicitHeight: th.dp(56)
@@ -22,24 +25,39 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: th.sp5
 
+        Rectangle {
+            visible: root.iconContainer && root.leadingIcon.length > 0
+            Layout.preferredWidth: th.dp(40)
+            Layout.preferredHeight: th.dp(40)
+            Layout.alignment: Qt.AlignVCenter
+            radius: th.radiusControl
+            color: th.field
+            Icon {
+                anchors.centerIn: parent
+                name: root.leadingIcon
+                iconSize: th.dp(18)
+                tint: th.secondaryLabel
+            }
+        }
+
         Icon {
             name: root.leadingIcon
-            iconSize: 22
+            iconSize: th.dp(22)
             tint: th.muted
-            visible: root.leadingIcon.length > 0
+            visible: !root.iconContainer && root.leadingIcon.length > 0
             Layout.alignment: Qt.AlignVCenter
         }
 
         ColumnLayout {
-            spacing: 2
+            spacing: th.sp1
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignVCenter
 
             QQC.Label {
                 text: root.title
                 color: th.text
-                font.pixelSize: th.fontHeadline
-                font.weight: th.weightRegular
+                font.pixelSize: th.fontBody
+                font.weight: th.weightMedium
                 wrapMode: Text.Wrap
                 visible: text.length > 0
                 Layout.fillWidth: true

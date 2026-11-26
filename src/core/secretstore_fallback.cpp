@@ -9,9 +9,10 @@
 // 存储格式: gdei.v1.<b64salt>.<b64nonce>.<b64cipher>.<b64tag>
 //
 // 说明：appPepper 是编译期常量，无法抵御逆向二进制的攻击者；真正的平台级保护
-// 仍需 Linux Secret Service / Android Keystore。但相对裸 Base64，本实现消除了
-// "直接可逆读取"这一 P0 根因，并带完整性校验（篡改会被 tag 校验拒绝），
-// 且完全基于 Qt Core，全平台可编译。backend() 会如实标注为 encrypted fallback。
+// 仍需 Linux Secret Service / Android Keystore。本实现消除了"直接可逆读取"，
+// 并带完整性校验（篡改会被 tag 校验拒绝），且完全基于 Qt Core，全平台可编译。
+// 旧版裸 Base64 值不再兼容读取，以避免把无校验数据当作可信口令。
+// backend() 会如实标注为 encrypted fallback。
 //
 // Encrypted fallback: PBKDF2-derived key + HMAC keystream + encrypt-then-MAC.
 // Removes the trivially-reversible Base64 exposure and adds tamper detection.
@@ -115,9 +116,11 @@ QByteArray encryptSecret(const QString& secret) {
 // 解密；格式非法或 tag 校验失败返回空串。/ Decrypt; empty on invalid or bad tag.
 QString decryptSecret(const QByteArray& stored) {
     if (!stored.startsWith("gdei.v1.")) {
-        // 兼容旧版本裸 Base64，读取后由下次 write 自动升级为加密格式。
-        // Migrate legacy plain-Base64 values; next write upgrades them.
-        return QString::fromUtf8(QByteArray::fromBase64(stored));
+        // 旧版本裸 Base64 无完整性校验、可逆读取；出于安全考虑不再自动还原。
+        // 旧值视为损坏：返回空串，由用户重新输入口令并写入加密格式。
+        // Legacy bare Base64 is no longer auto-decoded; treat it as invalid so
+        // the user re-enters the secret and it is re-stored with integrity.
+        return {};
     }
     const QByteArray body = stored.mid(8);
     const QList<QByteArray> parts = body.split('.');

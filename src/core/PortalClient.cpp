@@ -1,5 +1,6 @@
 // src/core/PortalClient.cpp
 #include "core/PortalClient.hpp"
+#include "core/BodyDecoder.hpp"
 #include "core/ConfigStore.hpp"
 #include "core/Constants.hpp"
 #include "core/FormEncoding.hpp"
@@ -14,6 +15,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSslError>
+#include <QSslConfiguration>
 #include <QRegularExpression>
 #include <QStringDecoder>
 #include <QUrl>
@@ -39,12 +41,18 @@ PortalClient::PortalClient(ConfigStore* config, Logger* logger, QObject* parent)
                     if (m_log) {
                         m_log->warning(tr("SSL verification skipped by config / 按配置跳过证书校验"));
                     }
+                    emit insecureSslSkipped(reply->url().host());
                 }
             });
 }
 
 int PortalClient::state() const { return static_cast<int>(m_state); }
 bool PortalClient::online() const { return m_online; }
+bool PortalClient::busy() const { return m_busy; }
+
+void PortalClient::setCaCertificates(const QList<QSslCertificate>& certificates) {
+    m_caCertificates = certificates;
+}
 
 void PortalClient::setState(AuthState s) {
     if (m_state == s) return;
@@ -68,12 +76,24 @@ QUrl PortalClient::urlFor(const QString& path) const {
     // Domain first, fallback to the direct IP only when host is unset. The portal
     // certificate is issued for the domain; connecting by IP makes Qt verify the
     // certificate against the IP, which has no IP SAN and fails hostname matching.
-    const QString host = m_cfg->host().isEmpty() ? m_cfg->ip() : m_cfg->host();
+    const QString host = !m_cfg->host().isEmpty() ? m_cfg->host()
+                        : !m_cfg->ip().isEmpty()  ? m_cfg->ip()
+                        : constants::DEFAULT_HOST;
     QUrl url;
     url.setScheme(constants::DEFAULT_SCHEME);
     url.setHost(host);
     url.setPort(constants::DEFAULT_PORT);
-    url.setPath(path);
+    // setPath 会把查询串里的 '?' 编码成 %3F，导致路径变成 /portal/pws%3Ft=... 而 404；
+    // 需先拆分 path 与 query，分别交给 setPath / setQuery。
+    // setPath would percent-encode the '?' of a query string into the path
+    // (e.g. /portal/pws%3Ft=...) and yield 404; split path/query first.
+    const int q = path.indexOf(QLatin1Char('?'));
+    if (q >= 0) {
+        url.setPath(path.left(q));
+        url.setQuery(path.mid(q + 1));
+    } else {
+        url.setPath(path);
+    }
     return url;
 }
 
@@ -94,9 +114,10 @@ QString PortalClient::hostHeader() const {
     return constants::DEFAULT_HOST;
 }
 
-QNetworkReply* PortalClient::sendRequest(const QString& method,
-                                         const QString& path,
-                                         const QString& body) {
+QNetworkRequest PortalClient::makeRequest(const QString& path,
+                                          const QString& accept) const {
+    // 统一的请求基线：UA / Host / Referer / Accept / Accept-Language / 超时 / 证书主机名对齐 / 用户 CA。
+    // Shared request baseline so every portal call keeps identical TLS behaviour.
     const QUrl url = urlFor(path);
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader, constants::USER_AGENT);
@@ -104,10 +125,31 @@ QNetworkReply* PortalClient::sendRequest(const QString& method,
     req.setRawHeader("Referer",
         QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, hostHeader(),
             constants::LOGIN_PAGE_REFERRER).toUtf8());
+    // 实测门户过滤器要求 Accept 与 Accept-Language 同时存在，缺任一回 200 空体。
+    // The portal filter requires both Accept and Accept-Language; either
+    // missing yields a 200 empty body.
+    req.setRawHeader("Accept",
+        accept.isEmpty() ? constants::ACCEPT_HTML.toUtf8() : accept.toUtf8());
+    req.setRawHeader("Accept-Language", constants::ACCEPT_LANGUAGE.toUtf8());
     req.setTransferTimeout(m_cfg->connectTimeoutMs());
     applyPeerVerify(req, url.host());
 
-    if (!body.isEmpty()) {
+    if (!m_caCertificates.isEmpty() && url.scheme() == QLatin1String("https")) {
+        QSslConfiguration ssl = QSslConfiguration::defaultConfiguration();
+        ssl.addCaCertificates(m_caCertificates);
+        req.setSslConfiguration(ssl);
+    }
+    return req;
+}
+
+QNetworkReply* PortalClient::sendRequest(const QString& method,
+                                         const QString& path,
+                                         const QString& body) {
+    const bool isPost = !body.isEmpty();
+    QNetworkRequest req = makeRequest(
+        path, isPost ? constants::ACCEPT_AJAX : constants::ACCEPT_HTML);
+
+    if (isPost) {
         req.setHeader(QNetworkRequest::ContentTypeHeader,
             "application/x-www-form-urlencoded; charset=UTF-8");
         req.setRawHeader("X-Requested-With", "XMLHttpRequest");
@@ -139,15 +181,7 @@ QNetworkReply* PortalClient::postConfiguredForm(const QString& path, const QStri
         return sendRequest("POST", path, body);
     }
 
-    const QUrl url = urlFor(path);
-    QNetworkRequest req(url);
-    req.setHeader(QNetworkRequest::UserAgentHeader, constants::USER_AGENT);
-    req.setRawHeader("Host", hostHeader().toUtf8());
-    req.setRawHeader("Referer",
-        QString("%1://%2%3").arg(constants::DEFAULT_SCHEME, hostHeader(),
-            constants::LOGIN_PAGE_REFERRER).toUtf8());
-    req.setTransferTimeout(m_cfg->connectTimeoutMs());
-    applyPeerVerify(req, url.host());
+    QNetworkRequest req = makeRequest(path, constants::ACCEPT_AJAX);
     req.setHeader(QNetworkRequest::ContentTypeHeader,
         QString("application/x-www-form-urlencoded; charset=%1").arg(encoded.charset));
     req.setRawHeader("X-Requested-With", "XMLHttpRequest");
@@ -217,21 +251,24 @@ QString PortalClient::decodeBody(const QByteArray& raw, const QByteArray& conten
         QStringDecoder decoder(name);
         return decoder(raw);
     }
-    if (cs == "gbk") {
-        // TODO(P1): 接入 Qt5Compat 的 QTextCodec 以支持 GBK/GB2312；当前回退 UTF-8。
-        // TODO(P1): link Qt5Compat QTextCodec for GBK/GB2312; fall back to UTF-8 meanwhile.
-        if (m_log) {
-            m_log->warning(tr("GBK/GB2312 codec pending, falling back to UTF-8 / GBK 编码待接入，暂按 UTF-8 解码"));
-        }
+    if (cs == "gbk" || cs == "gb2312" || cs == "gb18030") {
+        return BodyDecoder::fromLegacy(raw);
     }
-    return QString::fromUtf8(raw);
+    // 未声明或声明为 UTF-8 时同样走自适应探测：部分门户的 meta charset 与实际字节不一致。
+    return BodyDecoder::fromLegacy(raw);
 }
 
 bool PortalClient::externalProbeOnline(int status, const QByteArray& raw,
                                        const QString& body) const {
     const bool statusOk = (status == 0) || (status >= 200 && status < 300);
-    return statusOk && !raw.trimmed().isEmpty() &&
-           body.contains(QStringLiteral("Microsoft"), Qt::CaseInsensitive);
+    // generate_204 类探测在线时回 204 No Content（空体），不能仅凭空体判离线；
+    // connecttest.txt 类探测仍要求响应体含 Microsoft 特征串。
+    // generate_204 probes answer 204 No Content when online; an empty body
+    // must not count as offline. Text-body probes still match "Microsoft".
+    const bool noContentOnline = (status == 204);
+    const bool bodyOnline = !raw.trimmed().isEmpty() &&
+        body.contains(QStringLiteral("Microsoft"), Qt::CaseInsensitive);
+    return statusOk && (noContentOnline || bodyOnline);
 }
 
 QString PortalClient::buildForm(const QString& user, const QString& pass) const {
@@ -243,9 +280,12 @@ QString PortalClient::buildForm(const QString& user, const QString& pass) const 
     fields << qMakePair(QString::fromLatin1(constants::FIELD_PASSWORD), pwdB64);
     fields << qMakePair(QString::fromLatin1(constants::FIELD_USERURL), QString());
     fields << qMakePair(QString::fromLatin1(constants::FIELD_USERIP), QString());
-    // basip 隐藏域在登录页 HTML 中 value 即为空；服务端按来源 IP 鉴权，不填 NAS 地址。
-    // The basip hidden field renders empty; the server authenticates by source IP.
-    fields << qMakePair(QString::fromLatin1(constants::FIELD_BASIP), QString());
+    // basip 隐藏域取值为 NAS（AC）地址，与登录页渲染值一致；服务端仍按来源 IP 鉴权。
+    // The basip hidden field carries the NAS (AC) address, matching the rendered
+    // login page; the server still authenticates by source IP.
+    const QString basip = m_cfg->nasip().isEmpty()
+        ? constants::DEFAULT_NASIP : m_cfg->nasip();
+    fields << qMakePair(QString::fromLatin1(constants::FIELD_BASIP), basip);
     fields << qMakePair(QString::fromLatin1(constants::FIELD_LANGUAGE), constants::DEFAULT_LANGUAGE);
     fields << qMakePair(QString::fromLatin1(constants::FIELD_USERS_MAC), constants::DEFAULT_NULL);
     fields << qMakePair(QString::fromLatin1(constants::FIELD_WLAN_NASID), QString());

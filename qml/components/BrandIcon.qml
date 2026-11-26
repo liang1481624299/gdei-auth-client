@@ -50,6 +50,8 @@ Item {
     }
 
     readonly property string key: brandKey(osText)
+    // 是否识别到可展示的品牌图标；供外层在无品牌时回退到通用图标。
+    readonly property bool hasBrand: key.length > 0
 
     Icon {
         id: brandIcon

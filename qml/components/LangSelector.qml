@@ -20,9 +20,9 @@ QQC.ComboBox {
                  ? languages[currentIndex].name : ""
 
     implicitHeight: th.touchTarget
-    implicitWidth: 148
-    leftPadding: 12
-    rightPadding: 34
+    implicitWidth: th.dp(160)
+    leftPadding: th.sp4
+    rightPadding: th.sp6
     topPadding: 0
     bottomPadding: 0
     font.pixelSize: th.fontSubhead
@@ -44,10 +44,10 @@ QQC.ComboBox {
     }
 
     contentItem: RowLayout {
-        spacing: 7
+        spacing: th.sp2
         Icon {
             name: "globe"
-            iconSize: 16
+            iconSize: th.dp(16)
             tint: th.primary
             Layout.alignment: Qt.AlignVCenter
         }
@@ -64,9 +64,9 @@ QQC.ComboBox {
 
     indicator: Icon {
         name: "chevronDown"
-        iconSize: 12
+        iconSize: th.dp(12)
         tint: th.muted
-        x: control.width - width - 12
+        x: control.width - width - th.sp4
         y: (control.height - height) / 2
         rotation: control.pressed ? 180 : 0
         Behavior on rotation { NumberAnimation { duration: th.durationFast } }
@@ -83,7 +83,7 @@ QQC.ComboBox {
         background: Rectangle {
             radius: th.radiusSmall
             color: control.highlightedIndex === index || control.currentIndex === index
-                   ? th.greenFill : parent.hovered ? th.controlHover : "transparent"
+                   ? th.primaryFill : parent.hovered ? th.controlHover : "transparent"
         }
         contentItem: QQC.Label {
             text: modelData.name

@@ -4,14 +4,23 @@ import QtQuick.Layouts
 import "../theme"
 import "../components"
 
+// 高级设置子页（规范 6.5）—— 四组默认折叠，编码默认自动探测，高危项红色警示，可重置默认。
+// 前端校验：最小 < 最大间隔、时间 / 次数禁止 0 与负数、URL 格式校验。
+// All logic preserved; visuals migrated to Base* components for dark-theme correctness.
 PageScaffold {
     id: root
+    Theme { id: th }
 
-    readonly property Theme th: Theme {}
-    readonly property var encodingModel: ["AUTO", "ASCII", "GBK", "UTF-8"]
+    // 编码选项：对象数组的 name 用于显示（AUTO 走多语言），value 写入配置。
+    // 引用 app.i18n.lang 使语言切换时标签自动刷新。
+    readonly property var encodingItems: [
+        { "name": localized("encoding.auto"), "value": "AUTO" },
+        { "name": "ASCII", "value": "ASCII" },
+        { "name": "GBK", "value": "GBK" },
+        { "name": "UTF-8", "value": "UTF-8" }
+    ]
 
     // 本地暂存：编辑过程不直接写配置，保存时统一校验通过后再批量落盘。
-    // Local draft: edits are validated together on save before persisting.
     property int minSec: app.config.keepaliveMinSec
     property int maxSec: app.config.keepaliveMaxSec
     property int failThreshold: app.config.offlineFailThreshold
@@ -19,19 +28,17 @@ PageScaffold {
     property int probeTimeout: app.config.probeTimeoutMs
     property string probeUrl: app.config.probeUrl
     property string healthUrl: app.config.healthUrl
+    // 编码选择同样先暂存，保存时经门面统一落盘。
+    property string requestEncoding: app.config.requestEncoding
+    // 证书导入：路径与结果码（-1 未操作；0 成功；1 读取失败；2 无效证书；3 写入失败）。
+    property string certPath: ""
+    property int certImportCode: -1
 
     title: "section.advanced"
     showBack: true
+    contentMaxWidth: th.dp(720)
 
-    function localized(key) {
-        app.i18n.lang;
-        return app.i18n.text(key);
-    }
-
-    function encodingDisplay(index) {
-        if (index < 0 || index >= encodingModel.length) return "";
-        return encodingModel[index] === "AUTO" ? localized("encoding.auto") : encodingModel[index];
-    }
+    function localized(key) { return app.i18n.dictionary[key]; }
 
     function isValidUrl(u) {
         var s = String(u).trimmed();
@@ -39,7 +46,6 @@ PageScaffold {
     }
 
     // 返回空串表示通过；否则返回错误文案键。
-    // Returns an empty string when valid, otherwise an error message key.
     function validate(): string {
         if (minSec <= 0 || maxSec <= 0 || failThreshold <= 0 ||
             connectTimeout <= 0 || probeTimeout <= 0)
@@ -51,385 +57,323 @@ PageScaffold {
         return "";
     }
 
-    component NumericField: ColumnLayout {
-        id: numericRoot
-
-        property string label: ""
-        property string helpText: ""
+    // 数字字段：仅接受数字，失焦时夹到合法区间后回写暂存。
+    component NumericField: BaseTextField {
         property int value: 0
         property int minimum: 0
         property int maximum: 0
         signal submitted(int newValue)
-
-        spacing: th.sp3
-
-        QQC.Label {
-            text: numericRoot.label
-            color: th.muted
-            font.pixelSize: th.fontFootnote
-            wrapMode: Text.Wrap
-            Layout.fillWidth: true
-        }
-        TextField {
-            text: numericRoot.value
-            inputMethodHints: Qt.ImhDigitsOnly
-            validator: IntValidator {
-                bottom: numericRoot.minimum
-                top: numericRoot.maximum
-            }
-            Layout.fillWidth: true
-            onEditingFinished: {
-                if (acceptableInput)
-                    numericRoot.submitted(Number(text));
-                else
-                    text = numericRoot.value;
-            }
-        }
-        QQC.Label {
-            width: parent.width
-            visible: numericRoot.helpText.length > 0
-            text: numericRoot.helpText
-            color: th.tertiaryLabel
-            font.pixelSize: th.fontCaption
-            wrapMode: Text.Wrap
+        text: String(value)
+        onEdited: function(t) {
+            var digits = String(t).replace(/[^\d]/g, "");
+            var n = digits.length > 0 ? parseInt(digits) : 0;
+            if (minimum > 0 && n < minimum) n = minimum;
+            if (maximum > 0 && n > maximum) n = maximum;
+            submitted(n);
         }
     }
 
     ColumnLayout {
-        width: parent.width
+        Layout.fillWidth: true
         spacing: th.sp8
 
-        // 编码与安全
-        DisclosureGroup {
+        // ── 编码与安全 ──
+        BaseCollapseGroup {
             title: root.localized("adv.groupSecurity")
-            leadingIcon: "shield"
-            opened: false
-            Layout.fillWidth: true
+            expanded: false
 
-            ColumnLayout {
-                spacing: th.sp5
-                width: parent.width
+            BaseComboBox {
+                Layout.fillWidth: true
+                label: root.localized("label.requestEncoding")
+                helperText: root.localized("help.requestEncoding")
+                model: root.encodingItems
+                currentIndex: {
+                    var target = String(root.requestEncoding).toUpperCase();
+                    for (var i = 0; i < root.encodingItems.length; i++)
+                        if (root.encodingItems[i].value === target) return i;
+                    return 0;
+                }
+                onActivated: function(index) {
+                    root.requestEncoding = root.encodingItems[index].value;
+                }
+            }
+
+            // 跳过证书校验：高危项，红色风险提示 + 开启前二次确认。
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: insecureRow.implicitHeight + (insecureWarn.visible ? insecureWarn.implicitHeight + th.sp3 : 0) + th.sp4 * 2
+                radius: th.radiusControl
+                color: th.field
+                border.width: 1
+                border.color: th.border
 
                 ColumnLayout {
                     spacing: th.sp3
-                    width: parent.width
+                    anchors.fill: parent
+                    anchors.margins: th.sp4
 
-                    QQC.Label {
-                        width: parent.width
-                        text: root.localized("label.requestEncoding")
-                        color: th.muted
-                        font.pixelSize: th.fontFootnote
-                        wrapMode: Text.Wrap
-                    }
-                    QQC.ComboBox {
-                        id: encodingCombo
-                        width: parent.width
-                        implicitHeight: th.inputHeight
-                        model: root.encodingModel
-                        currentIndex: {
-                            var index = root.encodingModel.indexOf(String(app.config.requestEncoding).toUpperCase());
-                            return index >= 0 ? index : 0;
-                        }
-                        displayText: root.encodingDisplay(currentIndex)
-                        leftPadding: 14
-                        rightPadding: 40
-                        hoverEnabled: true
-                        Accessible.name: root.localized("label.requestEncoding")
-                        onActivated: function(index) {
-                            app.config.requestEncoding = root.encodingModel[index];
-                        }
-
-                        contentItem: QQC.Label {
-                            text: encodingCombo.displayText
-                            color: th.text
-                            font.pixelSize: th.fontBody
-                            verticalAlignment: Text.AlignVCenter
-                            elide: Text.ElideRight
-                        }
-                        indicator: Icon {
-                            name: "chevronDown"
-                            iconSize: 13
-                            tint: th.muted
-                            x: encodingCombo.width - width - 14
-                            y: (encodingCombo.height - height) / 2
-                            rotation: encodingCombo.pressed ? 180 : 0
-                            Behavior on rotation { NumberAnimation { duration: th.durationFast } }
-                        }
-                        background: Rectangle {
-                            radius: th.radiusSmall
-                            color: encodingCombo.pressed ? th.controlPressed
-                                 : encodingCombo.hovered ? th.controlHover : th.field
-                            border.width: 1
-                            border.color: encodingCombo.activeFocus ? th.primary : th.separator
-                        }
-                        delegate: QQC.ItemDelegate {
-                            required property var modelData
-                            required property int index
-                            width: ListView.view ? ListView.view.width : encodingCombo.width
-                            height: th.touchTarget
-                            highlighted: encodingCombo.highlightedIndex === index
-                            hoverEnabled: true
-                            contentItem: QQC.Label {
-                                text: root.encodingDisplay(index)
-                                color: encodingCombo.currentIndex === index ? th.primary : th.text
+                    RowLayout {
+                        id: insecureRow
+                        Layout.fillWidth: true
+                        spacing: th.sp4
+                        ColumnLayout {
+                            spacing: 0
+                            Layout.fillWidth: true
+                            QQC.Label {
+                                text: root.localized("action.insecureSsl")
+                                color: th.text
                                 font.pixelSize: th.fontBody
-                                leftPadding: 10
-                                rightPadding: 10
-                                verticalAlignment: Text.AlignVCenter
-                                elide: Text.ElideRight
-                            }
-                            background: Rectangle {
-                                radius: th.radiusSmall
-                                color: highlighted || encodingCombo.currentIndex === index
-                                       ? th.greenFill : parent.hovered ? th.controlHover : "transparent"
+                                font.weight: th.weightMedium
+                                Layout.fillWidth: true
                             }
                         }
-                        popup: QQC.Popup {
-                            id: encodingPopup
-                            width: Math.min(encodingCombo.width,
-                                            Math.max(0, encodingCombo.Window.width - th.sp8))
-                            height: Math.min(contentItem.implicitHeight + topPadding + bottomPadding,
-                                             Math.max(th.touchTarget * 2,
-                                                      encodingCombo.Window.height - th.sp8))
-                            padding: th.sp2
-                            x: {
-                                var origin = encodingCombo.mapToItem(null, 0, 0);
-                                var desired = origin.x;
-                                var clamped = Math.max(th.sp2, Math.min(desired,
-                                       encodingCombo.Window.width - width - th.sp2));
-                                return clamped - origin.x;
-                            }
-                            y: {
-                                var origin = encodingCombo.mapToItem(null, 0, 0);
-                                var below = origin.y + encodingCombo.height + th.sp2;
-                                var above = origin.y - height - th.sp2;
-                                var desired = encodingCombo.Window.height - below >= height ? below : above;
-                                return Math.max(th.sp2, Math.min(desired,
-                                                encodingCombo.Window.height - height - th.sp2)) - origin.y;
-                            }
-                            contentItem: ListView {
-                                clip: true
-                                implicitHeight: contentHeight
-                                model: encodingCombo.delegateModel
-                                currentIndex: encodingCombo.highlightedIndex
-                                boundsBehavior: Flickable.StopAtBounds
-                                QQC.ScrollIndicator.vertical: QQC.ScrollIndicator {}
-                            }
-                            background: Rectangle {
-                                radius: th.radius
-                                color: th.surfaceElevated
-                                border.width: 1
-                                border.color: th.separator
-                            }
-                            enter: Transition {
-                                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: th.durationFast }
-                            }
-                            exit: Transition {
-                                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: th.durationFast }
-                            }
-                        }
-                    }
-                    QQC.Label {
-                        width: parent.width
-                        text: root.localized("help.requestEncoding")
-                        color: th.muted
-                        font.pixelSize: th.fontFootnote
-                        wrapMode: Text.Wrap
-                    }
-                }
-
-                Rectangle {
-                    width: parent.width
-                    implicitHeight: insecureRow.implicitHeight + insecureWarn.implicitHeight + th.sp3
-                    radius: th.radiusSmall
-                    color: th.field
-                    border.width: 1
-                    border.color: th.separator
-
-                    ColumnLayout {
-                        spacing: th.sp3
-                        anchors.fill: parent
-                        anchors.margins: th.sp4
-
-                        SettingRow {
-                            id: insecureRow
-                            width: parent.width
-                            title: root.localized("action.insecureSsl")
-                            Switch {
-                                checked: app.config.allowInsecureSsl
-                                onToggled: function(checked) {
-                                    if (checked) {
-                                        // 高危项：开启前二次确认；先复位开关，待弹窗确认后再写入。
-                                        // High-risk: confirm before enabling; revert until accepted.
-                                        this.checked = false;
-                                        insecureDialog.open();
-                                    } else {
-                                        app.config.allowInsecureSsl = false;
-                                    }
+                        BaseSwitch {
+                            checked: app.config.allowInsecureSsl
+                            onToggled: function(checked) {
+                                if (checked) {
+                                    // 先复位开关，待弹窗确认后再写入。
+                                    this.checked = false;
+                                    insecureDialog.open();
+                                } else {
+                                    app.setSkipCertificateCheck(false);
                                 }
                             }
                         }
-                        QQC.Label {
-                            id: insecureWarn
-                            width: parent.width
-                            visible: app.config.allowInsecureSsl
-                            text: root.localized("adv.insecureWarn")
-                            color: th.danger
-                            font.pixelSize: th.fontFootnote
-                            wrapMode: Text.WrapAnywhere
-                        }
+                    }
+                    QQC.Label {
+                        id: insecureWarn
+                        visible: app.config.allowInsecureSsl
+                        text: root.localized("adv.insecureWarn")
+                        color: th.danger
+                        font.pixelSize: th.fontFootnote
+                        wrapMode: Text.WrapAnywhere
+                        Layout.fillWidth: true
                     }
                 }
             }
         }
 
-        // 保活策略
-        DisclosureGroup {
+        // ── 证书信任（仅追加信任锚，不关闭校验）──
+        BaseCollapseGroup {
+            title: root.localized("cert.title")
+            expanded: false
+
+            QQC.Label {
+                text: root.localized("cert.hint")
+                color: th.secondaryLabel
+                font.pixelSize: th.fontFootnote
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+
+            // 已导入证书列表：主体 / 有效期 / 指纹 / 删除。
+            Repeater {
+                model: app.certificates.certificates
+                delegate: Rectangle {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    implicitHeight: certRow.implicitHeight + th.sp3 * 2
+                    radius: th.radiusControl
+                    color: th.field
+                    border.width: 1
+                    border.color: th.border
+
+                    ColumnLayout {
+                        id: certRow
+                        anchors.fill: parent
+                        anchors.margins: th.sp3
+                        spacing: th.sp1
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: th.sp3
+                            QQC.Label {
+                                text: modelData.subject
+                                color: th.text
+                                font.pixelSize: th.fontSubhead
+                                font.weight: th.weightMedium
+                                wrapMode: Text.WrapAnywhere
+                                Layout.fillWidth: true
+                            }
+                            BaseBadge {
+                                visible: modelData.expired === true
+                                text: root.localized("cert.expired")
+                                iconName: "info"
+                                tint: th.danger
+                            }
+                            BaseButton {
+                                text: root.localized("cert.delete")
+                                type: "danger"
+                                onClicked: app.certificates.removeByFingerprint(modelData.fingerprint)
+                            }
+                        }
+                        QQC.Label {
+                            text: root.localized("cert.expires").replace("%1", modelData.notAfter)
+                            color: modelData.expired === true ? th.danger : th.muted
+                            font.pixelSize: th.fontFootnote
+                            wrapMode: Text.WrapAnywhere
+                            Layout.fillWidth: true
+                        }
+                        QQC.Label {
+                            text: root.localized("cert.fingerprint") + ": " + modelData.fingerprint
+                            color: th.muted
+                            font.pixelSize: th.fontFootnote
+                            font.family: "monospace"
+                            wrapMode: Text.WrapAnywhere
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+            }
+
+            QQC.Label {
+                text: root.localized("cert.empty")
+                color: th.tertiaryLabel
+                font.pixelSize: th.fontFootnote
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                visible: app.certificates.certificates.length === 0
+            }
+
+            // 导入：路径输入 + 导入按钮，结果按返回码反馈。
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: th.sp4
+                BaseTextField {
+                    Layout.fillWidth: true
+                    placeholderText: root.localized("cert.pathPlaceholder")
+                    text: root.certPath
+                    onEdited: function(t) { root.certPath = t; }
+                }
+                BaseButton {
+                    text: root.localized("cert.import")
+                    type: "secondary"
+                    leadingIcon: "plus"
+                    onClicked: {
+                        if (root.certPath.trimmed().length === 0) return;
+                        root.certImportCode = app.certificates.importFromPath(root.certPath.trimmed());
+                    }
+                }
+            }
+            QQC.Label {
+                visible: root.certImportCode >= 0
+                text: {
+                    switch (root.certImportCode) {
+                    case 0: return root.localized("cert.importOk");
+                    case 1: return root.localized("cert.importReadFailed");
+                    case 2: return root.localized("cert.importInvalid");
+                    case 3: return root.localized("cert.importWriteFailed");
+                    default: return "";
+                    }
+                }
+                color: root.certImportCode === 0 ? th.success : th.danger
+                font.pixelSize: th.fontFootnote
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+        }
+
+        // ── 保活策略 ──
+        BaseCollapseGroup {
             title: root.localized("adv.groupKeepalive")
-            leadingIcon: "bolt"
-            opened: false
-            Layout.fillWidth: true
+            expanded: false
 
             GridLayout {
-                width: parent.width
+                Layout.fillWidth: true
                 columns: width >= th.compactBreakpoint ? 2 : 1
                 columnSpacing: th.sp6
                 rowSpacing: th.sp6
 
                 NumericField {
+                    Layout.fillWidth: true
                     label: root.localized("advanced.minInterval")
-                    helpText: root.localized("help.minInterval")
+                    helperText: root.localized("help.minInterval")
                     value: root.minSec
                     minimum: 30
                     maximum: 600
-                    Layout.fillWidth: true
                     onSubmitted: function(v) { root.minSec = v; }
                 }
                 NumericField {
+                    Layout.fillWidth: true
                     label: root.localized("advanced.maxInterval")
-                    helpText: root.localized("help.maxInterval")
+                    helperText: root.localized("help.maxInterval")
                     value: root.maxSec
                     minimum: 30
                     maximum: 600
-                    Layout.fillWidth: true
                     onSubmitted: function(v) { root.maxSec = v; }
                 }
                 NumericField {
+                    Layout.fillWidth: true
                     label: root.localized("advanced.failThreshold")
-                    helpText: root.localized("help.failThreshold")
+                    helperText: root.localized("help.failThreshold")
                     value: root.failThreshold
                     minimum: 1
                     maximum: 10
-                    Layout.fillWidth: true
                     onSubmitted: function(v) { root.failThreshold = v; }
                 }
             }
         }
 
-        // 超时参数
-        DisclosureGroup {
+        // ── 超时参数 ──
+        BaseCollapseGroup {
             title: root.localized("adv.groupTimeout")
-            leadingIcon: "clock"
-            opened: false
-            Layout.fillWidth: true
+            expanded: false
 
             GridLayout {
-                width: parent.width
+                Layout.fillWidth: true
                 columns: width >= th.compactBreakpoint ? 2 : 1
                 columnSpacing: th.sp6
                 rowSpacing: th.sp6
 
                 NumericField {
+                    Layout.fillWidth: true
                     label: root.localized("advanced.connectTimeout")
-                    helpText: root.localized("help.connectTimeout")
+                    helperText: root.localized("help.connectTimeout")
                     value: root.connectTimeout
                     minimum: 1000
                     maximum: 60000
-                    Layout.fillWidth: true
                     onSubmitted: function(v) { root.connectTimeout = v; }
                 }
                 NumericField {
+                    Layout.fillWidth: true
                     label: root.localized("advanced.probeTimeout")
-                    helpText: root.localized("help.probeTimeout")
+                    helperText: root.localized("help.probeTimeout")
                     value: root.probeTimeout
                     minimum: 1000
                     maximum: 60000
-                    Layout.fillWidth: true
                     onSubmitted: function(v) { root.probeTimeout = v; }
                 }
             }
         }
 
-        // 探测地址配置
-        DisclosureGroup {
+        // ── 探测地址配置 ──
+        BaseCollapseGroup {
             title: root.localized("adv.groupProbe")
-            leadingIcon: "globe"
-            opened: false
-            Layout.fillWidth: true
+            expanded: false
 
-            ColumnLayout {
-                width: parent.width
-                spacing: th.sp5
-
-                ColumnLayout {
-                    spacing: th.sp3
-                    width: parent.width
-                    QQC.Label {
-                        width: parent.width
-                        text: root.localized("advanced.probeUrl")
-                        color: th.muted
-                        font.pixelSize: th.fontFootnote
-                        wrapMode: Text.Wrap
-                    }
-                    TextField {
-                        width: parent.width
-                        text: root.probeUrl
-                        onEditingFinished: root.probeUrl = text
-                    }
-                    QQC.Label {
-                        width: parent.width
-                        text: root.localized("adv.probeUrlHint")
-                        color: th.tertiaryLabel
-                        font.pixelSize: th.fontCaption
-                        wrapMode: Text.Wrap
-                    }
-                }
-
-                ColumnLayout {
-                    spacing: th.sp3
-                    width: parent.width
-                    QQC.Label {
-                        width: parent.width
-                        text: root.localized("advanced.healthUrl")
-                        color: th.muted
-                        font.pixelSize: th.fontFootnote
-                        wrapMode: Text.Wrap
-                    }
-                    TextField {
-                        width: parent.width
-                        text: root.healthUrl
-                        onEditingFinished: root.healthUrl = text
-                    }
-                    QQC.Label {
-                        width: parent.width
-                        text: root.localized("adv.healthUrlHint")
-                        color: th.tertiaryLabel
-                        font.pixelSize: th.fontCaption
-                        wrapMode: Text.Wrap
-                    }
-                }
+            BaseTextField {
+                Layout.fillWidth: true
+                label: root.localized("advanced.probeUrl")
+                helperText: root.localized("adv.probeUrlHint")
+                text: root.probeUrl
+                onEdited: function(t) { root.probeUrl = t; }
+            }
+            BaseTextField {
+                Layout.fillWidth: true
+                label: root.localized("advanced.healthUrl")
+                helperText: root.localized("adv.healthUrlHint")
+                text: root.healthUrl
+                onEdited: function(t) { root.healthUrl = t; }
             }
         }
 
-        GridLayout {
-            columns: width >= th.compactBreakpoint ? 2 : 1
-            columnSpacing: th.sp4
-            rowSpacing: th.sp4
+        // ── 保存 ──
+        RowLayout {
             Layout.fillWidth: true
-
-            PrimaryButton {
-                text: (app.i18n.lang, app.i18n.text("btn.save"))
-                variant: "primary"
+            spacing: th.sp4
+            BaseButton {
+                text: root.localized("btn.save")
+                type: "primary"
                 leadingIcon: "check"
                 Layout.fillWidth: true
                 onClicked: {
@@ -440,72 +384,71 @@ PageScaffold {
                         return;
                     }
                     if (app.session.requireLogin("settings.save")) {
-                        app.config.keepaliveMinSec = root.minSec;
-                        app.config.keepaliveMaxSec = root.maxSec;
-                        app.config.offlineFailThreshold = root.failThreshold;
-                        app.config.connectTimeoutMs = root.connectTimeout;
-                        app.config.probeTimeoutMs = root.probeTimeout;
-                        app.config.probeUrl = root.probeUrl.trimmed();
-                        app.config.healthUrl = root.healthUrl.trimmed();
-                        saveFeedback.saved = app.config.save();
+                        saveFeedback.saved = app.saveAdvancedSettings({
+                            "keepaliveMinSec": root.minSec,
+                            "keepaliveMaxSec": root.maxSec,
+                            "offlineFailThreshold": root.failThreshold,
+                            "connectTimeoutMs": root.connectTimeout,
+                            "probeTimeoutMs": root.probeTimeout,
+                            "probeUrl": root.probeUrl.trimmed(),
+                            "healthUrl": root.healthUrl.trimmed(),
+                            "requestEncoding": root.requestEncoding
+                        });
                         saveFeedback.visible = true;
                     }
                 }
             }
-            StatusBadge {
+            BaseBadge {
                 id: saveFeedback
                 property bool saved: true
-                text: (app.i18n.lang, app.i18n.text(saved ? "config.saved" : "config.saveFailed"))
+                text: root.localized(saved ? "config.saved" : "config.saveFailed")
                 iconName: saved ? "check" : "info"
                 tint: saved ? th.success : th.danger
                 visible: false
-                Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
             }
         }
 
-        PrimaryButton {
-            text: (app.i18n.lang, app.i18n.text("action.resetDefaults"))
-            variant: "danger"
-            bg: "transparent"
+        // ── 重置为默认配置（高危，二次确认）──
+        BaseButton {
+            text: root.localized("action.resetDefaults")
+            type: "danger"
             leadingIcon: "refresh"
             Layout.fillWidth: true
             onClicked: resetDialog.open()
         }
-        StatusBadge {
+        BaseBadge {
             id: resetFeedback
             property bool saved: true
-            text: (app.i18n.lang, app.i18n.text(saved ? "config.resetDone" : "config.resetFailed"))
+            text: root.localized(saved ? "config.resetDone" : "config.resetFailed")
             iconName: saved ? "check" : "info"
             tint: saved ? th.success : th.danger
             visible: false
-            Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
         }
     }
 
     property var errorDialog: AppDialog {
-        title: (app.i18n.lang, app.i18n.text("adv.validationTitle"))
-        confirmText: (app.i18n.lang, app.i18n.text("action.ok"))
+        title: root.localized("adv.validationTitle")
+        confirmText: root.localized("action.ok")
         showCancel: false
     }
 
     property var insecureDialog: AppDialog {
-        title: (app.i18n.lang, app.i18n.text("adv.insecureConfirmTitle"))
-        message: (app.i18n.lang, app.i18n.text("adv.insecureConfirmMessage"))
-        confirmText: (app.i18n.lang, app.i18n.text("action.ok"))
-        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
+        title: root.localized("adv.insecureConfirmTitle")
+        message: root.localized("adv.insecureConfirmMessage")
+        confirmText: root.localized("action.ok")
+        cancelText: root.localized("action.cancel")
         showCancel: true
         destructive: true
         onAccepted: {
-            app.config.allowInsecureSsl = true;
-            app.config.save();
+            app.setSkipCertificateCheck(true);
         }
     }
 
     property var resetDialog: AppDialog {
-        title: (app.i18n.lang, app.i18n.text("config.resetTitle"))
-        message: (app.i18n.lang, app.i18n.text("config.resetMessage"))
-        confirmText: (app.i18n.lang, app.i18n.text("action.resetDefaults"))
-        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
+        title: root.localized("config.resetTitle")
+        message: root.localized("config.resetMessage")
+        confirmText: root.localized("action.resetDefaults")
+        cancelText: root.localized("action.cancel")
         showCancel: true
         destructive: true
         onAccepted: {
@@ -518,6 +461,7 @@ PageScaffold {
             root.probeTimeout = app.config.probeTimeoutMs;
             root.probeUrl = app.config.probeUrl;
             root.healthUrl = app.config.healthUrl;
+            root.requestEncoding = app.config.requestEncoding;
             app.i18n.setLang(0);
             resetFeedback.visible = true;
         }

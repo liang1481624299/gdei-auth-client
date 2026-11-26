@@ -13,9 +13,10 @@ class AuthController;
 class ConfigStore;
 class DeviceController;
 class EventBus;
+class KeepAlive;
 class LocalDeviceController;
-class Logger;
 class NetworkInfoController;
+class PortalClient;
 class SessionController;
 
 class EventBridge : public QObject {
@@ -23,8 +24,8 @@ class EventBridge : public QObject {
 public:
     EventBridge(EventBus* events, AuthController* auth, SessionController* session,
                 LocalDeviceController* localDevices, DeviceController* portalDevices,
-                NetworkInfoController* network, ConfigStore* config, Logger* logger,
-                QObject* parent = nullptr);
+                NetworkInfoController* network, ConfigStore* config,
+                KeepAlive* keepAlive, PortalClient* portal, QObject* parent = nullptr);
 
 private:
     void publish(int level, const QString& source, const QString& titleKey,
@@ -34,7 +35,6 @@ private:
                  const QString& messageKey, const QString& reasonKey,
                  const QVariantMap& arguments);
     void onPortalDevicesFinished(bool ok, const QString& message);
-    void onLogAdded(int level, const QString& message);
 
     EventBus* m_events;
     AuthController* m_auth;

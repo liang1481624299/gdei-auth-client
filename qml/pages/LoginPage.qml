@@ -12,8 +12,6 @@ Item {
         if (!app.session.busy) app.session.login();
     }
 
-    onVisibleChanged: if (!visible) passwordField.passwordVisible = false
-
     QQC.ScrollView {
         id: scroll
         anchors.fill: parent
@@ -49,18 +47,19 @@ Item {
             height: Math.max(root.height,
                              loginCard.implicitHeight + th.sp16 * 2)
 
-            Card {
+            BaseCard {
                 id: loginCard
                 anchors.centerIn: parent
                 width: Math.min(th.dp(440), Math.max(0, parent.width - th.sp12 * 2))
-                margins: th.sp10
+                cardPadding: th.sp10
+                hoverable: false
 
                 ColumnLayout {
-                    width: parent.width
+                    Layout.fillWidth: true
                     spacing: th.sp3
 
                     QQC.Label {
-                        text: (app.i18n.lang, app.i18n.text("app.title"))
+                        text: (app.i18n.dictionary["app.title"])
                         color: th.text
                         font.pixelSize: th.fontTitle2
                         font.weight: th.weightSemibold
@@ -69,7 +68,7 @@ Item {
                         Layout.fillWidth: true
                     }
                     QQC.Label {
-                        text: (app.i18n.lang, app.i18n.text("app.subtitle"))
+                        text: (app.i18n.dictionary["app.subtitle"])
                         color: th.muted
                         font.pixelSize: th.fontBody
                         horizontalAlignment: Text.AlignHCenter
@@ -77,7 +76,7 @@ Item {
                         Layout.fillWidth: true
                     }
                     QQC.Label {
-                        text: (app.i18n.lang, app.i18n.text("login.guestHint"))
+                        text: (app.i18n.dictionary["login.guestHint"])
                         color: th.muted
                         font.pixelSize: th.fontFootnote
                         horizontalAlignment: Text.AlignHCenter
@@ -91,53 +90,49 @@ Item {
                 }
 
                 ColumnLayout {
-                    width: parent.width
+                    Layout.fillWidth: true
                     spacing: th.sp3
 
                     QQC.Label {
-                        text: (app.i18n.lang, app.i18n.text("label.username"))
+                        text: (app.i18n.dictionary["label.username"])
                         color: th.muted
                         font.pixelSize: th.fontFootnote
                         Layout.fillWidth: true
                     }
-                    TextField {
-                        leadingIcon: "person"
-                        placeholderText: (app.i18n.lang, app.i18n.text("placeholder.username"))
+                    BaseTextField {
+                        placeholderText: (app.i18n.dictionary["placeholder.username"])
                         text: app.config.username
                         enabled: !app.session.busy
-                        onTextChanged: app.config.username = text
+                        onEdited: app.setLoginUsername(text)
                         onAccepted: root.submitLogin()
                         Layout.fillWidth: true
                     }
                 }
 
                 ColumnLayout {
-                    width: parent.width
+                    Layout.fillWidth: true
                     spacing: th.sp3
 
                     QQC.Label {
-                        text: (app.i18n.lang, app.i18n.text("label.password"))
+                        text: (app.i18n.dictionary["label.password"])
                         color: th.muted
                         font.pixelSize: th.fontFootnote
                         Layout.fillWidth: true
                     }
-                    TextField {
+                    BaseTextField {
                         id: passwordField
-                        leadingIcon: "lock"
-                        passwordMode: true
-                        placeholderText: (app.i18n.lang, app.i18n.text("placeholder.password"))
+                        password: true
+                        placeholderText: (app.i18n.dictionary["placeholder.password"])
                         text: app.config.password
-                        showPasswordAccessibleText: (app.i18n.lang, app.i18n.text("action.showPassword"))
-                        hidePasswordAccessibleText: (app.i18n.lang, app.i18n.text("action.hidePassword"))
                         enabled: !app.session.busy
-                        onTextChanged: app.config.password = text
+                        onEdited: app.setLoginPassword(text)
                         onAccepted: root.submitLogin()
                         Layout.fillWidth: true
                     }
                 }
 
                 Rectangle {
-                    width: parent.width
+                    Layout.fillWidth: true
                     implicitHeight: settingsColumn.implicitHeight
                     radius: th.radiusSmall
                     color: th.field
@@ -151,10 +146,10 @@ Item {
 
                         SettingRow {
                             width: parent.width
-                            title: (app.i18n.lang, app.i18n.text("action.remember"))
-                            Switch {
+                            title: (app.i18n.dictionary["action.remember"])
+                            BaseSwitch {
                                 checked: app.config.rememberPassword
-                                onToggled: app.config.rememberPassword = checked
+                                onToggled: app.setRememberPassword(checked)
                             }
                         }
                         Rectangle {
@@ -165,27 +160,28 @@ Item {
                         }
                         SettingRow {
                             width: parent.width
-                            title: (app.i18n.lang, app.i18n.text("action.autoLogin"))
-                            Switch {
+                            title: (app.i18n.dictionary["action.autoLogin"])
+                            BaseSwitch {
                                 checked: app.config.autoLogin
-                                onToggled: app.config.autoLogin = checked
+                                onToggled: app.setAutoLogin(checked)
                             }
                         }
                     }
                 }
 
-                PrimaryButton {
-                    width: parent.width
-                    text: (app.i18n.lang, app.i18n.text("btn.login"))
+                BaseButton {
+                    text: (app.i18n.dictionary["btn.login"])
+                    type: "primary"
                     leadingIcon: "power"
                     busy: app.session.busy
+                    Layout.fillWidth: true
                     onClicked: root.submitLogin()
                 }
-                PrimaryButton {
-                    width: parent.width
-                    variant: "secondary"
-                    text: (app.i18n.lang, app.i18n.text("login.cancel"))
+                BaseButton {
+                    text: (app.i18n.dictionary["login.cancel"])
+                    type: "secondary"
                     enabled: !app.session.busy
+                    Layout.fillWidth: true
                     onClicked: app.session.dismissLoginPrompt()
                 }
             }
@@ -194,9 +190,9 @@ Item {
 
     AppDialog {
         id: loginErrorDialog
-        title: (app.i18n.lang, app.i18n.text("login.failed"))
+        title: (app.i18n.dictionary["login.failed"])
         detail: app.session.lastError
-        confirmText: (app.i18n.lang, app.i18n.text("action.ok"))
+        confirmText: (app.i18n.dictionary["action.ok"])
     }
 
     Connections {

@@ -15,9 +15,9 @@ QQC.ComboBox {
     model: modes
 
     function label(v) {
-        if (v === 1) return app.i18n.text("theme.modeLight");
-        if (v === 2) return app.i18n.text("theme.modeDark");
-        return app.i18n.text("theme.modeSystem");
+        if (v === 1) return app.i18n.dictionary["theme.modeLight"];
+        if (v === 2) return app.i18n.dictionary["theme.modeDark"];
+        return app.i18n.dictionary["theme.modeSystem"];
     }
 
     currentIndex: {
@@ -30,9 +30,9 @@ QQC.ComboBox {
                  ? label(modes[currentIndex].value) : ""
 
     implicitHeight: th.touchTarget
-    implicitWidth: 148
-    leftPadding: 12
-    rightPadding: 34
+    implicitWidth: th.dp(160)
+    leftPadding: th.sp4
+    rightPadding: th.sp6
     topPadding: 0
     bottomPadding: 0
     font.pixelSize: th.fontSubhead
@@ -40,7 +40,7 @@ QQC.ComboBox {
     hoverEnabled: true
     onActivated: function(index) {
         if (index >= 0 && index < modes.length)
-            app.config.themeMode = modes[index].value;
+            app.applyTheme(modes[index].value);
     }
 
     background: Rectangle {
@@ -54,7 +54,7 @@ QQC.ComboBox {
     }
 
     contentItem: RowLayout {
-        spacing: 7
+        spacing: th.sp2
         QQC.Label {
             text: control.displayText
             color: control.enabled ? th.text : th.disabledText
@@ -68,9 +68,9 @@ QQC.ComboBox {
 
     indicator: Icon {
         name: "chevronDown"
-        iconSize: 12
+        iconSize: th.dp(12)
         tint: th.muted
-        x: control.width - width - 12
+        x: control.width - width - th.dp(12)
         y: (control.height - height) / 2
         rotation: control.pressed ? 180 : 0
         Behavior on rotation { NumberAnimation { duration: th.durationFast } }
@@ -87,7 +87,7 @@ QQC.ComboBox {
         background: Rectangle {
             radius: th.radiusSmall
             color: control.highlightedIndex === index || control.currentIndex === index
-                   ? th.greenFill : parent.hovered ? th.controlHover : "transparent"
+                   ? th.primaryFill : parent.hovered ? th.controlHover : "transparent"
         }
         contentItem: QQC.Label {
             text: control.label(modelData.value)

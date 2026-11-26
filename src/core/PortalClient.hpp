@@ -9,7 +9,9 @@
 
 #include <QObject>
 #include <QByteArray>
+#include <QList>
 #include <QString>
+#include <QSslCertificate>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -31,6 +33,13 @@ public:
 
     int state() const;
     bool online() const;
+    // 是否已有认证/登出请求在途；供保活状态机避免叠加调用。
+    // True while a login/logout exchange is in flight; lets keep-alive avoid overlap.
+    bool busy() const;
+
+    // 追加用户导入的 CA 信任锚（不改变“跳过校验”开关语义）。
+    // Append user-imported CA anchors; the insecure toggle semantics stay unchanged.
+    void setCaCertificates(const QList<QSslCertificate>& certificates);
 
     Q_INVOKABLE void login();
     Q_INVOKABLE void logout();
@@ -44,6 +53,9 @@ signals:
     // 每次探测（无论在线态是否翻转）的结果，供保活状态机累计连续失败次数。
     // Per-probe result (regardless of state flip) for the keep-alive failure counter.
     void probeFinished(bool online, QString reason);
+    // 结构化安全事件：因配置放行了证书错误（供事件总线使用）。
+    // Structured security signal for the configured SSL bypass.
+    void insecureSslSkipped(QString host);
 
 private slots:
     void onEntryReply();
@@ -74,8 +86,11 @@ private:
     // Last external probe result and timestamp, used as a fresh hint for empty-body replies.
     bool m_lastProbeOnline = false;
     qint64 m_lastProbeMs = 0;
+    QList<QSslCertificate> m_caCertificates;
 
     QUrl urlFor(const QString& path) const;
+    QNetworkRequest makeRequest(const QString& path,
+                                const QString& accept = QString()) const;
     void applyPeerVerify(QNetworkRequest& req, const QString& urlHost) const;
     QString hostHeader() const;
     QNetworkReply* sendRequest(const QString& method, const QString& path,

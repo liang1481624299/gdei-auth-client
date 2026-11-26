@@ -3,10 +3,19 @@
 #include "core/ConfigStore.hpp"
 
 #include <QAbstractSocket>
+#include <QFile>
 #include <QHostAddress>
 #include <QNetworkAddressEntry>
 #include <QNetworkInterface>
+#include <QStringList>
+#include <QTextStream>
+#include <QtEndian>
 #include <QVariantMap>
+
+#ifdef Q_OS_WIN
+#include <iphlpapi.h>
+#include <qt_windows.h>
+#endif
 
 namespace gdei {
 namespace {
@@ -30,6 +39,56 @@ bool isVirtualAdapter(const QNetworkInterface& iface) {
 
 bool isLinkLocal(const QHostAddress& ip) {
     return ip.isInSubnet(QHostAddress("169.254.0.0"), 16);
+}
+
+// 同子网时从系统邻接表解析目标 MAC。只读系统缓存，不发送任何探测包；
+// 目标未在邻接表中（未通信过）时返回空，由 UI 显示“未提供”。
+// Read the OS neighbour table; no probes are sent. Empty means "not available".
+QString lookupNeighborMac(const QString& ip) {
+    if (ip.isEmpty()) return QString();
+
+#ifdef Q_OS_WIN
+    const quint32 target = QHostAddress(ip).toIPv4Address();
+    if (target == 0) return QString();
+    ULONG size = 0;
+    if (GetIpNetTable(nullptr, &size, TRUE) != ERROR_INSUFFICIENT_BUFFER || size == 0) {
+        return QString();
+    }
+    QByteArray buffer(static_cast<int>(size), Qt::Uninitialized);
+    auto* table = reinterpret_cast<PMIB_IPNETTABLE>(buffer.data());
+    if (GetIpNetTable(table, &size, TRUE) != NO_ERROR || table == nullptr) {
+        return QString();
+    }
+    const quint32 targetNetOrder = qToBigEndian<quint32>(target);
+    for (DWORD i = 0; i < table->dwNumEntries; ++i) {
+        const MIB_IPNETROW& row = table->table[i];
+        if (row.dwAddr != targetNetOrder) continue;
+        if (row.dwPhysAddrLen < 6) continue;
+        QStringList parts;
+        parts.reserve(6);
+        for (int b = 0; b < 6; ++b) {
+            parts << QStringLiteral("%1").arg(row.bPhysAddr[b], 2, 16, QLatin1Char('0')).toUpper();
+        }
+        return parts.join(QLatin1Char(':'));
+    }
+    return QString();
+#else
+    // Linux / Android：/proc/net/arp（Android 部分版本受限，读不到则返回空）。
+    QFile arp(QStringLiteral("/proc/net/arp"));
+    if (!arp.open(QIODevice::ReadOnly | QIODevice::Text)) return QString();
+    QTextStream stream(&arp);
+    stream.readLine();  // 跳过表头
+    while (!stream.atEnd()) {
+        const QString line = stream.readLine().simplified();
+        const QStringList cols = line.split(QLatin1Char(' '));
+        if (cols.size() < 4) continue;
+        if (cols.at(0) != ip) continue;
+        const QString mac = cols.at(3).toUpper();
+        if (mac == QLatin1String("00:00:00:00:00:00")) return QString();
+        return mac;
+    }
+    return QString();
+#endif
 }
 
 int calculateSubnetStatus(const QString& sourceIp, const QString& targetIp,
@@ -61,7 +120,7 @@ QString NetworkInfoController::sourceIp() const { return m_sourceIp; }
 QString NetworkInfoController::targetIp() const { return m_targetIp; }
 QString NetworkInfoController::netmask() const { return m_netmask; }
 QString NetworkInfoController::localMac() const { return m_localMac; }
-QString NetworkInfoController::targetMac() const { return QString(); }
+QString NetworkInfoController::targetMac() const { return m_targetMac; }
 QString NetworkInfoController::interfaceName() const { return m_interfaceName; }
 bool NetworkInfoController::available() const { return m_available; }
 int NetworkInfoController::subnetStatus() const { return m_subnetStatus; }
@@ -128,6 +187,8 @@ void NetworkInfoController::refresh() {
     const bool available = havePrimary;
     const int subnetStatus = available
         ? calculateSubnetStatus(sourceIp, targetIp, netmask) : 0;
+    const QString targetMac = (available && subnetStatus == 1)
+        ? lookupNeighborMac(targetIp) : QString();
 
     const bool sourceChanged = m_sourceIp != sourceIp;
     const bool targetChanged = m_targetIp != targetIp;
@@ -136,6 +197,7 @@ void NetworkInfoController::refresh() {
     const bool interfaceChanged = m_interfaceName != interfaceName;
     const bool hasAvailableChange = m_available != available;
     const bool subnetChanged = m_subnetStatus != subnetStatus;
+    const bool targetMacChangedFlag = m_targetMac != targetMac;
     const bool hasInterfacesChange = m_interfaces != interfaces;
 
     m_sourceIp = sourceIp;
@@ -145,6 +207,7 @@ void NetworkInfoController::refresh() {
     m_interfaceName = interfaceName;
     m_available = available;
     m_subnetStatus = subnetStatus;
+    m_targetMac = targetMac;
     m_interfaces = interfaces;
 
     if (sourceChanged) emit sourceIpChanged();
@@ -154,6 +217,7 @@ void NetworkInfoController::refresh() {
     if (interfaceChanged) emit interfaceNameChanged();
     if (hasAvailableChange) emit availableChanged();
     if (subnetChanged) emit subnetStatusChanged();
+    if (targetMacChangedFlag) emit targetMacChanged();
     if (hasInterfacesChange) emit interfacesChanged();
 }
 
@@ -166,6 +230,11 @@ void NetworkInfoController::updateTargetIp() {
     if (m_subnetStatus != status) {
         m_subnetStatus = status;
         emit subnetStatusChanged();
+    }
+    const QString mac = (m_available && status == 1) ? lookupNeighborMac(m_targetIp) : QString();
+    if (m_targetMac != mac) {
+        m_targetMac = mac;
+        emit targetMacChanged();
     }
 }
 

@@ -38,6 +38,11 @@ public:
     Q_INVOKABLE void startKeepAlive();
     Q_INVOKABLE void stopKeepAlive();
 
+    // 内部桥接用只读访问器（不作为 QML 属性暴露）。
+    // Read-only accessors for the internal event bridge; not exposed to QML.
+    PortalClient* portal() const { return m_portal; }
+    KeepAlive* keepAlive() const { return m_keep; }
+
 signals:
     void stateChanged();
     void onlineChanged();

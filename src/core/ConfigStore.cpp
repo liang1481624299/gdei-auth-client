@@ -4,8 +4,11 @@
 #include "core/SecretStore.hpp"
 
 #include <QHostAddress>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QUrl>
+#include <QApplication>
+#include <QStyleHints>
 #include <utility>
 
 namespace gdei {
@@ -17,6 +20,33 @@ bool isSafeProbeUrl(const QString& value) {
     const QUrl url(value);
     return url.isValid() && !url.host().isEmpty() &&
            (url.scheme() == QLatin1String("http") || url.scheme() == QLatin1String("https"));
+}
+
+// 从用户粘贴的整串 URL / 主机名中提取纯主机名（域名或 IPv4），剥离 scheme、路径、
+// 查询串与端口；非法时返回空串。客户端各自按 443/8080 单独设置端口，host 字段只
+// 保留主机，不能夹带路径，否则 QUrl 解析后主机为空会报 "Host  not found"。
+// Extract a bare hostname/IPv4 from a pasted URL; strip scheme, path, query and port.
+// Returns empty when invalid. Clients set 443/8080 ports separately, so the host
+// field must never carry a path; an embedded path yields an empty host and a
+// "Host  not found" error.
+QString normalizeHost(const QString& value) {
+    QString s = value.trimmed();
+    if (s.isEmpty()) return QString();
+    const int schemeIdx = s.indexOf(QLatin1String("://"));
+    if (schemeIdx >= 0) s = s.mid(schemeIdx + 3);
+    const int slash = s.indexOf(QLatin1Char('/'));
+    if (slash >= 0) s = s.left(slash);
+    const int qmark = s.indexOf(QLatin1Char('?'));
+    if (qmark >= 0) s = s.left(qmark);
+    const int colon = s.lastIndexOf(QLatin1Char(':'));
+    if (colon >= 0) s = s.left(colon);
+    s = s.trimmed();
+    if (s.isEmpty()) return QString();
+    if (!QHostAddress(s).isNull()) return s;   // 合法 IPv4 / valid IPv4
+    static const QRegularExpression hostRe(
+        QStringLiteral("^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)*"
+                        "[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$"));
+    return hostRe.match(s).hasMatch() ? s : QString();
 }
 
 } // namespace
@@ -91,10 +121,15 @@ void ConfigStore::setThemeMode(int v) {
     if (m_themeMode == c) return;
     m_themeMode = c; emit themeModeChanged();
 }
+QString ConfigStore::normalizeHost(const QString& v) {
+    return gdei::normalizeHost(v);
+}
+
 void ConfigStore::setHost(const QString& v) {
-    const QString c = v.trimmed();
-    // 主机域名不得为空（PortalClient 用它构造 Host 头与证书校验名）。
-    // Host must be non-empty; it feeds the Host header and certificate name.
+    const QString c = normalizeHost(v);
+    // 主机域名不得为空（PortalClient 用它构造 Host 头与证书校验名）；非法整串忽略，保留现值。
+    // Host must be a bare hostname/IP; an invalid pasted URL is rejected and the
+    // current value is kept. It feeds the Host header and certificate name.
     if (c.isEmpty()) return;
     if (m_host == c) return;
     m_host = c; emit hostChanged();
@@ -167,9 +202,15 @@ void ConfigStore::load() {
     m_username   = s.value("username", "").toString();
     m_rememberPassword = s.value("remember_password", false).toBool();
     m_autoLogin   = s.value("auto_login", false).toBool();
-    m_lang        = static_cast<Lang>(s.value("lang", static_cast<int>(Lang::ZhCN)).toInt());
+    // 配置文件可能被手改或来自旧版本：越界语言值回退简体中文，避免 i18n 越界取词。
+    // Clamp lang on load; a hand-edited or legacy value falls back to ZhCN.
+    const int langRaw = s.value("lang", static_cast<int>(Lang::ZhCN)).toInt();
+    m_lang = (langRaw >= static_cast<int>(Lang::ZhCN) && langRaw <= static_cast<int>(Lang::Ja))
+                 ? static_cast<Lang>(langRaw)
+                 : Lang::ZhCN;
     m_themeMode   = qBound(0, s.value("theme_mode", 0).toInt(), 2);
-    m_host = s.value("host", constants::DEFAULT_HOST).toString();
+    m_host = normalizeHost(s.value("host", constants::DEFAULT_HOST).toString());
+    if (m_host.isEmpty()) m_host = constants::DEFAULT_HOST;  // 旧版本/手改坏的 host 回退默认域
     m_ip   = s.value("ip", constants::DEFAULT_IP).toString();
     m_nasip = s.value("nasip", constants::DEFAULT_NASIP).toString();
     m_allowInsecureSsl = s.value("allow_insecure_ssl", false).toBool();
@@ -292,6 +333,27 @@ bool ConfigStore::resetToDefaults() {
 
     // 落盘默认值并返回存储状态 / persist defaults and report storage status.
     return save();
+}
+
+bool ConfigStore::systemDark() const {
+#ifdef Q_OS_WIN
+    // Basic 样式下 Qt 的 SystemPalette / styleHints 可能拿不到 Windows 深色偏好，
+    // 直接读注册表 AppsUseLightTheme（1=浅色，0=深色），最可靠。
+    // Under the Basic style Qt may not surface the Windows dark preference; read
+    // the AppsUseLightTheme registry value directly (1 light, 0 dark).
+    QSettings reg(QStringLiteral("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
+                  QSettings::NativeFormat);
+    const QVariant v = reg.value(QStringLiteral("AppsUseLightTheme"), 1);
+    const int light = v.toInt();
+    return light == 0;
+#else
+    if (auto* app = qApp) {
+        const Qt::ColorScheme cs = app->styleHints()->colorScheme();
+        if (cs == Qt::DarkScheme) return true;
+        if (cs == Qt::LightScheme) return false;
+    }
+    return false;
+#endif
 }
 
 bool ConfigStore::clearCredentials() {

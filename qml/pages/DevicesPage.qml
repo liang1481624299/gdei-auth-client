@@ -4,232 +4,194 @@ import QtQuick.Layouts
 import "../theme"
 import "../components"
 
+// 设备管理页（规范 6.2）—— 仅保留校园网在线设备（只读）；本机认证配置已迁入首页「本地配置卡」。
+// 卡片样式参考设备台：品牌图标 + 设备名 + 状态点，两列键值明细；云端只读无操作行。
+// Devices page — portal online devices (read-only) only; local profiles live on Home.
 PageScaffold {
-    id: root
+    id: page
     Theme { id: th }
 
     signal openRemoteRequested()
 
-    property string pendingDeleteId: ""
-
     title: "profiles.title"
     subtitle: "profiles.subtitle"
     showBack: false
-    contentMaxWidth: th.dp(480)
+    contentMaxWidth: th.dp(720)
 
-    function editProfile(id) {
-        profileEditor.edit(id);
+    function localized(key) { return app.i18n.localize(key); }
+    function normalizeMac(m) { return (m || "").toLowerCase().replace(/[^a-f0-9]/g, ""); }
+    readonly property string localMacNorm: page.normalizeMac(app.network.localMac)
+
+    // 进入远程设备子页：受保护操作走会话门禁，已登录则直接跳转（门户验证码在子页处理）。
+    function openRemote() {
+        if (app.session.requireLogin("remote.open"))
+            page.openRemoteRequested();
     }
 
-    function requestDelete(id) {
-        pendingDeleteId = id;
-        deleteDialog.open();
+    onVisibleChanged: {
+        // 已登录但尚未拉取设备时，进入页面自动刷新一次。
+        if (visible && app.portalDevices.authenticated && app.portalDevices.devices.length === 0)
+            app.portalDevices.refreshDevices();
     }
 
-    ColumnLayout {
-        width: parent.width
-        spacing: th.sp8
+    // 组装非空键值明细项。
+    function buildFields(entries) {
+        var out = [];
+        for (var i = 0; i < entries.length; i++) {
+            var e = entries[i];
+            if (e.value && String(e.value).length > 0)
+                out.push({ label: e.label, value: String(e.value) });
+        }
+        return out;
+    }
 
-        // 分组 1：本地认证配置（保活程序使用的本机账号数据）。
-        // Group 1: local auth profiles used by the keep-alive client.
-        Card {
-            Layout.fillWidth: true
+    // 云端设备状态色：在线绿、绑定蓝、历史灰。
+    function cloudStatusColor(cat) {
+        if (cat === "history") return th.muted;
+        if (cat === "bound") return th.primary;
+        return th.success;
+    }
+    function cloudStatusText(cat) {
+        if (cat === "history") return page.localized("devices.cat.history");
+        if (cat === "bound") return page.localized("devices.cat.bound");
+        return page.localized("devices.cat.online");
+    }
 
-            ColumnLayout {
-                width: parent.width
-                spacing: th.sp4
-
-                RowLayout {
-                    width: parent.width
-                    spacing: th.sp4
-
-                    Icon {
-                        name: "person"
-                        iconSize: 18
-                        tint: th.primary
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-                    ColumnLayout {
-                        spacing: 2
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-
-                        QQC.Label {
-                            text: root.localized("profiles.localGroup")
-                            color: th.text
-                            font.pixelSize: th.fontHeadline
-                            font.weight: th.weightSemibold
-                            Layout.fillWidth: true
-                        }
-                        QQC.Label {
-                            text: root.localized("profiles.localGroupHint")
-                            color: th.muted
-                            font.pixelSize: th.fontFootnote
-                            wrapMode: Text.Wrap
-                            Layout.fillWidth: true
-                        }
-                    }
-                    PrimaryButton {
-                        text: (app.i18n.lang, app.i18n.text("profiles.add"))
-                        leadingIcon: "plus"
-                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        onClicked: profileEditor.create()
-                    }
-                }
-
-                Card {
-                    Layout.fillWidth: true
-                    visible: app.localDevices.count === 0
-
-                    QQC.Label {
-                        width: parent.width
-                        text: (app.i18n.lang, app.i18n.text("profiles.empty"))
-                        color: th.muted
-                        font.pixelSize: th.fontBody
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.Wrap
-                    }
-                }
-
-                Repeater {
-                    model: app.localDevices.model
-
-                    delegate: LocalDeviceCard {
-                        required property var model
-
-                        Layout.fillWidth: true
-                        deviceId: model.id
-                        name: model.name
-                        username: model.username
-                        host: model.host
-                        ip: model.ip
-                        nasip: model.nasip
-                        selected: app.localDevices.selectedId === model.id
-                        showSelect: true
-                        showManage: false
-                        onSelectRequested: app.localDevices.selectProfile(deviceId)
-                        onEditRequested: root.editProfile(deviceId)
-                        onDeleteRequested: root.requestDelete(deviceId)
-                    }
-                }
+    // ── 校园网在线设备（只读）──
+    BaseCard {
+        Layout.fillWidth: true
+        title: page.localized("profiles.cloudGroup")
+        subtitle: page.localized("profiles.cloudGroupHint")
+        actions: Component {
+            BaseButton {
+                visible: app.portalDevices.authenticated
+                text: page.localized("devices.refresh")
+                type: "secondary"
+                leadingIcon: "refresh"
+                busy: app.portalDevices.busy
+                enabled: app.portalDevices.authenticated && !app.portalDevices.busy
+                onClicked: app.portalDevices.refreshDevices()
             }
         }
 
-        // 分组 2：校园网在线设备（学校服务器数据，点击进入门户设备页）。
-        // Group 2: online devices reported by the campus portal server.
-        Card {
+        // 未登录：引导进入门户登录（子页处理验证码）
+        NavEntryRow {
             Layout.fillWidth: true
-            margins: th.sp4
+            visible: !app.portalDevices.authenticated
+            title: page.localized("profiles.cloudLogin")
+            subtitle: page.localized("profiles.cloudLoginHint")
+            iconName: "shield"
+            onClicked: page.openRemote()
+        }
 
-            ColumnLayout {
-                width: parent.width
+        // 已登录：内嵌只读设备列表（在线置顶由后端解析顺序保证）
+        Item {
+            visible: app.portalDevices.authenticated
+            Layout.fillWidth: true
+            implicitHeight: skeletonCol.visible ? skeletonCol.implicitHeight : portalList.contentHeight
+            ListView {
+                id: portalList
+                anchors.fill: parent
+                model: app.portalDevices.devices
+                interactive: false
+                clip: true
                 spacing: th.sp4
-
-                RowLayout {
-                    width: parent.width
-                    spacing: th.sp4
-
-                    Icon {
-                        name: "server"
-                        iconSize: 18
-                        tint: th.primary
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-                    ColumnLayout {
-                        spacing: 2
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-
-                        QQC.Label {
-                            text: root.localized("profiles.cloudGroup")
-                            color: th.text
-                            font.pixelSize: th.fontHeadline
-                            font.weight: th.weightSemibold
-                            Layout.fillWidth: true
-                        }
-                        QQC.Label {
-                            text: root.localized("profiles.cloudGroupHint")
-                            color: th.muted
-                            font.pixelSize: th.fontFootnote
-                            wrapMode: Text.Wrap
-                            Layout.fillWidth: true
-                        }
-                    }
-                }
-
-                QQC.Button {
-                    id: remoteButton
-                    width: parent.width
-                    implicitHeight: Math.max(th.touchTarget, remoteRow.implicitHeight)
-                    padding: 0
-                    hoverEnabled: true
-                    onClicked: {
-                        if (app.session.requireLogin("remote.open"))
-                            root.openRemoteRequested();
-                    }
-
-                    contentItem: RowLayout {
-                        id: remoteRow
-                        spacing: th.sp6
-
-                        ColumnLayout {
-                            spacing: 2
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
-
-                            QQC.Label {
-                                text: (app.i18n.lang, app.i18n.text("profiles.remoteEntry"))
-                                color: th.text
-                                font.pixelSize: th.fontHeadline
-                                font.weight: th.weightSemibold
-                                wrapMode: Text.Wrap
-                                Layout.fillWidth: true
-                            }
-                            QQC.Label {
-                                text: (app.i18n.lang, app.i18n.text("profiles.remoteSubtitle"))
-                                color: th.muted
-                                font.pixelSize: th.fontFootnote
-                                wrapMode: Text.Wrap
-                                Layout.fillWidth: true
-                            }
-                        }
-                        Icon {
-                            name: "chevronRight"
-                            iconSize: 16
-                            tint: th.muted
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-                    }
-
-                    background: Rectangle {
-                        radius: th.radiusSmall
-                        color: remoteButton.down ? th.controlPressed
-                             : remoteButton.hovered ? th.controlHover : "transparent"
-                        border.width: remoteButton.activeFocus ? 2 : 0
-                        border.color: th.focusRing
-                    }
-                }
+                boundsBehavior: Flickable.StopAtBounds
+                delegate: portalCardComp
+            }
+            // 加载骨架：首次拉取且暂无条目时占位，避免把“加载中”误读成空列表。
+            ColumnLayout {
+                id: skeletonCol
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: th.sp4
+                visible: app.portalDevices.busy && portalList.count === 0
+                BaseSkeleton { Layout.fillWidth: true; height: th.dp(88) }
+                BaseSkeleton { Layout.fillWidth: true; height: th.dp(88) }
+            }
+            QQC.Label {
+                anchors.centerIn: parent
+                width: parent.width - th.sp8
+                text: page.localized("devices.empty")
+                color: th.tertiaryLabel
+                font.pixelSize: th.fontSubhead
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+                visible: app.portalDevices.authenticated && portalList.count === 0 && !app.portalDevices.busy
             }
         }
-    }
 
-    LocalDeviceEditor {
-        id: profileEditor
-    }
-
-    AppDialog {
-        id: deleteDialog
-        title: (app.i18n.lang, app.i18n.text("profiles.deleteTitle"))
-        message: (app.i18n.lang, app.i18n.text("profiles.deleteMessage"))
-        confirmText: (app.i18n.lang, app.i18n.text("action.delete"))
-        cancelText: (app.i18n.lang, app.i18n.text("action.cancel"))
-        showCancel: true
-        destructive: true
-        onAccepted: {
-            if (root.pendingDeleteId.length > 0)
-                app.localDevices.removeProfile(root.pendingDeleteId);
-            root.pendingDeleteId = "";
+        // 查看全部线上设备 → 远程设备子页
+        NavEntryRow {
+            Layout.fillWidth: true
+            visible: app.portalDevices.authenticated && app.portalDevices.devices.length > 0
+            title: page.localized("profiles.cloudViewAll")
+            iconName: "server"
+            onClicked: page.openRemoteRequested()
         }
-        onRejected: root.pendingDeleteId = ""
+
+        // 只读说明
+        RowLayout {
+            spacing: th.sp2
+            Layout.fillWidth: true
+            Icon { name: "info"; iconSize: th.dp(14); tint: th.muted }
+            QQC.Label {
+                text: page.localized("profiles.readOnly")
+                color: th.muted
+                font.pixelSize: th.fontCaption
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+        }
+
+        // 拉取失败 / 状态消息（展示原因，无静态「暂无法获取」）
+        QQC.Label {
+            text: app.portalDevices.lastMessage.length > 0
+                  ? page.localized(app.portalDevices.lastMessage) : ""
+            color: th.secondaryLabel
+            font.pixelSize: th.fontFootnote
+            wrapMode: Text.Wrap
+            visible: text.length > 0
+            Layout.fillWidth: true
+        }
+        // 失败内联重试：与余额卡一致，给出可操作的下一步。
+        BaseButton {
+            text: page.localized("action.retry")
+            type: "secondary"
+            leadingIcon: "refresh"
+            busy: app.portalDevices.busy
+            enabled: app.portalDevices.authenticated && !app.portalDevices.busy
+            visible: app.portalDevices.lastMessage.length > 0
+            Layout.alignment: Qt.AlignLeft
+            onClicked: app.portalDevices.refreshDevices()
+        }
+    }
+
+    // 云端只读设备卡片（内嵌 delegate）
+    Component {
+        id: portalCardComp
+        DeviceCard {
+            id: card
+            required property var modelData
+            readonly property bool isLocal: page.normalizeMac(modelData.mac) === page.localMacNorm
+            readonly property string cat: modelData.category || "online"
+
+            title: (modelData.deviceType && modelData.deviceType.length > 0)
+                   ? modelData.deviceType : page.localized("devices.unknownName")
+            subtitle: card.isLocal ? page.localized("devices.thisDevice") : ""
+            brandText: (modelData.deviceType || "") + " " + (modelData.os || "")
+            fallbackIcon: "server"
+            interactive: false
+            statusColor: page.cloudStatusColor(card.cat)
+            statusText: page.cloudStatusText(card.cat)
+            fields: page.buildFields([
+                { label: page.localized("label.mac"), value: modelData.mac },
+                { label: page.localized("label.ip"), value: modelData.ip },
+                { label: page.localized("label.os"), value: modelData.os },
+                { label: page.localized("label.duration"), value: modelData.duration },
+                { label: page.localized("label.status"), value: modelData.lostStatus }
+            ])
+        }
     }
 }

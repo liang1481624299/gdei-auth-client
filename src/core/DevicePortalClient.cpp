@@ -1,5 +1,6 @@
 // src/core/DevicePortalClient.cpp
 #include "core/DevicePortalClient.hpp"
+#include "core/BodyDecoder.hpp"
 #include "core/ConfigStore.hpp"
 #include "core/Constants.hpp"
 #include "core/FormEncoding.hpp"
@@ -79,8 +80,8 @@ QString DevicePortalClient::decodeBody(const QByteArray& raw,
         QStringDecoder decoder("ISO-8859-1");
         return decoder(raw);
     }
-    // 自助门户页面声明 UTF-8；GBK 回退 UTF-8（与 PortalClient 同一遗留项）。
-    return QString::fromUtf8(raw);
+    // 声明缺失或声明为 UTF-8 时按字节自适应：优先严格 UTF-8，失败再按 GB18030。
+    return BodyDecoder::fromLegacy(raw);
 }
 
 QString DevicePortalClient::fieldValue(const QString& item, const QString& label) {
@@ -287,6 +288,11 @@ void DevicePortalClient::loginWithCode(const QString& code) {
 
     auto enc = [](const QString& v) { return QString::fromUtf8(QUrl::toPercentEncoding(v)); };
 
+    // 设备自助门户（ICEfaces）直接提交明文口令，且门户仅在 8080 HTTP 提供。
+    // 与账户门户的「前端可逆编码」不同，这里不做任何混淆——协议本身没有该要求，
+    // 客户端也不应伪造不被服务端识别的编码。传输层风险已在 UI 明确警示。
+    // The ICEfaces device portal expects the raw password over plain HTTP; no client-side
+    // obfuscation is applied because the server does not expect any.
     QStringList fields;
     fields << "ice.window=" + enc(m_iceWindow);
     fields << "ice.view=" + enc(m_iceView);

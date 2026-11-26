@@ -4,28 +4,43 @@ import QtQuick.Layouts
 import "../theme"
 import "."
 
-Card {
+BaseCard {
     id: root
     readonly property Theme th: Theme {}
 
     property string codeText: ""
     property real availableListHeight: 240
     readonly property bool compact: width < th.compactBreakpoint
+    hoverable: false
 
     ColumnLayout {
-        width: parent.width
+        Layout.fillWidth: true
         spacing: th.sp6
 
         ColumnLayout {
             spacing: th.sp4
             Layout.fillWidth: true
 
+            // 明文门户提示：自助门户为 HTTP，口令仅可逆编码，非加密传输。
+            RowLayout {
+                spacing: th.sp2
+                Layout.fillWidth: true
+                Icon { name: "shield"; iconSize: th.dp(14); tint: th.warning; Layout.alignment: Qt.AlignTop }
+                QQC.Label {
+                    text: (app.i18n.dictionary["portal.plaintextWarning"])
+                    color: th.secondaryLabel
+                    font.pixelSize: th.fontFootnote
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+            }
+
             RowLayout {
                 spacing: th.sp4
                 Layout.fillWidth: true
-                Icon { name: "server"; iconSize: 18; tint: th.primary; Layout.alignment: Qt.AlignVCenter }
+                Icon { name: "server"; iconSize: th.dp(18); tint: th.primary; Layout.alignment: Qt.AlignVCenter }
                 QQC.Label {
-                    text: (app.i18n.lang, app.i18n.text("devices.title"))
+                    text: (app.i18n.dictionary["devices.title"])
                     color: th.text
                     font.weight: th.weightSemibold
                     font.pixelSize: th.fontHeadline
@@ -40,22 +55,21 @@ Card {
                 visible: app.portalDevices.authenticated
                 Layout.fillWidth: true
 
-                PrimaryButton {
-                    text: (app.i18n.lang, app.i18n.text("devices.refresh"))
-                    variant: "secondary"
+                BaseButton {
+                    text: (app.i18n.dictionary["devices.refresh"])
+                    type: "secondary"
                     leadingIcon: "refresh"
                     busy: app.portalDevices.busy
                     enabled: app.portalDevices.authenticated && !app.portalDevices.busy
                     Layout.fillWidth: true
                     onClicked: app.portalDevices.refreshDevices()
                 }
-                PrimaryButton {
-                    text: (app.i18n.lang, app.i18n.text("devices.logout"))
-                    variant: "danger"
-                    bg: "transparent"
+                BaseButton {
+                    text: (app.i18n.dictionary["devices.logout"])
+                    type: "danger-ghost"
                     leadingIcon: "power"
                     Layout.fillWidth: true
-                    onClicked: app.portalDevices.clearSession()
+                    onClicked: logoutDialog.open()
                 }
             }
         }
@@ -73,15 +87,15 @@ Card {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredWidth: root.compact ? -1 : 120
-                    Layout.preferredHeight: 52
-                    Layout.maximumWidth: root.compact ? Infinity : 140
+                    Layout.preferredWidth: root.compact ? -1 : th.dp(120)
+                    Layout.preferredHeight: th.dp(52)
+                    Layout.maximumWidth: root.compact ? Infinity : th.dp(140)
                     radius: th.radiusSmall
-                    color: "white"
+                    color: th.captchaSurface
                     border.width: 1
                     border.color: th.separator
                     clip: true
-                    Accessible.name: (app.i18n.lang, app.i18n.text("devices.code"))
+                    Accessible.name: (app.i18n.dictionary["devices.code"])
 
                     Image {
                         anchors.fill: parent
@@ -93,20 +107,19 @@ Card {
                     }
                 }
 
-                TextField {
+                BaseTextField {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter
-                    placeholderText: (app.i18n.lang, app.i18n.text("devices.code"))
-                    leadingIcon: "shield"
+                    placeholderText: (app.i18n.dictionary["devices.code"])
                     text: root.codeText
-                    onTextChanged: root.codeText = text
+                    onEdited: root.codeText = text
                     onAccepted: app.portalDevices.loginWithCode(root.codeText)
                 }
             }
 
-            PrimaryButton {
-                text: (app.i18n.lang, app.i18n.text("devices.login"))
-                variant: "primary"
+            BaseButton {
+                text: (app.i18n.dictionary["devices.login"])
+                type: "primary"
                 leadingIcon: "power"
                 busy: app.portalDevices.busy
                 enabled: !app.portalDevices.busy
@@ -157,7 +170,7 @@ Card {
             QQC.Label {
                 anchors.centerIn: parent
                 width: parent.width - th.sp8
-                text: (app.i18n.lang, app.i18n.text("devices.empty"))
+                text: (app.i18n.dictionary["devices.empty"])
                 color: th.tertiaryLabel
                 font.pixelSize: th.fontSubhead
                 horizontalAlignment: Text.AlignHCenter
@@ -181,15 +194,15 @@ Card {
             Layout.fillWidth: true
 
             Rectangle {
-                Layout.preferredWidth: 24
-                Layout.preferredHeight: 24
+                Layout.preferredWidth: th.dp(24)
+                Layout.preferredHeight: th.dp(24)
                 Layout.alignment: Qt.AlignTop
-                radius: 12
+                radius: th.dp(12)
                 color: th.orangeFill
-                Icon { name: "info"; iconSize: 14; tint: th.warning; anchors.centerIn: parent }
+                Icon { name: "info"; iconSize: th.dp(14); tint: th.warning; anchors.centerIn: parent }
             }
             QQC.Label {
-                text: (app.i18n.lang, app.i18n.text("devices.unsupported"))
+                text: (app.i18n.dictionary["devices.unsupported"])
                 color: th.muted
                 font.pixelSize: th.fontFootnote
                 wrapMode: Text.Wrap
@@ -197,5 +210,16 @@ Card {
                 Layout.alignment: Qt.AlignTop
             }
         }
+    }
+
+    AppDialog {
+        id: logoutDialog
+        title: app.i18n.dictionary["devices.logoutTitle"]
+        message: app.i18n.dictionary["devices.logoutMessage"]
+        confirmText: app.i18n.dictionary["devices.logout"]
+        cancelText: app.i18n.dictionary["action.cancel"]
+        showCancel: true
+        destructive: true
+        onAccepted: app.portalDevices.clearSession()
     }
 }

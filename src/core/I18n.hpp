@@ -17,12 +17,17 @@ class I18n : public QObject {
     Q_OBJECT
     Q_PROPERTY(int lang READ lang WRITE setLang NOTIFY langChanged)
     Q_PROPERTY(QVariantList languages READ languages CONSTANT)
+    // 当前语言下的全套译文快照：QML 绑定只读此属性取词，langChanged 时整份刷新。
+    // Snapshot of the current language dictionary; QML reads this for lookup and
+    // refreshes wholesale on langChanged.
+    Q_PROPERTY(QVariantMap dictionary READ dictionary NOTIFY langChanged)
 
 public:
     explicit I18n(QObject* parent = nullptr);
 
     int lang() const;
     QVariantList languages() const;
+    QVariantMap dictionary() const;
 
     Q_INVOKABLE void setLang(int l);
     // 取译文；缺键回退英文，再回退键名。/ Translate key with EN fallback.

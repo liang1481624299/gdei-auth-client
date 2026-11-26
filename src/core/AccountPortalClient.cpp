@@ -1,5 +1,6 @@
 // src/core/AccountPortalClient.cpp
 #include "core/AccountPortalClient.hpp"
+#include "core/BodyDecoder.hpp"
 #include "core/ConfigStore.hpp"
 #include "core/Constants.hpp"
 #include "core/FormEncoding.hpp"
@@ -81,7 +82,10 @@ QString AccountPortalClient::decodeBody(const QByteArray& raw,
         QStringDecoder decoder("ISO-8859-1");
         return decoder(raw);
     }
-    return QString::fromUtf8(raw);
+    if (cs == "gbk" || cs == "gb2312" || cs == "gb18030") {
+        return BodyDecoder::fromLegacy(raw);
+    }
+    return BodyDecoder::fromLegacy(raw);
 }
 
 void AccountPortalClient::fetchCaptcha() {
@@ -109,7 +113,7 @@ void AccountPortalClient::onCaptchaPageReply() {
 
     if (reply->error() != QNetworkReply::NoError || html.isEmpty()) {
         setBusy(false);
-        setMessage(tr("Self-service portal unreachable / 自助门户无法访问"));
+        setMessage(QStringLiteral("portalDevices.unreachable"));
         log(LogLevel::Warning, tr("PC captcha page error / PC 验证码页面请求异常"));
         emit loginFinished(false, m_lastMessage);
         return;
@@ -130,7 +134,7 @@ void AccountPortalClient::onCaptchaPageReply() {
 
     if (m_captchaPath.isEmpty()) {
         setBusy(false);
-        setMessage(tr("Captcha not found / 未找到验证码"));
+        setMessage(QStringLiteral("portalDevices.captchaUnavailable"));
         emit loginFinished(false, m_lastMessage);
         return;
     }
@@ -151,7 +155,7 @@ void AccountPortalClient::onCaptchaImageReply() {
     const QByteArray bytes = reply->readAll();
     if (reply->error() != QNetworkReply::NoError || bytes.isEmpty()) {
         setBusy(false);
-        setMessage(tr("Captcha unavailable / 验证码获取失败"));
+        setMessage(QStringLiteral("portalDevices.captchaUnavailable"));
         emit loginFinished(false, m_lastMessage);
         return;
     }
@@ -164,11 +168,11 @@ void AccountPortalClient::loginWithCode(const QString& code) {
     const QString user = m_cfg->username();
     const QString pass = m_cfg->password();
     if (user.isEmpty() || pass.isEmpty()) {
-        setMessage(tr("Username or password not set / 未配置账号或密码"));
+        setMessage(QStringLiteral("auth.reasonMissingCredentials"));
         return;
     }
     if (code.trimmed().isEmpty()) {
-        setMessage(tr("Enter captcha / 请输入验证码"));
+        setMessage(QStringLiteral("portalDevices.enterCaptcha"));
         return;
     }
     if (m_busy) return;
@@ -178,6 +182,9 @@ void AccountPortalClient::loginWithCode(const QString& code) {
     auto enc = [](const QString& v) { return QString::fromUtf8(QUrl::toPercentEncoding(v)); };
 
     // 口令按门户前端可逆编码后再进表单 / Encode password with the portal frontend scheme.
+    // 注意：该编码是门户前端约定的可逆混淆（AES 常量密钥），不是加密；配合 8080 HTTP
+    // 传输仅能通过 TLS 之外的网络隔离降低风险，客户端无法替服务端升级协议。
+    // Note: this is a reversible obfuscation required by the portal frontend, not encryption.
     const QString encodedPass = SelfServiceCodec::encodePassword(pass);
 
     QStringList fields;
@@ -238,7 +245,7 @@ void AccountPortalClient::onLoginReply() {
     if (!ok) {
         setAuthenticated(false);
         setBusy(false);
-        setMessage(tr("Self-service login failed, check captcha / 自助门户登录失败，请核对验证码"));
+        setMessage(QStringLiteral("portalDevices.loginFailed"));
         log(LogLevel::Warning, tr("PC self-service login rejected / PC 自助门户登录被拒绝"));
         emit loginFinished(false, m_lastMessage);
         fetchCaptcha(); // 刷新验证码供重试 / Refresh captcha for retry.
@@ -259,7 +266,7 @@ void AccountPortalClient::onLoginReply() {
 
 void AccountPortalClient::refreshProfile() {
     if (!m_authenticated) {
-        setMessage(tr("Sign in to self-service portal first / 请先登录自助门户"));
+        setMessage(QStringLiteral("portalDevices.loginRequired"));
         return;
     }
     if (m_busy) return;
@@ -286,7 +293,7 @@ void AccountPortalClient::onHomeReply() {
         m_homeHtml.contains(QStringLiteral("mainForm:username"))) {
         setBusy(false);
         setAuthenticated(false);
-        setMessage(tr("Session expired, sign in again / 会话已过期，请重新登录"));
+        setMessage(QStringLiteral("portalDevices.sessionExpired"));
         emit loginFinished(false, m_lastMessage);
         fetchCaptcha();
         return;
@@ -316,7 +323,7 @@ void AccountPortalClient::onLogoutReply() {
 
     clearSession();
     setBusy(false);
-    setMessage(tr("Signed out / 已注销"));
+    setMessage(QStringLiteral("auth.signOut"));
 }
 
 void AccountPortalClient::parseProfile(const QString& html) {

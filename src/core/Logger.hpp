@@ -45,7 +45,13 @@ private:
     QVector<Entry> m_entries;
     static constexpr int MAX_ENTRIES = 500;
 
+    // 持久日志大小上限：2 MiB × (1 当前 + 3 备份)。
+    static constexpr qint64 MAX_FILE_BYTES = 2LL * 1024 * 1024;
+    static constexpr int MAX_FILE_BACKUPS = 3;
+    qint64 m_writtenBytes = -1;  // 首次写入前未知，读取实际文件大小
+
     void append(Entry entry);
+    static void rotate(const QString& path);
     static QString levelText(LogLevel level);
     static QString timestamp(qint64 ms);
     static QString sanitize(const QString& message);

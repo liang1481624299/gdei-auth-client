@@ -32,9 +32,11 @@ public:
     int filterLevel() const;
     void setFilterLevel(int level);
 
-    Q_INVOKABLE void publish(int level, QString source, QString titleKey,
-                             QString messageKey, QString reasonKey = QString(),
-                             QVariantMap arguments = QVariantMap());
+    // 仅允许 C++ 业务层发布事件；QML 不得直接调用（避免伪造网络/保活事件）。
+    // C++-only ingress: QML must not fabricate business events.
+    void publish(int level, QString source, QString titleKey,
+                 QString messageKey, QString reasonKey = QString(),
+                 QVariantMap arguments = QVariantMap());
     Q_INVOKABLE void clear();
     Q_INVOKABLE void markAllRead();
     Q_INVOKABLE void setEventPageVisible(bool visible);

@@ -18,38 +18,39 @@ PageScaffold {
     }
 
     ColumnLayout {
-        width: parent.width
+        Layout.fillWidth: true
         spacing: th.sp8
 
-        Card {
+        BaseCard {
             Layout.fillWidth: true
+            hoverable: false
 
             QQC.Label {
-                width: parent.width
-                text: (app.i18n.lang, app.i18n.text("profiles.remoteSubtitle"))
+                Layout.fillWidth: true
+                text: (app.i18n.dictionary["profiles.remoteSubtitle"])
                 color: th.text
                 font.pixelSize: th.fontBody
                 wrapMode: Text.Wrap
             }
             RowLayout {
-                width: parent.width
+                Layout.fillWidth: true
                 spacing: th.sp4
 
                 Rectangle {
-                    Layout.preferredWidth: 24
-                    Layout.preferredHeight: 24
+                    Layout.preferredWidth: th.dp(24)
+                    Layout.preferredHeight: th.dp(24)
                     Layout.alignment: Qt.AlignTop
-                    radius: 12
+                    radius: th.dp(12)
                     color: th.orangeFill
                     Icon {
                         anchors.centerIn: parent
                         name: "info"
-                        iconSize: 14
+                        iconSize: th.dp(14)
                         tint: th.warning
                     }
                 }
                 QQC.Label {
-                    text: (app.i18n.lang, app.i18n.text("profiles.readOnly"))
+                    text: (app.i18n.dictionary["profiles.readOnly"])
                     color: th.muted
                     font.pixelSize: th.fontFootnote
                     wrapMode: Text.Wrap

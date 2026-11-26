@@ -67,6 +67,10 @@ public:
     void setLang(int v);
     void setThemeMode(int v);
     void setHost(const QString& v);
+    // 从整串 URL / 主机名提取纯主机名（域名或 IPv4），剥离 scheme、路径、查询与端口；
+    // 非法返回空串。供本地档案层与 UI 复用。
+    // Extract a bare hostname/IPv4 from a pasted URL; invalid input returns empty.
+    static QString normalizeHost(const QString& v);
     void setIp(const QString& v);
     void setNasip(const QString& v);
     void setAllowInsecureSsl(bool v);
@@ -93,6 +97,10 @@ public:
     // keep host, language, keep-alive and timeout settings; drop the stored secret
     // and persist. Returns whether persistence succeeded.
     Q_INVOKABLE bool clearCredentials();
+
+    // 系统是否处于深色外观（Windows 读注册表；其他平台回退 Qt 配色提示）。
+    // Whether the OS appearance is dark (Windows registry; fallback to Qt hints elsewhere).
+    Q_INVOKABLE bool systemDark() const;
 
 signals:
     void usernameChanged();

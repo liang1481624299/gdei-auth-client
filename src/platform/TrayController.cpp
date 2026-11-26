@@ -1,4 +1,11 @@
 // src/platform/TrayController.cpp
+//
+// 托盘平台支持矩阵 / Tray support matrix:
+//   Windows : 支持（QSystemTrayIcon + QApplication，CMake 仅在 WIN32 编译本文件）
+//   Linux   : 未实现（需要 StatusNotifier/AppIndicator 依赖，不引入新依赖，宁缺毋假实现）
+//   macOS   : 未实现（菜单栏项需 NSStatusItem 集成，同上）
+//   Android : 不适用（移动端无托盘概念）
+// 运行时仍以 QSystemTrayIcon::isSystemTrayAvailable() 为准，不可用则静默降级为仅主窗口。
 #include "platform/TrayController.hpp"
 
 #include "app/AuthController.hpp"

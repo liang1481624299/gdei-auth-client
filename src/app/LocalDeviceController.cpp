@@ -98,7 +98,8 @@ QString LocalDeviceController::addProfile(const QString& name, const QString& us
     profile.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     profile.name = name;
     profile.username = username;
-    profile.host = host;
+    profile.host = ConfigStore::normalizeHost(host);
+    if (profile.host.isEmpty()) profile.host = constants::DEFAULT_HOST;
     profile.ip = ip;
     profile.nasip = nasip;
     profile.rememberPassword = rememberPassword;
@@ -122,7 +123,8 @@ bool LocalDeviceController::updateProfile(const QString& id, const QString& name
     }
     updated.name = name;
     updated.username = username;
-    updated.host = host;
+    updated.host = ConfigStore::normalizeHost(host);
+    if (updated.host.isEmpty()) updated.host = constants::DEFAULT_HOST;
     updated.ip = ip;
     updated.nasip = nasip;
     updated.rememberPassword = rememberPassword;
@@ -259,7 +261,8 @@ bool LocalDeviceController::syncSelectedProfile() {
 }
 
 bool LocalDeviceController::switchingBlocked() const {
-    return m_auth && (m_auth->state() == 2 || m_auth->online() || m_auth->keepAliveRunning());
+    return m_auth && (m_auth->state() == static_cast<int>(AuthState::Authenticating) ||
+                      m_auth->online() || m_auth->keepAliveRunning());
 }
 
 void LocalDeviceController::emitSwitchBlocked(const QString& id) {

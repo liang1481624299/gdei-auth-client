@@ -5,6 +5,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QStringConverter>
@@ -43,13 +44,39 @@ void Logger::log(LogLevel level, const QString& message) {
     const QString dir =
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(dir);
-    QFile file(QDir(dir).filePath("gdei-connect.log"));
+    const QString path = QDir(dir).filePath("gdei-connect.log");
+    const QString line =
+        QStringLiteral("%1 [%2] %3\n")
+            .arg(timestamp(e.timestamp), levelText(level), e.message);
+    const QByteArray lineBytes = line.toUtf8();
+
+    // 按大小轮转，避免长期运行无限增长 / rotate by size to bound disk usage.
+    if (m_writtenBytes < 0) {
+        m_writtenBytes = QFileInfo(path).size();
+    }
+    if (m_writtenBytes + lineBytes.size() > MAX_FILE_BYTES) {
+        rotate(path);
+        m_writtenBytes = 0;
+    }
+
+    QFile file(path);
     if (file.open(QIODevice::Append | QIODevice::Text)) {
         QTextStream ts(&file);
         ts.setEncoding(QStringConverter::Utf8);
-        ts << timestamp(e.timestamp) << " [" << levelText(level) << "] "
-           << e.message << "\n";
+        ts << line;
+        m_writtenBytes += lineBytes.size();
     }
+}
+
+void Logger::rotate(const QString& path) {
+    // gdei-connect.log -> .1 -> .2 -> .3，超出 MAX_FILE_BACKUPS 的最旧文件丢弃。
+    QFile::remove(path + QStringLiteral(".%1").arg(MAX_FILE_BACKUPS));
+    for (int i = MAX_FILE_BACKUPS - 1; i >= 1; --i) {
+        const QString from = path + QStringLiteral(".%1").arg(i);
+        if (!QFile::exists(from)) continue;
+        QFile::rename(from, path + QStringLiteral(".%1").arg(i + 1));
+    }
+    QFile::rename(path, path + QStringLiteral(".1"));
 }
 
 QString Logger::exportLog(const QString& dirPath) {

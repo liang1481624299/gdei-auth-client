@@ -56,8 +56,6 @@ bool SessionController::busy() const {
     return m_busy || m_auth->state() == static_cast<int>(AuthState::Authenticating);
 }
 bool SessionController::loginPromptOpen() const { return m_loginPromptOpen; }
-QString SessionController::route() const { return m_loggedIn ? QStringLiteral("main")
-                                                              : QStringLiteral("login"); }
 QString SessionController::lastError() const {
     return m_i18n ? m_i18n->localize(m_lastError) : m_lastError;
 }
