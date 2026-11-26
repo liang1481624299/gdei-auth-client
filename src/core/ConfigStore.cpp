@@ -3,11 +3,16 @@
 #include "core/Constants.hpp"
 #include "core/SecretStore.hpp"
 
+#include <QtGlobal>
 #include <QHostAddress>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QUrl>
+#ifdef Q_OS_WIN
 #include <QApplication>
+#else
+#include <QGuiApplication>
+#endif
 #include <QStyleHints>
 #include <utility>
 
@@ -347,11 +352,16 @@ bool ConfigStore::systemDark() const {
     const int light = v.toInt();
     return light == 0;
 #else
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    // QStyleHints::colorScheme / Qt::ColorScheme 自 Qt 6.5 起提供；
+    // 6.4 及更早版本无此 API，按浅色兜底，交由应用内主题选择处理。
+    // colorScheme exists since Qt 6.5; older Qt falls back to light here.
     if (auto* app = qApp) {
         const Qt::ColorScheme cs = app->styleHints()->colorScheme();
         if (cs == Qt::DarkScheme) return true;
         if (cs == Qt::LightScheme) return false;
     }
+#endif
     return false;
 #endif
 }

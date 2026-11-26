@@ -129,6 +129,10 @@ int main(int argc, char* argv[]) {
         // 内置宋体覆盖简体、Microsoft JhengHei 覆盖繁体，缺失字形再回退系统字体。
         // Application-level fallback per script: bundled first, then system CJK,
         // then generic sans-serif.
+        // 注意：setApplicationFallbackFontFamilies 自 Qt 6.8 起才提供；
+        // 6.5/6.4 等旧版 Qt 无此 API，跳过显式回退链，交由系统默认字体合并兜底。
+        // This API exists since Qt 6.8; on older Qt the system font fallback handles merging.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         const QStringList han = {
             QStringLiteral("SimSun"), QStringLiteral("Microsoft JhengHei"),
             QStringLiteral("Microsoft JhengHei UI"), QStringLiteral("Microsoft YaHei"),
@@ -145,6 +149,7 @@ int main(int argc, char* argv[]) {
         QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Han, han);
         QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Katakana, ja);
         QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Hiragana, ja);
+#endif
     }
 
     // 强制 Basic 样式：本项目深度自定义了控件的 background / contentItem / indicator，
