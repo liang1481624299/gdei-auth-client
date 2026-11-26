@@ -1,10 +1,10 @@
 # CAS 统一认证与个人门户对接调研 / CAS & Personal Portal Notes
 
-> 来源：2026-11-22 对公网可访问页面、门户前端 bundle（React/axios）的静态分析；2026-11-26 在可达统一认证中心的网络下**实测匿名链路**（外壳页、login2022 表单、校验端点、子系统 302 跳转、前端 bundle）。
-> Source: public pages + portal bundle static analysis (2026-11-22); anonymous live probing of shell page, login2022 form, validation endpoints and subsystem redirects (2026-11-26).
-> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-26 21:26:02`。
+> 来源：2026-11-22 对公网可访问页面、门户前端 bundle（React/axios）的静态分析；2026-11-26 在可达统一认证中心的网络下**实测匿名链路**（外壳页、login2022 表单、校验端点、子系统 302 跳转、前端 bundle）；同日在**本人已登录门户会话**内复核了票据跳转链、会话 Cookie 与 `sessionStorage.userLogin` 全字段。
+> Source: public pages + portal bundle static analysis (2026-11-22); anonymous live probing (2026-11-26); logged-in session verification of ticket flow, session cookies and the merged `userLogin` object (2026-11-26).
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-26 17:58:00`。
 >
-> **环境限制 / Environment caveat**：2026-11-26 实测可匿名访问 CAS 外壳与表单、可探测未登录跳转链；浏览器复测确认本机 Chrome 无现存门户会话，匿名访问门户直接回 CAS 登录页。**登录后才返回的个人信息 JSON、教务/学工学籍字段、票据成功后的 302 与会话 Cookie 名，均需在已登录会话中补抓**（本轮无账号凭证，登录步骤需用户本人完成），见第 9 节。
+> **登录后实测口径 / Logged-in scope**：CAS 登录链、会话 Cookie、门户 `userLogin` 资料字段已在本人账号登录会话中实测核对（字段名/类型/枚举见第 4.1 节，文档不落真实姓名学号等值）。**教务 jwxt / 数据门户 dsj 的学籍字段（专业、年级、学籍号、学籍状态、学院规范全称）尚未进入对应子系统抓包**，见第 4.2、9 节。
 >
 > **合规红线 / Compliance**：个人信息一律由客户端在用户本人登录后按账号运行时拉取，**不得把学号、姓名、班级、学院、学籍号等真实个人信息硬编码进仓库或文档**；口令仅经系统密钥存储读取，不明文落盘。校徽/院徽等素材版权归学校，仅作客户端界面展示用途。
 
@@ -33,7 +33,7 @@
 
 | 子系统 | CAS service 回调 | 后端会话端点 / 备注 |
 |---|---|---|
-| 融合门户 iportal | `https://iportal.gdei.edu.cn/shiro-cas` | Apache Shiro 接 CAS，会话靠 Cookie |
+| 融合门户 iportal | `https://iportal.gdei.edu.cn/shiro-cas` | Apache Shiro 接 CAS；实测 ticket 回调先落到 `http://iportal.gdei.edu.cn?ticket=ST-...`，nginx 301 到 `https://` 后由 SPA 落地 `#/StudentHomepage`，会话靠 Cookie / 令牌 |
 | 教务 jwxt | `https://jwxt.gdei.edu.cn/gly/api/cas/login?pattern=teacher-login` | gly 后端 API；`pattern` 区分师生 |
 | 数据门户 dsj | `https://dsj.gdei.edu.cn/sso/sso/login` | 先经 `/sso/ecas/login.do` 二次封装，再回 CAS |
 
@@ -55,15 +55,28 @@
    | `password` | **JSEncrypt RSA / PKCS#1 v1.5 加密**后的 Base64 密文（非明文） |
    | `tokens` | 表单隐藏域，32 位十六进制，当次表单生成（CSRF/会话令牌） |
    | `stamp` | 秒级时间戳隐藏域，前端每秒自增 |
-   | `service` | 回调 URL（页面单选共六项：门户 / 教务 / 邮件 / VPN / CMS / CAS；门户、教务、数据门户三套回调已实测见 2.1，邮件 / VPN / CMS 回调未逐一探测） |
+   | `service` | 回调 URL（登录页 radio 实测共七项，见下「登录目标选项」；门户、教务、数据门户三套回调已实测见 2.1，邮件 / VPN / CMS 回调未逐一探测） |
    | `renew` | 隐藏固定 `true` |
    | `txtUserName` / `txtPasswd` | 隐藏域，仅 VPN 分支使用 |
 
    - **无图形验证码**（表单与 `login.js` 均无验证码字段；`login.js` 只做焦点/尺寸适配）。
    - 登录页静态提示（2026-11-26 浏览器复测可见）：「请使用校园网账号登录，不详请查账号」「新用户初始密码为身份证号码后 8 位数字」「若遗失密码，可通过手机短信自助修改密码」；页面标题「统一身份认证系统 / 校园网账号登录」，横幅为广东第二师范学院校名。
-4. 认证成功后 CAS 302 回跳 `service?ticket=ST-xxxx`；子系统回调端点内部校验 ticket 并建立本地会话 Cookie（**成功后的 Location、ticket 形态、Shiro Cookie 名待登录环境抓包**）。
+4. **认证成功跳转（浏览器实测）**：POST `/cas/login` 成功返回 **200**（不是 302），响应体是一段 JS：`window.location.href="<cas根>/cas/login?service=<回调>&ticket=ST-..."`；**成功跳转 Location 在 body 的 JS 里，不在 302 响应头**。随后二次跳转：GET 该带 ticket 的 CAS 地址 → body JS 再跳到 `http://iportal.gdei.edu.cn?ticket=ST-...`（CAS 在此换发第二个 ST）；`http://` 经 nginx 301 到 `https://`，门户 SPA 落地 `https://iportal.gdei.edu.cn/#/StudentHomepage`。
+   - ticket 形态：`ST-<序号>-<随机串>`，一次性、短时有效；实测同一会话 CAS 换发两张 ST（`ST-21xx-...` 序号递增）。
    - 复测：本机 Chrome profile 无有效门户会话，匿名访问 `https://iportal.gdei.edu.cn/` 直接被 302 到 `https://security.gdei.edu.cn/cas/login?service=https://iportal.gdei.edu.cn/shiro-cas`（地址栏 `service` 为明文未编码），再次印证未登录即回 CAS。
-5. 会话建立后，门户前端携带会话 Cookie 调后端接口拉取个人信息与卡片。
+5. 会话建立后，门户前端携带会话 Cookie / 令牌调后端接口拉取个人信息与卡片（见第 3 节）。
+
+**登录目标选项（radio value 实测七项）**：
+
+| 选项 | radio value / service |
+|---|---|
+| 门户 | `https://security.gdei.edu.cn/cas/login?service=http://iportal.gdei.edu.cn` |
+| 旧教务 | `http://jwgl.gdei.edu.cn/login_cas.aspx` |
+| 教务 SSO | `https://security.gdei.edu.cn/cas/jwxtsso.jsp` |
+| 邮件 | `https://security.gdei.edu.cn/cas/mailsso.jsp` |
+| VPN | `https://webvpn.gdei.edu.cn` |
+| CMS | `https://cms.webvpn.gdei.edu.cn` |
+| CAS 自身 | 空（无 service） |
 
 ### 2.3 票据校验端点（实测 404）/ Ticket validation endpoints
 
@@ -77,8 +90,8 @@
 
 ### 2.4 RSA 公钥与辅助接口 / RSA keys & aux endpoints
 
-- **表单内嵌公钥**：`isSubmit()` 主分支使用一把内嵌 1024 位公钥（`MIGfMA0...QIDAQAB`，完整值见登录表单 HTML）。
-- **动态公钥接口**：`POST/GET https://security.gdei.edu.cn/user/inc/api?opt=getkey`，返回另一把 1024 位 Base64 公钥（实测每次会话可能不同）；`getRSAKey()` 仅在弱口令校验分支 `goModWeak()` 使用。**主登录提交到底用内嵌公钥还是动态公钥，待登录抓包复核。**
+- **表单内嵌公钥（主登录已确认）**：`isSubmit()` 主分支使用登录表单内嵌的一把 1024 位公钥（`MIGfMA0...QIDAQAB`，完整值见登录表单 HTML），JSEncrypt RSA / PKCS#1 v1.5 → Base64。
+- **动态公钥接口（仅弱口令分支）**：`POST/GET https://security.gdei.edu.cn/user/inc/api?opt=getkey`，返回另一把 1024 位 Base64 公钥；`getRSAKey()` 仅在弱口令校验分支 `goModWeak()` 使用，**主登录提交不走此接口**（已确认）。
 - **校验/弱口令接口**：`https://security.gdei.edu.cn/user/inc/api`，`opt=auth&uid=<账号>&pwd=<RSA 密文>`，返回：`1` 账号存在弱口令 / `10` 账密错误 / `5` 多次错误锁定 5 分钟 / `99` 操作超时。
 - **账号自助页**：`/user/query`（查用户名）、`/user/reset`（短信重置）、`/user/modify`（改密）。
 - 弱口令：纯数字或纯字母会弹窗提醒并跳转改密。
@@ -89,26 +102,28 @@
 
 以下路径提取自 `iportal.gdei.edu.cn/assets/js/app.3c2.js`，相对门户同源（无独立 baseURL）；**响应结构未鉴权实测**，登录后需复核。
 
-**鉴权方式（bundle 实测）**：axios 实例 `withCredentials=true`，默认请求头 `X-Requested-With: XMLHttpRequest`（GET/POST/DELETE），POST 为表单编码；**会话靠 Shiro 会话 Cookie，不发 `Authorization` Bearer**。响应拦截器把 `data.meta.status == 302` 判为未登录。匿名调用被 SPA 兜底回首页 `index.html`，拿不到任何数据。
+**鉴权方式（bundle + 登录会话实测）**：axios 实例 `withCredentials=true`，默认请求头 `X-Requested-With: XMLHttpRequest`（GET/POST/DELETE），POST 默认 `application/x-www-form-urlencoded`；请求拦截器还会按 `timestamp + GATEWAY_KEY` 生成 `csrfToken` 头（GET/POST 均带）。登录会话实测：当前域 JS 可见 Cookie 仅 `Authorization`（值为门户内部令牌），后端另有 Shiro HttpOnly 会话 Cookie（`document.cookie` 读不到）；主资料接口 `tryLoginUserInfo` 在请求头带 `Authorization: <令牌>` 与 `gatewayAppId: ly-upp`。响应拦截器把 `data.meta.status == 302` / 401 判为未登录。匿名调用被 SPA 兜底回首页 `index.html`，拿不到任何数据。
 
 ### 3.0 部门/头像等关联接口 / Lookup endpoints
 
 | 接口 / Endpoint | 方法 | 用途 / Purpose |
 |---|---|---|
-| `/api/authc/departments` | GET | 部门/学院列表，按 `departmentId` 关联出 `departmentName` |
-| `/api/authc/departments/commonDepartmentsTree` | GET | 部门树 |
+| `/api/authc/departments` | GET | 部门/学院列表，按 `departmentId` 关联部门名。**学生账号实测无权限**：缺 `pageSize` 返 400 `MissingServletRequestParameterException`；带 `pageSize=200&pageNum=1` 返 500「超出数据权限的操作」，普通学生拉不到部门全量，学院全称无法靠此接口关联 |
+| `/api/authc/departments/commonDepartmentsTree` | GET | 部门树（预期同受数据权限限制，待复核） |
 | `api/authc/users/portraitChange` | POST | 更换头像（头像字段 `portrait` / `avatar`） |
 
 ### 3.1 登录用户信息 / current user
 
 | 接口 / Endpoint | 方法 | 用途 / Purpose |
 |---|---|---|
-| `api/upp/userControl/getLoginInfo` | GET | 当前登录用户资料（核心个人信息来源）；响应 `data` 落 `sessionStorage.userLogin` |
-| 补充接口（bundle 中紧随 `getLoginInfo` 调用，返回 `strategy`、`headPortrait` 合并进资料对象） | GET | 接口路径待登录抓包确认；`strategy` 同时驱动消息提醒分支 |
+| `tryLoginUserInfo` | POST（或由 `window.config.tryLoginMethod` 指定的 GET） | **主资料接口**：CAS 回调建立会话后前端首个用户接口，返回完整资料对象（`userId`/`userName`/`departmentName`/`departmentId`/`userType`/`sex` 等 46 字段，见 4.1），整体写入 `sessionStorage.userLogin`；请求头带 `Authorization` 令牌与 `gatewayAppId: ly-upp` |
+| `api/upp/userControl/getLoginInfo` | GET | 补充接口：实测响应 `data` 仅 `userId`、`firLogin`、`guideUsed`、`headPortrait`、`strategy`；其中 `strategy`、`headPortrait` 合并回 `userLogin`，`guideUsed`/`firLogin` 驱动新手引导与首次登录分支 |
 | `api/upp/userControl/guideHasUsed` | POST | 新手引导是否已使用 |
 | `/api/authc/users/menus` | GET | 当前用户菜单权限 |
 | `/api/authc/users/<id>/authority` | GET | 指定用户权限 |
 | `/api/authc/users/selector` | GET | 人员选择器查询 |
+
+> 调用顺序（bundle 实测）：会话有效时先读本地 `userLogin`；无会话则先调 `tryLoginUserInfo` 落主资料，再调 `getLoginInfo` 合并 `strategy`/`headPortrait`/`guideUsed`/`firLogin`，最后调 `onlineUsers/add` 上报当前浏览环境（`userName`/`userType`/`nickName`/`host`/`departmentId`/浏览器/屏幕/登录类别等）。
 
 ### 3.2 其他已识别模块（供后续对接参考）/ other modules
 
@@ -126,23 +141,42 @@
 
 ## 4. 个人信息字段分层 / Personal Fields by Source
 
-### 4.1 融合门户侧（bundle 消费 `getLoginInfo` 响应对象读取的 key，待登录 JSON 复核）
+### 4.1 融合门户侧（登录会话实测，`sessionStorage.userLogin` 合并对象）
 
-登录后资料对象 `d` 直接写入 `sessionStorage.userLogin`；前端上报/展示从 `d` 读取：`d.userName`、`d.userNickname`、`d.userType`、`d.host`、`d.email`、`d.departmentId`，头像与策略由第二个补充接口合并进 `d`。
+登录后资料对象整体写入 `sessionStorage.userLogin`（实测共 46 个 key）。前端上报/展示从该对象读取：`userName`、`userType`、`host`、`email`、`departmentId`、`departmentName`、`headPortrait` 等；`strategy`、`headPortrait` 由 `getLoginInfo` 补充合并。
 
-| 前端 key | 含义 / Meaning | 说明 / Notes |
+**实测有值字段（本人学生账号样本；文档只记含义与枚举，不落真实值）**：
+
+| 前端 key | 含义 / Meaning | 实测口径 / Notes |
 |---|---|---|
-| `userName` | 登录账号 | 学生一般为学号，教师为工号；待登录 JSON 复核 |
-| `userNickname` | 姓名 / 昵称 | 展示名（上报映射为 `nickName`） |
-| `userType` | 用户类型 | 学生 / 教师等分类（上报映射为 `operaCategory`） |
-| `email` | 邮箱 | |
-| `departmentId` | 部门 / 学院 ID | 响应对象只带 ID；部门名需调 `/api/authc/departments` 按 ID 关联 |
-| `host` | 登录 IP | 登录日志用（上报映射为 `ip`） |
-| `headPortrait` | 头像 URL | bundle 实测头像主字段（非 `portrait`/`avatar`，后两者为兜底/历史命名）；由补充接口合并；头像 URL 拼装与鉴权待复核 |
-| `sex` | 性别 | 仅用于无头像时男/女默认头像兜底（`"1"` 男，其余女）；取值待 JSON 复核 |
-| `strategy` | 登录策略标记 | 由补充接口带回，默认 `"0"`；具体含义待复核 |
+| `userId` | **学号** | 学生侧 `userId` 即学号（注意：不是 `userName`）；SSE 心跳头 `LoginUserId` 也取此字段 |
+| `userName` | **姓名** | 真实姓名展示名 |
+| `departmentName` | **班级** | 学生侧部门字段被复用为班级，文本已拼接「年级 + 专业方向 + 班」；门户不另拆独立年级/专业字段 |
+| `departmentId` | 班级 / 部门 ID | 字符串 ID；学院全称无法靠 `departments` 接口关联（学生无权限，见 3.0） |
+| `userType` | 用户类型 | 实测 `student`（教师预期 `teacher`）；上报映射为 `operaCategory` |
+| `sex` | 性别 | 实测 `"1"` 男，其余值按女处理；仅用于无头像时男/女默认头像兜底 |
+| `host` | 登录来源标记 | 实测 `cas-host`；上报映射为 `ip`（并非真实 IP） |
+| `strategy` | 登录策略标记 | 实测 `"0"`；驱动消息提醒分支 |
+| `sortNum` | 排序号 | 实测 `"0"` |
+| `headPortrait` | 头像 | **`data:image/jpeg;base64,...` 内嵌 data URI**（非 URL 字段）；由 `getLoginInfo` 合并 |
+| `attribute` | 扩展属性 | 实测空对象 `{}` |
+| `tokenId` | 门户内部令牌 | JWT 样式长串，前端保存；另有 `accessToken`/`refreshToken`/`authorization` 字段，用途与是否需客户端复用待复核 |
 
-> 复核结论：`departmentName` 在 bundle 中只出现在部门选择器 / 权限表格列，**不在** `getLoginInfo` 资料对象内，部门全称仍须按 `departmentId` 关联部门列表。bundle 中**未出现** `className`、`grade`、`major`、`studentNo`、`collegeName`、`realName`、`jobNumber`、`loginName`、`mobile`、`idCard`、`birthday` 等学籍/身份字段（`className` 高频命中均为 DOM `class`，与班级无关）。
+**实测为 `null` / 空串的字段（学生账号未填充）**：
+
+| 前端 key | 含义 / Meaning | 实测值 |
+|---|---|---|
+| `userNickname` | 昵称 | `null`（昵称未启用，展示名用 `userName`） |
+| `email` / `qq` | 邮箱 / QQ | `null` |
+| `kindCode` / `studentUrl` / `teacherUrl` | 类别码 / 学生·教师主页链接 | `null` |
+| `orgId` | 机构 ID | `-1`（关联名字段未启用） |
+| `typeName` / `sessionId` / `status` / `onlineTicket` / `loginId` / `id` | 类型名 / 会话 / 状态 / 在线票据 / 登录 ID / 主键 | `null` |
+| `studentJobNumber` / `candidateNumber` / `examinationCardNumber` / `admissionNumber` / `idcard` / `phone` | 工号 / 考生号 / 准考证号 / 录取号 / 身份证 / 手机 | 空串 `""` |
+| `runAs` | 模拟身份 | `null` |
+
+**其余保留键（未逐一核对取值）**：`firstLogin`、`skin`、`startTimestamp`、`lastAccessTime`、`lastLoginTime`、`menus`、`apps`、`userSelectionList`、`dataAuthRelation`、`languageType`、`accessToken`、`refreshToken`、`authorization`、`fromUserId`。
+
+> 字段缺口结论：门户 `userLogin` **未出现**独立的 `className`、`grade`、`major`、`collegeName`（学院全称）、`realName`、`jobNumber`、`mobile`、`idCard`、`birthday` 等学籍/身份字段；班级文本已含年级/专业/班拼接，但学院规范全称、专业、年级、学籍号、学籍状态需走教务 jwxt 或 dsj（见 4.2）。
 
 ### 4.2 教务 / 学工侧（门户前端未出现，需另抓）/ academic & student-affairs
 
@@ -150,12 +184,14 @@
 
 | 目标字段 / Target field | 预期来源 / Likely source | 状态 / Status |
 |---|---|---|
-| 姓名 | 门户 `userNickname` 已可取；教务侧待复核 | 门户侧见 4.1 |
-| 学号 | 门户 `userName` 疑为学号，待复核；规范学号以教务为准 | 待抓 |
-| 班级 | 教务 / 学工（jwxt 或 dsj） | 待抓 |
-| 学院（规范全称） | 门户部门 ID → 部门列表关联；教务侧待复核 | 部分可由门户补 |
-| 专业 | 教务系统 jwxt | 待抓 |
-| 年级 / 年级专业班 | 教务 / 学工 | 待抓 |
+| 姓名 | 门户 `userName` 已可取（实测） | ✅ 门户侧已得（4.1） |
+| 学号 | 门户 `userId` 已可取（实测）；规范学号以教务为准 | ✅ 门户侧已得（4.1） |
+| 班级 | 门户 `departmentName` 已可取（实测，拼接文本）；规范班级编码以教务为准 | ✅ 门户侧已得（4.1） |
+| 性别 | 门户 `sex` 已可取（实测 `"1"` 男） | ✅ 门户侧已得（4.1） |
+| 头像 | 门户 `headPortrait`（base64 data URI） | ✅ 门户侧已得（4.1） |
+| 学院（规范全称） | 门户 `departments` 学生无权限；预期教务 jwxt / dsj | 待抓 |
+| 专业（独立字段） | 教务系统 jwxt；门户仅在班级文本中拼接 | 待抓 |
+| 年级（独立字段） | 教务 / 学工；门户仅在班级文本中拼接 | 待抓 |
 | 学籍号 | 学工 / 教务 | 待抓 |
 | 学籍状态（在读/休学等） | 学工 | 待抓 |
 
@@ -175,7 +211,7 @@
 - 个人信息模型按“账号登录后拉取”设计：本地不持久化他人或历史个人信息；展示字段以登录后接口返回为准，前端做缺省兜底。
 - 口令不入仓库、不写日志、不进截图；敏感字段沿用既有日志脱敏策略。
 - **信任锚边界**：NAC 门户仍是校园网入网认证与设备在线状态的信任根；CAS/iportal 仅用于在用户已入网、本人登录后**补全展示用账号资料**（姓名/部门等），不替代 NAC 入网认证，也不在离线/未入网时凭缓存资料对外鉴权。
-- 字段名以真实接口 JSON 为准，本文 4.1 的 key 为前端消费侧静态推断，接入前需在登录环境逐项核对。
+- 字段名以真实接口 JSON 为准；4.1 已在本人学生账号登录会话核对，教师账号（`userType=teacher`）字段填充情况接入前仍需另抓复核。
 
 ## 7. 素材清单 / Assets
 
@@ -198,15 +234,21 @@
 
 ## 9. 待登录环境补全清单 / TODO After Login
 
-**2026-11-26 匿名已实测（无需再抓）**：CAS 外壳/sign/JSESSIONID 链路、`login2022` 表单字段、RSA 加密与隐藏域、无图形验证码、标准校验端点 404、三套子系统 302 回调、门户 axios 鉴权方式（Cookie + AJAX 头）；bundle 静态复核资料字段 `userName/userNickname/userType/host/email/departmentId/headPortrait/sex/strategy` 与缺失字段清单，确认 `departmentName` 不直返。
+**2026-11-26 已实测闭环（无需再抓）**：
 
-**仍需已登录会话补抓**：
+- CAS 外壳 / `sign` / `JSESSIONID` 链路、`login2022` 表单字段、RSA 加密与隐藏域、无图形验证码、标准校验端点 404、三套子系统回调。
+- 登录成功跳转：POST `/cas/login` 返 200、body JS 跳转、CAS 两次换发 `ST-<序号>-<随机串>`、门户 SPA 落地 `#/StudentHomepage`。
+- 门户鉴权：`withCredentials` + `X-Requested-With` + `csrfToken` 头；会话含 JS 可见 `Authorization` Cookie 与 Shiro HttpOnly 会话。
+- 主资料接口 `tryLoginUserInfo` 与补充接口 `getLoginInfo` 的分工；`userLogin` 全字段名与取值口径（4.1）；`departments` 学生账号 500 无权限。
+- 主登录 RSA 用表单内嵌公钥，`getkey` 动态公钥仅弱口令分支。
 
-1. **登录成功后的票据与会话**：POST `/cas/login` 成功 302 的完整 Location、`ticket` 形态与有效期；回调 `/shiro-cas` 建立的会话 Cookie 名/属性；jwxt、dsj 回调各自的会话 Cookie。
-2. **门户个人信息 JSON**：登录后调 `api/upp/userControl/getLoginInfo` 及其后紧随的补充接口，记录真实 JSON 全字段名与类型，校准第 4.1 节；确认 `userName` 是否即学号、`userType` 取值枚举、`sex` 取值、`strategy` 含义、`headPortrait` 头像 URL 拼装与鉴权；并定位第二个补充接口的真实路径。（静态复核已确认 `departmentName` 不在资料对象内，须按 `departmentId` 关联部门列表。）
-3. **主登录 RSA 公钥选择**：复核主提交用表单内嵌公钥还是 `/user/inc/api?opt=getkey` 动态公钥；记录密文编码（Base64）与是否需 `stamp`/`tokens` 服务端时效校验。
-4. **教务 / 学工字段**：在 jwxt（`/gly/api/cas/login` 回调）与 dsj 学生门户（`id=MH_XS`）抓学号、班级、学院、专业、年级、学籍号、学籍状态对应的接口路径与返回结构。
-5. **头像接口**：确认头像字段来源 URL 与鉴权方式。
+**仍需补抓 / 复核**：
+
+1. **教务 / 学工学籍字段（P1）**：在 jwxt（`/gly/api/cas/login?pattern=...` 回调）与 dsj 学生门户（`id=MH_XS`）抓学院规范全称、专业、年级、学籍号、学籍状态对应的接口路径与返回结构；门户班级文本已含年级/专业/班拼接，但无独立字段。
+2. **会话 Cookie 名细节**：Shiro HttpOnly 会话 Cookie 的具体名称/属性；jwxt、dsj 回调各自建立的会话 Cookie。命令行 CookieJar 复现完整登录链尚未跑通（`Invoke-WebRequest` 重定向拦截、`HttpWebRequest` TLS 握手、`HttpClient` 空 Content 均失败），客户端实现前需用 Qt 网络栈重新验证 Cookie 保留与 302 跟随。
+3. **门户令牌用途**：`tokenId` / `accessToken` / `refreshToken` / `authorization` 各自用途、有效期与客户端是否需要复用/刷新；`tryLoginUserInfo` 的 `Authorization` 头与 `Authorization` Cookie 的关系。
+4. **教师账号字段复核**：4.1 口径来自学生账号；教师（`userType=teacher`）的工号、部门、职称等字段填充情况需另抓。
+5. **头像落地策略**：`headPortrait` 为 base64 data URI，客户端展示时的解码、缓存与缺省兜底方案。
 6. **WebVPN**：分析其登录接口与代理 URL 改写规则，判断客户端校外可达性方案。
 
 > 院徽采集已完成（见第 7、8 节）：18 个学院站均无独立院徽，头部沿用校徽变体，映射见 `colleges.json`。
