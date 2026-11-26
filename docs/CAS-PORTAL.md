@@ -2,9 +2,9 @@
 
 > 来源：2026-11-22 对公网可访问页面、门户前端 bundle（React/axios）的静态分析；2026-11-26 在可达统一认证中心的网络下**实测匿名链路**（外壳页、login2022 表单、校验端点、子系统 302 跳转、前端 bundle）。
 > Source: public pages + portal bundle static analysis (2026-11-22); anonymous live probing of shell page, login2022 form, validation endpoints and subsystem redirects (2026-11-26).
-> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-26 20:45:00`。
+> 最后核对 / Last reviewed：本地 CST(UTC+8) `2026-11-26 21:26:02`。
 >
-> **环境限制 / Environment caveat**：2026-11-26 实测可匿名访问 CAS 外壳与表单、可探测未登录跳转链；但**登录后才返回的个人信息 JSON、教务/学工学籍字段、票据成功后的 302 与会话 Cookie 名，均需在已登录会话中补抓**（本轮无账号凭证），见第 9 节。
+> **环境限制 / Environment caveat**：2026-11-26 实测可匿名访问 CAS 外壳与表单、可探测未登录跳转链；浏览器复测确认本机 Chrome 无现存门户会话，匿名访问门户直接回 CAS 登录页。**登录后才返回的个人信息 JSON、教务/学工学籍字段、票据成功后的 302 与会话 Cookie 名，均需在已登录会话中补抓**（本轮无账号凭证，登录步骤需用户本人完成），见第 9 节。
 >
 > **合规红线 / Compliance**：个人信息一律由客户端在用户本人登录后按账号运行时拉取，**不得把学号、姓名、班级、学院、学籍号等真实个人信息硬编码进仓库或文档**；口令仅经系统密钥存储读取，不明文落盘。校徽/院徽等素材版权归学校，仅作客户端界面展示用途。
 
@@ -55,12 +55,14 @@
    | `password` | **JSEncrypt RSA / PKCS#1 v1.5 加密**后的 Base64 密文（非明文） |
    | `tokens` | 表单隐藏域，32 位十六进制，当次表单生成（CSRF/会话令牌） |
    | `stamp` | 秒级时间戳隐藏域，前端每秒自增 |
-   | `service` | 回调 URL（单选：门户/教务/邮件/VPN/CAS） |
+   | `service` | 回调 URL（页面单选共六项：门户 / 教务 / 邮件 / VPN / CMS / CAS；门户、教务、数据门户三套回调已实测见 2.1，邮件 / VPN / CMS 回调未逐一探测） |
    | `renew` | 隐藏固定 `true` |
    | `txtUserName` / `txtPasswd` | 隐藏域，仅 VPN 分支使用 |
 
    - **无图形验证码**（表单与 `login.js` 均无验证码字段；`login.js` 只做焦点/尺寸适配）。
+   - 登录页静态提示（2026-11-26 浏览器复测可见）：「请使用校园网账号登录，不详请查账号」「新用户初始密码为身份证号码后 8 位数字」「若遗失密码，可通过手机短信自助修改密码」；页面标题「统一身份认证系统 / 校园网账号登录」，横幅为广东第二师范学院校名。
 4. 认证成功后 CAS 302 回跳 `service?ticket=ST-xxxx`；子系统回调端点内部校验 ticket 并建立本地会话 Cookie（**成功后的 Location、ticket 形态、Shiro Cookie 名待登录环境抓包**）。
+   - 复测：本机 Chrome profile 无有效门户会话，匿名访问 `https://iportal.gdei.edu.cn/` 直接被 302 到 `https://security.gdei.edu.cn/cas/login?service=https://iportal.gdei.edu.cn/shiro-cas`（地址栏 `service` 为明文未编码），再次印证未登录即回 CAS。
 5. 会话建立后，门户前端携带会话 Cookie 调后端接口拉取个人信息与卡片。
 
 ### 2.3 票据校验端点（实测 404）/ Ticket validation endpoints
