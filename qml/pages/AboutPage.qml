@@ -74,7 +74,7 @@ PageScaffold {
                     Layout.fillWidth: true
                 }
                 QQC.Label {
-                    text: "0.3.1"
+                    text: "0.3.2"
                     color: th.text
                     font.pixelSize: th.fontBody
                     font.weight: th.weightMedium
