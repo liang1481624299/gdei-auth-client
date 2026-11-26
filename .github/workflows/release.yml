@@ -161,6 +161,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # 与 native 任务一致：固定 Python 3.12，避免 aqt 3.3 在 Python 3.15 下解析 Qt 元数据失败。
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
@@ -176,6 +182,7 @@ jobs:
           dir: ${{ runner.temp }}/qt-host
           cache: true
           set-env: false
+          setup-python: false
 
       - name: Install Qt 6.8.3 Android arm64-v8a
         uses: jurplel/install-qt-action@v4
@@ -187,6 +194,7 @@ jobs:
           dir: ${{ runner.temp }}/qt-android-arm64
           cache: true
           set-env: false
+          setup-python: false
 
       - name: Install Qt 6.8.3 Android x86_64
         uses: jurplel/install-qt-action@v4
@@ -198,6 +206,7 @@ jobs:
           dir: ${{ runner.temp }}/qt-android-x86_64
           cache: true
           set-env: false
+          setup-python: false
 
       - name: Install Android SDK packages and NDK r26b
         run: |
