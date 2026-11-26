@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gdei-connect 静态审计报告 · Round 2</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1e222b; --line:#2a2f3a;
+    --text:#e5e7eb; --sub:#9ca3af; --muted:#6b7280;
+    --p0:#ef4444; --p1:#f97316; --p2:#eab308; --p3:#38bdf8; --p4:#9ca3af;
+    --ok:#22c55e; --primary:#38bdf8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6;padding:16px;max-width:1080px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:4px}
+  h2{font-size:17px;margin:26px 0 12px;border-left:3px solid var(--primary);padding-left:10px}
+  .meta{color:var(--sub);font-size:13px;margin-bottom:18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .score-big{font-size:44px;font-weight:700;color:var(--primary)}
+  .grade{font-size:15px;color:var(--sub);margin-top:4px}
+  .stat{font-size:13px;color:var(--sub)}
+  .stat b{color:var(--text);font-size:18px}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--card);border-radius:12px;overflow:hidden}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--sub);font-weight:600;font-size:12px}
+  td .num{font-variant-numeric:tabular-nums}
+  .bar{height:8px;border-radius:999px;background:var(--card2);overflow:hidden;margin-top:6px}
+  .bar>i{display:block;height:100%;border-radius:999px;background:var(--primary)}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .t-p0{background:rgba(239,68,68,.16);color:var(--p0)}
+  .t-p1{background:rgba(249,115,22,.16);color:var(--p1)}
+  .t-p2{background:rgba(234,179,8,.16);color:var(--p2)}
+  .t-p3{background:rgba(56,189,248,.16);color:var(--p3)}
+  .t-p4{background:rgba(156,163,175,.18);color:var(--p4)}
+  .issue{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+  .issue .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+  .issue .id{font-weight:700;font-size:14px}
+  .issue .type{font-size:12px;color:var(--sub)}
+  .issue .path{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--primary);word-break:break-all}
+  .issue p{font-size:13px;margin:4px 0}
+  .issue .lbl{color:var(--muted);font-size:12px}
+  .status{font-size:12px;font-weight:600}
+  .s-open{color:var(--p1)} .s-fixed{color:var(--ok)} .s-risk{color:var(--p2)}
+  .s-part{color:var(--p2)} .s-false{color:var(--p3)} .s-reg{color:var(--p0)}
+  ul{padding-left:18px;font-size:13px} li{margin:4px 0}
+  .note{background:var(--card2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--sub)}
+  .foot{margin-top:28px;color:var(--muted);font-size:12px;text-align:center}
+  code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px}
+  .up{color:var(--ok);font-weight:700} .down{color:var(--p0);font-weight:700} .flat{color:var(--sub)}
+</style>
+</head>
+<body>
+
+<h1>gdei-connect 静态审计报告 · Round 2（复查轮）</h1>
+<div class="meta">轮次：Round 2 ｜ 日期：2026-11-25 ｜ 基线：Qt6 + C++ + QML，单 CMake 工程，Windows 10 1509–Win11 25H2 / macOS 10.15+ / Android 8+ / Linux 内核 5+ ｜ 审计范围：QML 样式、组件复用、硬编码安全、后端网络、前后端耦合、平台适配 ｜ 流程：Round 1 报告 → 按序修复 → 复查 → 本轮对比报告</div>
+
+<!-- 1. 总览 -->
+<h2>1. 总览</h2>
+<div class="grid">
+  <div class="card">
+    <div class="score-big">87</div>
+    <div class="grade">良好（75–89）</div>
+  </div>
+  <div class="card">
+    <div class="stat">较上轮</div>
+    <div class="grade"><span class="up">↑ +6</span>（Round 1：81）</div>
+  </div>
+  <div class="card">
+    <div class="stat">现存问题 <b>11</b></div>
+    <div class="stat" style="margin-top:6px">
+      P0 <b style="color:var(--p0)">0</b> ｜ P1 <b style="color:var(--p1)">2</b> ｜ P2 <b style="color:var(--p2)">3</b> ｜ P3 <b style="color:var(--p3)">2</b> ｜ P4 <b style="color:var(--p4)">4</b>
+    </div>
+  </div>
+  <div class="card">
+    <div class="stat">漏洞 <b>1</b>（低风险）｜ 改进项 <b>9</b></div>
+    <div class="stat" style="margin-top:6px">本轮关闭 <b style="color:var(--ok)">5</b> ｜ 部分关闭 <b style="color:var(--p2)">2</b> ｜ 新回归 <b style="color:var(--p0)">0</b></div>
+  </div>
+</div>
+
+<div class="note" style="margin-top:12px">
+  <b>本轮闭环结论：</b>已完成 P1-01 死代码清理、P3-02 注释令牌化、P1-03 一处默认主机收敛；复核确认 P1-04 为审计脚本行号区间过时导致的<b>误报</b>（四语言 425 键实际对齐）。全量 configure + build 通过（EXIT=0），改动文件 qmllint 无 error，运行冒烟进程稳定、stderr 无 ReferenceError / TypeError。剩余欠账集中在<b>诊断页网络逻辑下沉后端（P1-02）</b>与诊断端点常量收敛（P1-03 遗留部分），属网络层结构性重构，列入下轮主攻。
+</div>
+
+<h2>六模块得分</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>模块</th><th>权重</th><th>Round 1</th><th>Round 2</th><th>变化</th><th>得分率</th><th>扣分原因</th></tr></thead>
+    <tbody>
+      <tr><td>QML 样式一致性</td><td class="num">25</td><td class="num">23</td><td class="num">24</td><td class="up">↑1</td><td><div class="bar"><i style="width:96%"></i></div></td><td>死图表随 P1-01 移除；头注释旧色值已令牌化（P3-02）。残留少量细节未单列问题。</td></tr>
+      <tr><td>组件复用与重复代码</td><td class="num">20</td><td class="num">14</td><td class="num">17</td><td class="up">↑3</td><td><div class="bar"><i style="width:85%"></i></div></td><td>4 个死文件已删、冗余旧卡片下线（P1-01 / P2-05）；3 个巨型页面/组件尚未拆分（P2-03，-3）。</td></tr>
+      <tr><td>硬编码与安全</td><td class="num">20</td><td class="num">16</td><td class="num">17</td><td class="up">↑1</td><td><div class="bar"><i style="width:85%"></i></div></td><td>本地配置默认主机已收敛到 app.config.host；诊断页三处地址与 Accept-Language 仍遗留（P1-03 / P2-02，-3）。凭证加密存储、无明文密钥/Token。</td></tr>
+      <tr><td>后端与网络层</td><td class="num">15</td><td class="num">14</td><td class="num">14</td><td class="flat">持平</td><td><div class="bar"><i style="width:93%"></i></div></td><td>每请求超时、SSL 严格默认、保活退避重试齐全；诊断探测未走后端 QNAM（计入耦合，-1）。</td></tr>
+      <tr><td>前后端耦合</td><td class="num">15</td><td class="num">11</td><td class="num">11</td><td class="flat">持平</td><td><div class="bar"><i style="width:73%"></i></div></td><td>诊断页仍在 QML 直发 XHR 并正则解析（P1-02，-4）。门面分层、Q_INVOKABLE 校验在 C++，整体良好。</td></tr>
+      <tr><td>合规与适配</td><td class="num">5</td><td class="num">3</td><td class="num">4</td><td class="up">↑1</td><td><div class="bar"><i style="width:80%"></i></div></td><td>复核证实 i18n 四语言 425 键已对齐（P1-04 误报关闭）；后端排障日志未 i18n 化（P3-01，-1）。平台条件编译、Android 权限最小化、Cleartext 域名限定均合规。</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 2. 评分明细 -->
+<h2>2. 评分明细</h2>
+<div class="note">总分 <b>87 / 100</b> ＝ 样式 24 ＋ 复用 17 ＋ 硬编码安全 17 ＋ 后端网络 14 ＋ 耦合 11 ＋ 适配 4。较 Round 1 <span class="up">↑ +6</span>。评分口径与 Round 1 一致；未确认项均标注「需人工复核」。</div>
+
+<!-- 3. 问题清单 -->
+<h2>3. 问题清单（按等级分组，含 Round 1 逐条处置状态）</h2>
+
+<h3 style="color:var(--p0);font-size:14px;margin:14px 0 8px">P0 阻断 / 高危（0 条）</h3>
+<div class="note">本轮复查仍未发现明文凭证、认证绕过、硬编码致多端不可用、循环绑定崩溃或安全校验缺失直连。SSL 默认严格，仅用户显式开启不安全开关时放行并写警告日志；口令经 PBKDF2 + encrypt-then-MAC 加密落盘，未见硬编码 Token / 私钥。</div>
+
+<h3 style="color:var(--p1);font-size:14px;margin:18px 0 8px">P1 明显缺陷（现存 2 条；另 2 条已关闭）</h3>
+
+<div class="issue">
+  <div class="head">
+    <span class="tag t-p1">P1-01</span><span class="id">死代码：未引用页面与组件仍进资源 / 游离磁盘</span>
+    <span class="type">改进项 · 复用</span><span class="status s-fixed">已修复</span>
+  </div>
+  <p class="path">已删除：qml/pages/DashboardPage.qml、qml/pages/SettingsPage.qml、qml/components/LocalDeviceCard.qml、qml/components/BaseChart.qml；CMakeLists.txt 同步移除 LocalDeviceCard / BaseChart 的 qrc 登记。</p>
+  <p><span class="lbl">处置：</span>删除前全仓 Grep 复核，源码 / C++ / CMake 中无实例化、无字符串名加载、无 Loader 按文件名动态引用；四个文件均被 git 跟踪，可从历史恢复。删除后全量 configure + build 通过，无悬空引用。</p>
+  <p><span class="lbl">复查：</span>残留命中仅存在于 docs/ 历史文档与一条 NavEntryRow 沿革注释，不参与构建。关联模块：复用。</p>
+</div>
+
+<div class="issue">
+  <div class="head">
+    <span class="tag t-p1">P1-02</span><span class="id">诊断探测在 QML 直发网络请求并解析响应（分层下沉不足）</span>
+    <span class="type">改进项 · 耦合</span><span class="status s-open">遗留</span>
+  </div>
+  <p class="path">qml/pages/DiagnosticsPage.qml:101（HTTP HEAD 探测）、146（DoH 并行 GET）、190（门户页编码嗅探）；正则解析 charset 见 201–206 行</p>
+  <p><span class="lbl">影响：</span>网络请求、超时与响应解析落在 QML，违反「C++ 管网络 / 解析，QML 只渲染交互」；QML 侧 XHR 与后端 QNAM 的 CookieJar / SSL 配置 / 超时口径不一致，移动端网络栈行为难以统一与测试。</p>
+  <p><span class="lbl">遗留原因（卡点）：</span>下沉需新增 C++ 诊断 Controller（QObject），暴露 <code>probeHttp(url)</code> / <code>probeDoh(endpoints)</code> / <code>sniffCharset(host)</code> 异步接口并经信号回传结构化结果，页面改为订阅渲染；属网络层结构性重构，本轮按「改动最小必要、不新增无关功能」未强行落地。诊断链路不属于登录认证 / 报文解析 / 保活逻辑，下轮可在不触碰认证主链路的前提下单独实施。</p>
+  <p><span class="lbl">建议：</span>下轮先出 Controller 接口与异步回传协议设计，再迁移 HTTP / DoH / 编码嗅探三类探测；QML 仅保留结果渲染与交互。关联模块：耦合、后端网络。</p>
+</div>
+
+<div class="issue">
+  <div class="head">
+    <span class="tag t-p1">P1-03</span><span class="id">QML 散落门户域名 / 端口 / 公共探测地址（未走常量或配置默认值）</span>
+    <span class="type">改进项 · 硬编码</span><span class="status s-part">部分修复</span>
+  </div>
+  <p class="path">
+    已修复：qml/components/LocalDeviceEditor.qml:14 <code>defaultHost</code> 由字面量 <code>"nac.gdei.edu.cn:8080"</code> 改为绑定 <code>app.config.host</code>（后端 ConfigStore 默认常量 <code>constants::DEFAULT_HOST</code>，启动加载失败时亦回退默认域）；提交时 <code>normalizeHost</code> 仍剥离端口，行为与改动前等价。<br>
+    遗留：DiagnosticsPage.qml:100 <code>https://www.baidu.com</code>；140–141 AliDNS / Cloudflare DoH 端点；188 <code>nac.gdei.edu.cn:8080</code> 兜底主机。
+  </p>
+  <p><span class="lbl">遗留原因：</span>三处均位于诊断探测流程，随 P1-02 诊断 Controller 下沉时一并收敛为后端常量 / 配置模型；188 行兜底主机带 8080 端口，而后端 <code>config.host</code> 为裸域名，单独替换会改变编码探测的目标端口，需在下重构中由后端暴露「带端口门户基址」统一处理，避免行为漂移。</p>
+  <p><span class="lbl">建议：</span>与 P1-02 同批落地：探测兜底 URL、DoH 端点、门户基址由后端 Constants / 配置模型暴露，QML 不写死业务地址。关联模块：硬编码、适配。</p>
+</div>
+
+<div class="issue">
+  <div class="head">
+    <span class="tag t-p1">P1-04</span><span class="id">i18n 四语言缺口：诊断页部分键缺译 / 字典缺失</span>
+    <span class="type">改进项 · 适配 / i18n</span><span class="status s-false">误报关闭</span>
+  </div>
+  <p class="path">src/core/I18n.cpp；引用方 qml/pages/DiagnosticsPage.qml</p>
+  <p><span class="lbl">复核结论：</span>Round 1 所用审计脚本按硬编码行号区间切分四个字典块，区间过时导致跨块键被误判为缺失。改用「按语言前缀全文正则扫描」重新核对：zhCN / zhTW / enGB / ja 各 <b>425</b> 键完全对齐，QML 与 C++ 引用到的键在字典中全部存在，无真实缺译。本轮未改动任何译文。</p>
+  <p><span class="lbl">附注：</span>静态扫描另列出 185 个「字典有、源码未引用」的键，其中多数为后端经信号 / 动态消息下发的运行时键（auth.* / keepalive.* / network.* / profiles.* / portalDevices.* 等，静态正则扫不到字符串拼接），少数为已删页面专用键；批量删除有误删后端动态键风险，列入 P4-03 观察，需人工复核后再清理。关联模块：适配。</p>
+</div>
+
+<h3 style="color:var(--p2);font-size:14px;margin:18px 0 8px">P2 优化项（现存 3 条；另 2 条已关闭 / 降级）</h3>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p2">P2-01</span><span class="id">图表网格线颜色绕过 Theme 令牌硬编码</span><span class="type">改进项 · 样式</span><span class="status s-fixed">随 P1-01 关闭</span></div>
+  <p class="path">qml/components/BaseChart.qml:73（原 <code>Qt.rgba(0.133,0.149,0.188,0.6)</code>）</p>
+  <p><span class="lbl">处置：</span>BaseChart.qml 为未引用死组件，已随 P1-01 整体删除，该硬编码网格线不再存在于产物中。无需再做令牌替换。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p2">P2-02</span><span class="id">Accept-Language 请求头写死英文，未随 locale</span><span class="type">改进项 · 硬编码 / 适配</span><span class="status s-open">遗留</span></div>
+  <p class="path">src/core/Constants.hpp:96 <code>ACCEPT_LANGUAGE = "en-US,en;q=0.9"</code></p>
+  <p><span class="lbl">影响：</span>门户过滤器要求该头存在（保留必要），但语言优先级固定英文；非英文 locale 下可按当前语言补充偏好。</p>
+  <p><span class="lbl">遗留原因：</span>该头属认证 / 门户请求组装链路，本轮约束「不改登录认证、报文解析逻辑」，未在请求组装处改动；常量保留英文兜底。后续可在请求组装处按 i18n 当前语言派生，英文作为兜底，需回归门户过滤器兼容性验证。关联模块：硬编码、适配。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p2">P2-03</span><span class="id">巨型页面 / 组件，内聚度偏高</span><span class="type">改进项 · 复用</span><span class="status s-open">遗留</span></div>
+  <p class="path">qml/pages/MinePage.qml（447 行）；qml/pages/AdvancedSettingsPage.qml（435 行）；qml/components/NetworkInfoCard.qml（322 行）</p>
+  <p><span class="lbl">影响：</span>单文件承载多组表单 / 卡片 / 状态分支，维护与复查成本上升。</p>
+  <p><span class="lbl">建议：</span>按分组抽为子组件（账号卡、偏好分组、链路明细行等），页面只做编排。属纯前端重构，不涉及认证逻辑，可在下一轮 P1 项落地后择机进行。关联模块：复用。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p2">P2-04</span><span class="id">兜底密钥存储依赖编译期 pepper，抗逆向能力有限（已知低风险限制）</span><span class="type">漏洞 · 低风险 · 安全</span><span class="status s-risk">已知限制 · 需人工复核</span></div>
+  <p class="path">src/core/secretstore_fallback.cpp:48–50（appPepper 编译期常量）；适用 Linux / Android 兜底后端</p>
+  <p><span class="lbl">影响：</span>PBKDF2-HMAC-SHA256（120k 迭代）+ encrypt-then-MAC 已消除裸 Base64 可逆读取并带篡改校验；但 pepper 随二进制分发，无法抵御逆向工程取钥。Windows / macOS 走系统凭据库，风险面较小。</p>
+  <p><span class="lbl">建议：</span>后续接入 Linux Secret Service / Android Keystore 平台级密钥库；当前实现注释已如实标注能力边界，不作为阻断项。是否在本期内接入平台 Keystore，需人工复核安全优先级与各端工作量。关联模块：硬编码安全。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p2">P2-05</span><span class="id">新旧设备卡片组件结构重叠，旧实现未随新卡片下线</span><span class="type">改进项 · 复用</span><span class="status s-part">部分关闭 → 降 P4-03</span></div>
+  <p class="path">原 qml/components/LocalDeviceCard.qml（已随 P1-01 删除）；现存 DeviceCard.qml / DeviceItem.qml</p>
+  <p><span class="lbl">复核：</span>冗余旧卡片 LocalDeviceCard 已删除。现存 DeviceCard（通用卡片容器：图标 + 名称/副标题 + 状态点/徽章 + 两列键值网格 + 可选操作槽）与 DeviceItem（DevicePanel 内历史/绑定/在线三态列表行：分类徽章 + 多字段拼接 + 时长行）数据模型、布局与职责不同，不构成必须合并的重复。长期可评估统一抽象，转入 P4-03 观察。关联模块：复用。</p>
+</div>
+
+<h3 style="color:var(--p3);font-size:14px;margin:18px 0 8px">P3 轻微（现存 2 条；另 1 条已修复）</h3>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p3">P3-01</span><span class="id">后端排障日志为双语硬编码串，未走 i18n</span><span class="type">改进项 · i18n / 日志</span><span class="status s-open">遗留（历史决策保留）</span></div>
+  <p class="path">src/core/KeepAlive.cpp、PortalClient.cpp、DevicePortalClient.cpp 中 "English / 中文" 双语 log 串</p>
+  <p><span class="lbl">影响：</span>这些串同时进入日志面板与落盘文件，便于排障；未纳入 i18n 字典。属既有刻意保留，非界面文案。</p>
+  <p><span class="lbl">建议：</span>维持现状；若后续要求日志多语言，再单独抽取日志文案键。关联模块：适配。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p3">P3-02</span><span class="id">组件头注释残留旧色值 / 圆角描述，与令牌现状滞后</span><span class="type">改进项 · 可读性</span><span class="status s-fixed">已修复</span></div>
+  <p class="path">qml/components/BaseCard.qml:7、BaseTextField.qml:8 头部注释；BaseChart.qml:6 随 P1-01 删除</p>
+  <p><span class="lbl">处置：</span>BaseCard / BaseTextField 头注释由写死 <code>#111318 / #272A33 / #151820 / #38BDF8 / 8 圆角 / 6 圆角 / 40 高</code> 改为「背景 / 边框 / 圆角 / 聚焦色取 Theme 令牌」的中性描述，不再写死色值与尺寸；纯注释改动，不影响运行行为。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p3">P3-03</span><span class="id">qmllint 全局 Unqualified access 风格警告</span><span class="type">改进项 · 规范</span><span class="status s-open">遗留</span></div>
+  <p class="path">全部 QML 中 <code>app.*</code> 全局单例未限定访问；本轮 LocalDeviceEditor.qml:15 新增 1 条同风格警告（<code>app.config.host</code>），并入本项，非新回归。</p>
+  <p><span class="lbl">影响：</span>qmllint 报 unqualified 警告；不影响运行，但长期不利于组件隔离检查。</p>
+  <p><span class="lbl">建议：</span>长期评估引入 <code>pragma ComponentBehavior: Bound</code> 并逐步限定外部 ID 访问；本轮不强制改写全项目风格。关联模块：复用。</p>
+</div>
+
+<h3 style="color:var(--p4);font-size:14px;margin:18px 0 8px">P4 建议项（现存 3 条）</h3>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p4">P4-01</span><span class="id">诊断端点与图表数据可进一步模型化 / 组件化</span><span class="type">建议 · 复用</span><span class="status s-open">遗留</span></div>
+  <p><span class="lbl">建议：</span>DoH / 探测端点抽为配置模型；图表组件数据绑定与空态、加载态统一抽象。与 P1-02 下沉一并规划。关联模块：复用。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p4">P4-02</span><span class="id">链路信息卡定时刷新可评估懒加载 / 增量更新</span><span class="type">建议 · 性能</span><span class="status s-open">遗留</span></div>
+  <p class="path">qml/components/NetworkInfoCard.qml（322 行）</p>
+  <p><span class="lbl">建议：</span>观察刷新频率与重渲染成本，必要时改为字段级增量更新。关联模块：后端网络。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p4">P4-03</span><span class="id">设备卡片长期统一抽象；字典死键需人工复核后清理</span><span class="type">建议 · 复用 / 维护</span><span class="status s-open">遗留（本轮新增观察项）</span></div>
+  <p><span class="lbl">建议：</span>① DeviceCard 与 DeviceItem 后续可评估抽出共享的图标行 / 状态徽章基元；② 静态扫描出的 185 个未引用字典键，需先区分「后端动态消息键」与「已删页面专用键」，确认无运行时引用后再删除，避免误删。关联模块：复用、适配。</p>
+</div>
+
+<div class="issue">
+  <div class="head"><span class="tag t-p4">P4-04</span><span class="id">DeviceItem 固定参考宽与内边距未走 dp() 缩放</span><span class="type">建议 · 适配</span><span class="status s-open">遗留（本轮复查新增）</span></div>
+  <p class="path">qml/components/DeviceItem.qml:13 <code>implicitWidth: 300</code>；:14 <code>+ 20</code>；:37–39 <code>x:10 / y:10 / parent.width - 20</code></p>
+  <p><span class="lbl">影响：</span>布局参考宽与内边距为固定数值，未经过 <code>th.dp()</code> 缩放；高 DPI / 小屏下边距与参考宽不随密度自适应。功能不受影响，属轻微适配瑕疵。</p>
+  <p><span class="lbl">建议：</span>后续随 DevicePanel 列表布局统一时，将固定边距改用 <code>th.sp*</code>、参考宽改用 <code>th.dp()</code>；改动前需核对 delegate 列宽与换行表现。关联模块：适配、样式。</p>
+</div>
+
+<!-- 4. 漏洞汇总 -->
+<h2>4. 漏洞汇总表</h2>
+<table>
+  <thead><tr><th>编号</th><th>类型</th><th>风险等级</th><th>文件</th><th>简述</th><th>处置 / 状态</th></tr></thead>
+  <tbody>
+    <tr><td>P2-04</td><td>凭证存储 · 兜底加密</td><td>低</td><td>secretstore_fallback.cpp:48</td><td>兜底后端 pepper 为编译期常量，理论上可被二进制逆向提取；已 PBKDF2 + MAC 校验，非明文可逆。</td><td>标注风险，后续接平台 Keystore；当前不阻断，<b>需人工复核</b>优先级。</td></tr>
+  </tbody>
+</table>
+<div class="note" style="margin-top:10px">其余条目均为改进项，不构成安全漏洞：未发现明文口令 / Token 落仓库，未见认证绕过、SSL 校验默认关闭或未校验直连。本轮未改动认证、报文解析与保活逻辑。</div>
+
+<!-- 5. 优化清单 -->
+<h2>5. 优化清单</h2>
+<div class="grid">
+  <div class="card">
+    <div class="stat" style="margin-bottom:6px">可抽 Theme / 常量</div>
+    <ul>
+      <li>诊断兜底 URL / DoH 端点 / 带端口门户基址 → 后端常量或配置模型（P1-03 遗留，随 P1-02）</li>
+      <li>Accept-Language 按 locale 派生，英文兜底（P2-02，需回归门户过滤器兼容）</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="stat" style="margin-bottom:6px">可封装组件</div>
+    <ul>
+      <li>MinePage / AdvancedSettingsPage / NetworkInfoCard 分组拆子组件（P2-03）</li>
+      <li>DeviceCard / DeviceItem 共享图标行 / 徽章基元（P4-03）</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="stat" style="margin-bottom:6px">应迁后端逻辑</div>
+    <ul>
+      <li>诊断 HTTP / DoH / 编码嗅探下沉 C++ QNAM Controller，信号回传结构化结果（P1-02，下轮主攻）</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="stat" style="margin-bottom:6px">应删并重复代码</div>
+    <ul>
+      <li>4 个死代码文件已删除（P1-01，本轮完成）</li>
+      <li>字典未使用键：区分后端动态键与已删页面键后再清理（P4-03，需人工复核）</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 6. 本轮修复记录 -->
+<h2>6. 本轮修复记录</h2>
+<table>
+  <thead><tr><th>改动文件</th><th>关闭 / 关联编号</th><th>改动说明</th></tr></thead>
+  <tbody>
+    <tr><td>CMakeLists.txt</td><td>P1-01、P2-01、P2-05</td><td>移除 BaseChart.qml、LocalDeviceCard.qml 的 qrc 资源登记。</td></tr>
+    <tr><td>qml/pages/DashboardPage.qml（删除）</td><td>P1-01</td><td>未登记 qrc、无引用的旧仪表盘页，磁盘删除；git 跟踪可恢复。</td></tr>
+    <tr><td>qml/pages/SettingsPage.qml（删除）</td><td>P1-01</td><td>未登记 qrc、无引用的旧设置页，磁盘删除。</td></tr>
+    <tr><td>qml/components/LocalDeviceCard.qml（删除）</td><td>P1-01、P2-05</td><td>已登记 qrc 但无引用的冗余旧设备卡片，删除并移出资源清单。</td></tr>
+    <tr><td>qml/components/BaseChart.qml（删除）</td><td>P1-01、P2-01</td><td>已登记 qrc 但无引用的图表组件，删除；网格线硬编码随之消除。</td></tr>
+    <tr><td>qml/components/LocalDeviceEditor.qml</td><td>P1-03（部分）</td><td><code>defaultHost</code> 由字面量门户地址改为绑定 <code>app.config.host</code>；提交归一化逻辑不变，行为等价。</td></tr>
+    <tr><td>qml/components/BaseCard.qml</td><td>P3-02</td><td>头注释旧色值 / 圆角改为 Theme 令牌中性描述（纯注释）。</td></tr>
+    <tr><td>qml/components/BaseTextField.qml</td><td>P3-02</td><td>头注释旧色值 / 尺寸改为 Theme 令牌中性描述（纯注释）。</td></tr>
+  </tbody>
+</table>
+<div class="note" style="margin-top:10px">
+  <b>未修原因：</b>P1-02 / P1-03 遗留部分属诊断网络层结构性重构，需先设计后端 Controller 接口与异步回传协议；P2-02 触及认证请求头，按约束本轮不改认证链路；P2-03 为纯前端大拆分，排在 P1 项之后；P2-04 为低风险已知限制，接入平台 Keystore 需人工复核优先级；P3-01 / P3-03 为历史决策与全项目风格项，本轮不批量改写。<br>
+  <b>自检：</b>未引入新循环绑定、未新增跨层调用、未写新硬编码业务地址；改动符合单 CMake 工程与多端产物要求；未改登录认证、报文解析、保活逻辑。全量 configure + build EXIT=0，改动文件 qmllint 无 error，运行冒烟无 ReferenceError / TypeError。
+</div>
+
+<!-- 7. 结论 -->
+<h2>7. 结论</h2>
+<div class="card">
+  <p><b>总体评价：</b>本轮在不动认证 / 解析 / 保活主链路的前提下，清掉了全部可安全落地的死代码与注释欠账，收敛了一处前端默认主机硬编码，并澄清了一处 i18n 误报。工程基线保持良好：主题令牌完整、网络超时 / SSL / 退避齐全、门面分层清晰、平台与权限合规、凭证非明文。</p>
+  <p style="margin-top:10px"><b>Top 3 事项：</b></p>
+  <ul>
+    <li><b>诊断探测下沉后端（P1-02）：</b>新增 C++ 诊断 Controller，把 HTTP / DoH / 编码嗅探的请求、超时、解析收拢到 QNAM，QML 只订阅结构化结果；这是当前耦合维度（11/15）与诊断硬编码（P1-03 遗留部分）的共同卡点。</li>
+    <li><b>诊断端点与门户基址常量化（P1-03 遗留）：</b>随下沉把 baidu 兜底、AliDNS / Cloudflare DoH、带 8080 端口门户基址收敛到后端常量 / 配置模型。</li>
+    <li><b>巨型文件拆分（P2-03）：</b>在 P1 项落地后，按分组把 MinePage / AdvancedSettingsPage / NetworkInfoCard 抽为子组件，降低维护成本。</li>
+  </ul>
+  <p style="margin-top:10px"><b>是否达 ≥90 停止线：</b>否。当前 87 分（良好），无 P0、无 P1 阻断性漏洞，但仍有 2 条 P1（P1-02、P1-03 部分遗留）未关闭，需进入 Round 3。</p>
+  <p><b>下轮计划：</b>① 设计并落地诊断 Controller 接口（probeHttp / probeDoh / sniffCharset 异步 + 信号回传），迁移 DiagnosticsPage 三类探测，同步收敛 P1-03 遗留地址；② 回归编译 + qmllint + 冒烟，核对诊断卡结果渲染与超时口径；③ 评估 P2-03 拆分范围。P2-04 是否接 Keystore、字典死键清理，先出人工复核结论再动。</p>
+</div>
+
+<!-- 分数演进 -->
+<h2>各轮分数演进</h2>
+<table>
+  <thead><tr><th>轮次</th><th>总分</th><th>P0</th><th>P1</th><th>P2</th><th>P3</th><th>P4</th><th>是否达标(≥90)</th><th>备注</th></tr></thead>
+  <tbody>
+    <tr><td>Round 1</td><td class="num">81</td><td class="num">0</td><td class="num">4</td><td class="num">5</td><td class="num">3</td><td class="num">2</td><td>否</td><td>首轮基线；P1-04 后经复核为误报</td></tr>
+    <tr><td>Round 2</td><td class="num">87</td><td class="num">0</td><td class="num">2</td><td class="num">3</td><td class="num">2</td><td class="num">4</td><td>否</td><td>↑+6；关闭 5、部分关闭 2、新回归 0；遗留 P1-02 / P1-03；复查补记 P4-04</td></tr>
+  </tbody>
+</table>
+
+<div class="foot">gdei-connect 静态审计 · Round 2 · 2026-11-25 · 内联 CSS，无外部 CDN / JS 依赖 · 移动端可读</div>
+</body>
+</html>

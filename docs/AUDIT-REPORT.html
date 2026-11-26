@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gdei-auth-client 全栈审计报告 v0.2.1</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --ink:#18181b; --muted:#5b6470; --line:#e4e7ec;
+    --blue:#2563c9; --blue-bg:#eaf1fc;
+    --green:#10a37f; --green-bg:#e7f6f1;
+    --orange:#e8890c; --orange-bg:#fdf2e2;
+    --red:#dc2626; --red-bg:#fdecec;
+    --gray:#6b7280; --gray-bg:#f1f3f5;
+    --code:#0f172a; --code-ink:#e2e8f0;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.65;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 18px 80px}
+  header.hero{background:linear-gradient(135deg,#1e293b,#334155);color:#fff;border-radius:var(--radius);padding:28px 26px;margin-bottom:22px}
+  header.hero h1{margin:0 0 8px;font-size:24px}
+  header.hero p{margin:4px 0;color:#cbd5e1}
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:18px}
+  .meta-grid .cell{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px}
+  .meta-grid .k{font-size:12px;color:#94a3b8}
+  .meta-grid .v{font-size:16px;font-weight:600;margin-top:2px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 22px;margin-bottom:20px}
+  h2{font-size:19px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  h3{font-size:16px;margin:20px 0 10px}
+  h4{font-size:14px;margin:14px 0 6px;color:var(--muted)}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  code{background:var(--gray-bg);padding:1px 5px;border-radius:5px;font-size:13px}
+  .tag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600}
+  .t-p0{background:var(--red-bg);color:var(--red)}
+  .t-p1{background:var(--orange-bg);color:var(--orange)}
+  .t-p2{background:var(--blue-bg);color:var(--blue)}
+  .t-ok{background:var(--green-bg);color:var(--green)}
+  .t-info{background:var(--gray-bg);color:var(--gray)}
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:10px 0}
+  .stat{border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+  .stat .n{font-size:26px;font-weight:700}
+  .stat .l{font-size:12px;color:var(--muted)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left}
+  th{background:#f8fafc}
+  ul{margin:6px 0;padding-left:20px}
+  li{margin:4px 0}
+  /* 架构图 */
+  .arch{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+  .layer{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fcfcfd}
+  .layer .lt{font-weight:700;font-size:13px;margin-bottom:8px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+  .layer .ld{font-size:12px;color:var(--muted);font-weight:400}
+  .blocks{display:flex;flex-wrap:wrap;gap:8px}
+  .blk{border:1px solid var(--line);border-radius:9px;padding:8px 11px;background:#fff;font-size:13px;flex:1 1 150px}
+  .blk b{display:block;font-size:13px}
+  .blk span{font-size:11.5px;color:var(--muted)}
+  .arrow{text-align:center;color:var(--gray);font-size:18px;line-height:1}
+  .flow-note{font-size:12.5px;color:var(--muted);background:#f8fafc;border-left:3px solid var(--blue);padding:8px 12px;border-radius:0 8px 8px 0;margin:10px 0}
+  /* 问题卡片 */
+  .issue{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden}
+  .issue-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .issue-head .id{font-weight:700}
+  .issue-body{padding:14px 16px;display:grid;grid-template-columns:1fr;gap:10px}
+  .field{display:grid;grid-template-columns:130px 1fr;gap:8px;font-size:13.5px}
+  .field .fk{color:var(--muted);font-weight:600}
+  .fix-tag{font-weight:600}
+  .fix-conv{color:var(--green)}
+  .fix-ref{color:var(--orange)}
+  @media(max-width:640px){
+    .field{grid-template-columns:1fr;gap:2px}
+    .wrap{padding:14px 10px 60px}
+    section{padding:16px 14px}
+  }
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .toc a{font-size:13px;text-decoration:none;color:var(--blue);background:var(--blue-bg);padding:5px 11px;border-radius:8px}
+  .note-warn{background:var(--orange-bg);border-left:3px solid var(--orange);padding:10px 14px;border-radius:0 10px 10px 0;margin:12px 0;font-size:13.5px}
+  .note-red{background:var(--red-bg);border-left:3px solid var(--red);padding:10px 14px;border-radius:0 10px 10px 0;margin:12px 0;font-size:13.5px}
+  .score-bar{height:10px;border-radius:999px;background:var(--gray-bg);overflow:hidden;margin:6px 0}
+  .score-bar > i{display:block;height:100%;background:var(--green)}
+  code.loc{color:var(--blue)}
+  .footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>gdei-auth-client · 全栈源码审计报告</h1>
+  <p>Qt6 + QML + C++ 跨平台原生客户端 · 新华三校园 Portal 认证保活</p>
+  <p class="small muted" style="color:#cbd5e1">审计基线：源码静态审查 · 结论绑定代码位置 · 不设计、不评估任何绕过 3 台设备上限的方案</p>
+  <div class="meta-grid">
+    <div class="cell"><div class="k">版本</div><div class="v">0.2.1</div></div>
+    <div class="cell"><div class="k">审计日期</div><div class="v">2026-11-24</div></div>
+    <div class="cell"><div class="k">C++ 规模</div><div class="v">56 文件 / 7634 行</div></div>
+    <div class="cell"><div class="k">QML 规模</div><div class="v">37 文件 / 5278 行</div></div>
+    <div class="cell"><div class="k">编译标准</div><div class="v">C++20 · Qt6</div></div>
+  </div>
+</header>
+
+<div class="toc">
+  <a href="#summary">结论摘要</a>
+  <a href="#arch">项目结构图</a>
+  <a href="#net">网络 & 接口专项</a>
+  <a href="#cert">证书管理器专项</a>
+  <a href="#island">后端逻辑孤岛</a>
+  <a href="#spec">编码规范专项</a>
+  <a href="#ui">UI / 主题 / 适配</a>
+  <a href="#ext">可扩展性评估</a>
+  <a href="#issues">问题清单</a>
+  <a href="#appendix">附录</a>
+</div>
+
+<!-- ============ 结论摘要 ============ -->
+<section id="summary">
+  <h2>一、结论摘要</h2>
+  <p>本次审计覆盖 QML 前端、C++ 业务层、网络发包模块、持久化存储、i18n 与主题适配，并完成证书管理、逻辑孤岛、多系统适配、可扩展性四项专项。所有结论均基于仓库源码静态核对，未引入无依据推断。</p>
+
+  <div class="stat-row">
+    <div class="stat"><div class="n" style="color:var(--green)">0</div><div class="l">P0 阻断 / 高危</div></div>
+    <div class="stat"><div class="n" style="color:var(--orange)">5</div><div class="l">P1 严重缺陷</div></div>
+    <div class="stat"><div class="n" style="color:var(--blue)">11</div><div class="l">P2 优化 / 规范</div></div>
+    <div class="stat"><div class="n" style="color:var(--gray)">7 / 10</div><div class="l">可扩展性评分</div></div>
+  </div>
+
+  <h3>总体判断</h3>
+  <ul>
+    <li><span class="tag t-ok">架构清晰</span> 门面控制器 + core 网络/存储/调度分层明确；QML 不直接发起任何网络请求（已核查无 <code>QNetworkAccessManager</code> / <code>XMLHttpRequest</code> / <code>fetch</code> / <code>WorkerScript</code> / <code>LocalStorage</code>）。</li>
+    <li><span class="tag t-ok">安全基线可用</span> 证书默认严格校验，跳过需显式开启并留痕、UI 二次确认；口令在 Win 走 DPAPI、mac 走 Keychain，后备为 PBKDF2 + encrypt-then-MAC 加密；日志敏感字段脱敏。</li>
+    <li><span class="tag t-p1">主要风险集中在</span> 保活重连缺退避/互斥、GBK 响应解码不对称、账户门户解析空占位、8080 明文门户、非桌面平台密钥库强度。</li>
+    <li><span class="tag t-p2">能力缺口</span> 任务书要求的“内置证书管理器模块”当前未实现；账户中心数据链路与部分跨平台能力（托盘、字体）为占位或平台受限。</li>
+  </ul>
+
+  <div class="note-warn">
+    <b>合规边界：</b>本报告仅评估本机保活、掉线识别、自动重连与证书管理正确性；校园网“最多 3 台设备同时在线、第 4 台接入随机踢人”为服务端规则，报告不含任何规避名额检测、抢占或保名额的方案。
+  </div>
+</section>
+
+<!-- ============ 项目结构图 ============ -->
+<section id="arch">
+  <h2>二、项目结构图（分层 · 依赖 · 调用流向）</h2>
+
+  <div class="arch">
+    <div class="layer">
+      <div class="lt">① QML UI 层 <span class="ld">qml/pages · qml/components · qml/theme</span></div>
+      <div class="blocks">
+        <div class="blk"><b>页面 Pages</b><span>Dashboard / Devices / Diagnostics / AccountDashboard / AdvancedSettings / EventLog / About / Login / RemoteDevices</span></div>
+        <div class="blk"><b>组件 Components</b><span>Card / Button / Icon / Switch / ToastHost / DevicePanel / LocalDeviceEditor / PageScaffold …（27 个）</span></div>
+        <div class="blk"><b>主题 Theme</b><span>双态色板 · 字号/间距/圆角令牌 · dp/uiScale 缩放 · 断点</span></div>
+      </div>
+    </div>
+    <div class="arrow">▼ 仅经 <code>app.*</code> 上下文属性调用控制器；禁止直接访问 core / 网络 / 存储</div>
+
+    <div class="layer">
+      <div class="lt">② 门面控制器层（App 层） <span class="ld">src/app</span></div>
+      <div class="blocks">
+        <div class="blk"><b>AuthController</b><span>认证状态 · 在线态 · 保活启停门面</span></div>
+        <div class="blk"><b>SessionController</b><span>会话门禁 · 按需登录 · 本地注销 · 操作态</span></div>
+        <div class="blk"><b>AccountController</b><span>账户门户（PrimeFaces）门面 · profile/services/验证码</span></div>
+        <div class="blk"><b>DeviceController</b><span>设备门户（ICEfaces）门面 · devices/验证码</span></div>
+        <div class="blk"><b>LocalDeviceController</b><span>本机认证配置 CRUD · 选中态 · 切换阻断</span></div>
+        <div class="blk"><b>NetworkInfoController</b><span>本机网卡 / 出口 IP / 子网判定</span></div>
+        <div class="blk"><b>EventBus / EventModel / EventBridge</b><span>有界事件历史 · 未读 · 桥接各控制器信号为事件</span></div>
+        <div class="blk"><b>LogController</b><span>日志读取 / 导出门面</span></div>
+      </div>
+    </div>
+    <div class="arrow">▼ 控制器组合 core 服务；UI 不跨越控制器直接调用 core</div>
+
+    <div class="layer">
+      <div class="lt">③ 业务 / 网络核心层 <span class="ld">src/core</span></div>
+      <div class="blocks">
+        <div class="blk"><b>PortalClient（443 captive）</b><span>入口 GET → 登录页 CSRF → 上线/下线表单 · 外网探测 · 空响应旁证</span></div>
+        <div class="blk"><b>AccountPortalClient（8080 PC）</b><span>PrimeFaces 账户门户 · 验证码 · profile 解析（占位）</span></div>
+        <div class="blk"><b>DevicePortalClient（8080 ICE）</b><span>ICEfaces 设备门户 · 会话 · 设备列表解析</span></div>
+        <div class="blk"><b>KeepAlive 调度</b><span>随机间隔探测 · 连续失败阈值 · 触发重登</span></div>
+        <div class="blk"><b>FormEncoding / SelfServiceCodec</b><span>表单编码 · 门户口令编码</span></div>
+        <div class="blk"><b>SessionCookieJar</b><span>会话 Cookie 跟随 / 丢弃</span></div>
+      </div>
+    </div>
+    <div class="arrow">▼ 核心层向下调用持久化与横切服务</div>
+
+    <div class="layer">
+      <div class="lt">④ 持久化 / 横切 / 平台层 <span class="ld">src/core · src/platform</span></div>
+      <div class="blocks">
+        <div class="blk"><b>ConfigStore</b><span>QSettings 配置 · setter 范围校验 / clamp</span></div>
+        <div class="blk"><b>LocalDeviceStore</b><span>本机认证配置持久化</span></div>
+        <div class="blk"><b>SecretStore</b><span>Win DPAPI · mac Keychain · Linux/Android 加密后备</span></div>
+        <div class="blk"><b>Logger / I18n</b><span>有界日志 + 持久文件 · 四语言词典</span></div>
+        <div class="blk"><b>TrayController（仅 WIN32）</b><span>系统托盘转发窗口 / 认证指令</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>允许 / 禁止调用方向</h3>
+  <table>
+    <thead><tr><th>方向</th><th>是否允许</th><th>说明 / 核查结论</th></tr></thead>
+    <tbody>
+      <tr><td>QML → 控制器（<code>app.*</code>）</td><td><span class="tag t-ok">允许</span></td><td>唯一对外通道；经 AppController 聚合注入根上下文 <code>main.cpp:112</code></td></tr>
+      <tr><td>QML → core 网络 / 存储 / SecretStore</td><td><span class="tag t-p0">禁止</span></td><td>已核查：QML 无任何网络对象、无本地存储 API，未发现跨层直连</td></tr>
+      <tr><td>控制器 → core 服务</td><td><span class="tag t-ok">允许</span></td><td>控制器组合并转发 core 客户端 / 存储 / 调度</td></tr>
+      <tr><td>core → 控制器反向依赖</td><td><span class="tag t-info">原则禁止</span></td><td>core 经信号回调上抛，不持有控制器指针；EventBridge 在 App 层做信号→事件接线</td></tr>
+      <tr><td>QML 直写 <code>app.config.*</code></td><td><span class="tag t-p2">越权（P2-7）</span></td><td>15 处视图直写配置模型，当前靠 ConfigStore setter clamp 兜底，分层上应收束到门面</td></tr>
+    </tbody>
+  </table>
+
+  <div class="flow-note">
+    <b>装配链（main.cpp:87–108）：</b>ConfigStore / Logger / I18n → Auth / Log / Device / Account / Session / LocalDevice / NetworkInfo 控制器 → EventBus → EventBridge 接线 → AppController 聚合 → <code>app</code> 注入 QML。启动时先只读探测标定在线态（<code>main.cpp:136</code>），满足自动登录条件再 <code>session.loginAutomatically()</code>（<code>main.cpp:139–142</code>）。
+  </div>
+</section>
+
+<!-- ============ 网络 & 接口专项 ============ -->
+<section id="net">
+  <h2>三、网络 & 接口专项（新华三 Portal 认证）</h2>
+
+  <h3>3.1 接口与链路清单</h3>
+  <table>
+    <thead><tr><th>通道</th><th>端口 / 协议</th><th>客户端</th><th>关键步骤</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>captive 上线 / 下线</td><td>443 · HTTPS</td>
+        <td><code>PortalClient</code></td>
+        <td>GET 入口页（跟随 302 建 Cookie）→ GET 登录页提取 CSRF → POST 表单（<code>userName</code>/<code>userPwd</code>，口令先 Base64；20+ 隐藏域常量）；下线表单凭据置空</td>
+      </tr>
+      <tr>
+        <td>设备自助门户</td><td>8080 · HTTP（ICEfaces）</td>
+        <td><code>DevicePortalClient</code></td>
+        <td>登录页提取 ViewState/ICE 窗口 → 验证码 → 提交 → macList 设备列表解析</td>
+      </tr>
+      <tr>
+        <td>账户自助门户</td><td>8080 · HTTP（PrimeFaces）</td>
+        <td><code>AccountPortalClient</code></td>
+        <td>验证码 → 口令经 <code>SelfServiceCodec</code> 编码提交 → 主页解析 profile/services（当前为空占位，见 P1-3）</td>
+      </tr>
+      <tr>
+        <td>外网连通探测</td><td>HTTP NCSI</td>
+        <td><code>PortalClient::externalProbeOnline</code></td>
+        <td>2xx + 非空体 + NCSI 特征串判定可达；空登录响应无会话 Cookie 时补发一次旁证探测聚合判定</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 鉴权流程与返回码处理（已核）</h3>
+  <ul>
+    <li><b>成功判定叠加多条件：</b>HTTP 状态码 + 报文 <code>errorNumber</code> 解析 + 会话 Cookie / 近期外网探测旁证；空 2xx 体由 <code>onEmptyProbeReply</code> 聚合旁证，无旁证不直接判成功。</li>
+    <li><b>返回码分支（<code>PortalClient.cpp:298–305</code>）：</b><code>errorNumber=1</code> 成功；<code>=7</code> 已在线（重复登录，达成在线态）；<code>=8</code> 本就离线 / 会话已释放（下线兼容分支）；其余码落失败，消息取 <code>e_d</code> / <code>errorMessage</code> / 原文。</li>
+    <li><b>CSRF / Cookie：</b>登录页提取 CSRF；<code>SessionCookieJar</code> 跟随会话 Cookie，门户切换时换新 Jar 丢弃旧会话。</li>
+    <li><b>幂等性：</b><code>KeepAlive::start</code> 幂等（重复调用不重置失败计数、不重复探测，<code>KeepAlive.cpp:36</code>）；登录/下线由 <code>m_busy</code> 在途守卫。</li>
+  </ul>
+
+  <h3>3.3 保活 / 掉线识别 / 重连策略核查</h3>
+  <table>
+    <thead><tr><th>核查项</th><th>现状（代码位置）</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td>探测间隔</td><td>随机区间 <code>keepaliveMinSec~MaxSec</code>（默认 150–210s），qBound 收敛到 30–600s；回调里调度下一次，避免探测重叠（<code>KeepAlive.cpp:52–63, 74–78</code>）</td><td><span class="tag t-ok">合理</span> 抖动降低限流风险</td></tr>
+      <tr><td>掉线识别</td><td>每次探测结果累计连续失败，达阈值（默认 3，边界 1–10）才判掉线；阈值内仅告警（<code>KeepAlive.cpp:88–98</code>）</td><td><span class="tag t-ok">合理</span> 防单次抖动误触发重登</td></tr>
+      <tr><td>重连触发</td><td>达阈值后清零计数并 <code>m_portal-&gt;login()</code>（<code>KeepAlive.cpp:105–106</code>）</td><td><span class="tag t-p1">缺陷 P1-1</span> 无指数退避 / 无最大重试 / 无并发互斥</td></tr>
+      <tr><td>在途竞态</td><td><code>PortalClient::login</code> 在 <code>m_busy</code> 时静默 <code>return</code>，不发 <code>loginFinished</code>（<code>PortalClient.cpp:324</code>）</td><td><span class="tag t-p1">缺陷 P1-1</span> 重连被吞，无补偿，恢复延迟到下一轮探测</td></tr>
+      <tr><td>风暴抑制</td><td>无退避、无熔断、无重登进行中标志；持续掉线时按固定探测周期反复尝试</td><td><span class="tag t-p1">缺陷 P1-1</span></td></tr>
+      <tr><td>下线事件识别</td><td>外网探测 + 会话健康检查 + 网卡可用态三层；事件经 EventBridge 上抛</td><td><span class="tag t-ok">覆盖</span> 半连通判定仍为已知缺口（见附录）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.4 参数校验与异常捕获</h3>
+  <ul>
+    <li>高级设置前端本地草稿 + <code>validate()</code> 双校验（正数 / 最小&lt;最大 / URL 格式，<code>AdvancedSettingsPage.qml:43–52</code>）；后端 ConfigStore setter 再做 clamp / 范围收敛。</li>
+    <li>网络异常经 <code>reply-&gt;error()</code> 与状态码聚合；缺失凭据在登录前拦截（<code>PortalClient.cpp:320–323</code>）。</li>
+    <li><b>报文编码风险：</b>三个门户 <code>decodeBody</code> 对 GBK/GB2312 均回退 UTF-8（详见 P1-2）；两套 8080 门户口令编码口径不一致（详见 P2-2）。</li>
+  </ul>
+</section>
+
+<!-- ============ 证书管理器专项 ============ -->
+<section id="cert">
+  <h2>四、新华三证书管理器专项评估</h2>
+
+  <div class="note-red">
+    <b>核心结论：</b>仓库中<b>不存在独立的证书管理器模块</b>。全仓检索未出现 <code>QSslCertificate</code> / <code>QSslConfiguration</code> / <code>QSslKey</code> / <code>addCaCertificate</code> / <code>setSslConfiguration</code> / <code>caCertificates</code> / <code>QSslSocket</code>；SSL 处理仅集中在 <code>PortalClient</code> 的 <code>sslErrors</code> 回调一处。
+  </div>
+
+  <h3>4.1 现有 TLS 处理（已核）</h3>
+  <table>
+    <thead><tr><th>能力点</th><th>现状</th><th>位置</th></tr></thead>
+    <tbody>
+      <tr><td>证书校验默认策略</td><td>默认严格校验；未开启跳过则不 <code>ignoreSslErrors</code>，握手错误经 <code>reply-&gt;error()</code> 上报</td><td><code>PortalClient.cpp:33–43</code></td></tr>
+      <tr><td>跳过校验开关</td><td>仅当配置 <code>allowInsecureSsl</code> 为真才 <code>ignoreSslErrors()</code> 并写警告日志留痕；UI 有二次确认</td><td><code>PortalClient.cpp:37–42</code>；<code>AdvancedSettingsPage.qml:267,499</code></td></tr>
+      <tr><td>主机名校验</td><td>IP 兜底建连时 <code>setPeerVerifyName</code> 对齐域名校验名；域名直连由 Qt 自然按域名校验</td><td><code>PortalClient.cpp:82–87</code></td></tr>
+      <tr><td>证书加载 / 解析 / 持久化</td><td><span class="tag t-p2">缺失</span> 无证书对象加载、链解析、用户信任锚持久化</td><td>—</td></tr>
+      <tr><td>证书链 / 根证书信任</td><td><span class="tag t-p2">缺失</span> 完全依赖系统默认根证书库，无应用级 CA 注入</td><td>—</td></tr>
+      <tr><td>自签 / 内网私有 CA 兼容</td><td><span class="tag t-p2">缺口</span> 无法单张导入信任内网 CA；唯一兼容手段是全局跳过校验（中间人风险）</td><td>—</td></tr>
+      <tr><td>过期检测 / 替换 / 缓存</td><td><span class="tag t-p2">缺失</span> 无到期时间读取、无临近过期提醒、无证书缓存与替换流程</td><td>—</td></tr>
+      <tr><td>导入 / 导出 / 文件权限</td><td><span class="tag t-p2">缺失</span> 无导入导出界面与存储权限管理</td><td>—</td></tr>
+      <tr><td>校验失败降级 / 告警</td><td>默认失败即中断并上报；跳过开关为全局降级，粒度粗，无按主机/按指纹的精细放行</td><td><code>PortalClient.cpp:33–43</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.2 识别到的风险点</h3>
+  <ul>
+    <li><b>内网证书环境只能全局跳过：</b>校园内网若使用私有 CA / 自签证书，应用无法把该 CA 加入信任锚，用户只能开启“跳过证书校验”，使整条 443 链路暴露于中间人攻击。</li>
+    <li><b>无证书可见性：</b>不展示对端证书指纹、颁发者、有效期，排障时无法判断是否为证书过期 / 域名不匹配 / 替换。</li>
+    <li><b>8080 门户无 TLS 层：</b>设备 / 账户自助门户全程 HTTP 明文（见 P1-4），证书机制对其不适用。</li>
+  </ul>
+
+  <h3>4.3 修复方向（对应 P2-1）</h3>
+  <p>新增 <code>CertificateStore</code> 子模块：解析并持久化用户主动信任的内网 CA（<code>QSslCertificate</code> + <code>QSslConfiguration::addCaCertificate</code>），按主机绑定指纹与有效期、提供到期提醒；全局跳过保留为最后手段并维持强告警。该能力属新增模块，现有网络层骨架不承载证书抽象。</p>
+</section>
+
+<!-- ============ 后端逻辑孤岛 ============ -->
+<section id="island">
+  <h2>五、后端逻辑孤岛专项</h2>
+  <p>双向对账：① 后端已暴露但 QML 未对接的闲置能力；② QML 发起调用但后端无实现的悬空请求。对账方式：提取后端 <code>Q_INVOKABLE</code> / <code>Q_PROPERTY</code> 清单，与 QML 中 <code>app.&lt;ctrl&gt;.&lt;member&gt;</code> 实际调用集合比对。</p>
+
+  <h3>5.1 后端已实现 · QML 未对接（闲置能力）</h3>
+  <table>
+    <thead><tr><th>控制器</th><th>闲置成员</th><th>性质 / 风险</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>AccountController</code></td>
+        <td><code>services</code>、<code>captchaImage</code>、<code>fetchCaptcha()</code>、<code>loginWithCode()</code>、<code>logout()</code>、<code>clearSession()</code></td>
+        <td>整条 PrimeFaces 账户门户登录 / 登出 / 会话清除链路后端已实现，账号页仅用 <code>authenticated / busy / profile / lastMessage / refreshProfile</code>。长期闲置导致版本口径漂移与维护成本（P1-3）</td>
+      </tr>
+      <tr>
+        <td><code>AccountController</code> / <code>AccountPortalClient</code></td>
+        <td><code>profile</code> 数据源</td>
+        <td><code>parseProfile</code> 为空占位，profile/services 恒空；UI 以“不可用 / 暂未统计”占位兜底，功能空转（P1-3）</td>
+      </tr>
+      <tr>
+        <td><code>SessionController</code></td>
+        <td><code>route</code>、<code>operation</code></td>
+        <td>内部状态机属性经 <code>Q_PROPERTY</code> 暴露但 QML 未读；属过度暴露（P2-11）</td>
+      </tr>
+      <tr>
+        <td><code>AuthController</code></td>
+        <td><code>lastMessage</code></td>
+        <td>后端有属性与信号，QML 认证提示主要走 session / 事件；轻微闲置（P2-11）</td>
+      </tr>
+      <tr>
+        <td><code>EventBus</code></td>
+        <td><code>publish()</code></td>
+        <td>后端内部发布入口被标为 <code>Q_INVOKABLE</code>，暴露到 QML 形成理论上的越权发事件面，应收回内部（P2-11）</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.2 QML 发起 · 后端无实现（悬空请求）</h3>
+  <p>逐条核对 QML 调用的控制器成员，<b>未发现悬空请求</b>：QML 调用的 <code>login / logout / refreshStatus / startKeepAlive / stopKeepAlive / fetchCaptcha / loginWithCode / refreshDevices / refreshProfile / addProfile / updateProfile / removeProfile / selectProfile / requireLogin / promptLogin / dismissLoginPrompt / signOutLocal / exportLog / clear / setEventPageVisible</code> 等均在后端有对应实现。</p>
+  <ul>
+    <li>事件模型经 <code>app.eventModel</code> 绑定（<code>EventLogPage.qml:89</code>、<code>DashboardPage.qml:267</code>），非 <code>app.events.model</code>，对接正常。</li>
+    <li>脚本扫描出的 3 个“悬空键”<code>events.source.</code>（动态拼接前缀）、<code>remote.open</code> / <code>settings.save</code>（门禁 actionKey）均非译文键，属误报。</li>
+  </ul>
+</section>
+
+<!-- ============ 编码规范专项 ============ -->
+<section id="spec">
+  <h2>六、编码规范专项</h2>
+
+  <h3>6.1 内存管理与对象树</h3>
+  <ul>
+    <li>网络对象 <code>QNetworkAccessManager</code> / <code>SessionCookieJar</code> 以 <code>this</code> 为 parent 纳入 Qt 对象树（<code>PortalClient.cpp:25–27</code>）；<code>QNetworkReply</code> 回调内 <code>deleteLater()</code> 释放。</li>
+    <li>未发现裸指针泄漏；控制器由 <code>main.cpp</code> 栈上持有、聚合到 AppController，生命周期与应用一致。</li>
+  </ul>
+
+  <h3>6.2 信号槽连接</h3>
+  <ul>
+    <li>跨对象状态转发均以函数指针式 <code>connect</code>；EventBus 用 <code>QueuedConnection</code> 投递待发事件（<code>EventBus.cpp:40–41</code>）。</li>
+    <li><b>耦合点：</b>EventBridge 槽函数靠匹配英文日志前缀派生事件（<code>EventBridge.cpp:107,112,117</code>），日志文案 / 翻译改动会静默断链（P2-3）。</li>
+  </ul>
+
+  <h3>6.3 CMake / 编译宏 / 跨平台</h3>
+  <ul>
+    <li>C++20、<code>CMAKE_AUTOMOC/AUTORCC</code>；固定 Qt6 组件 Core/Quick/QuickControls2/Network/Qml/Svg/Core5Compat，Widgets 仅 WIN32（<code>CMakeLists.txt:16–21,222–230</code>）。</li>
+    <li>平台条件编译：WIN32 接入 TrayController 与 crypt32；APPLE 链接 Security 框架并剥离已移除的 AGL.framework；MSVC 强制 include stdext 兼容头与 <code>/utf-8</code>，MinGW 设输入/执行字符集 UTF-8；Android 包名 / SDK 版本齐备（<code>CMakeLists.txt:120–123,234–261</code>）。</li>
+    <li>版本号两处一致：CPACK 与 Android versionName 均 <code>0.2.1</code>（<code>CMakeLists.txt:260,311</code>）。</li>
+  </ul>
+
+  <h3>6.4 注释 / 文案 / 硬编码</h3>
+  <ul>
+    <li>源码注释中英双语，关键决策与兼容分支均有说明；i18n 四语言各 306 键、差集为 0（详见附录 A）。</li>
+    <li>QML 显示文案均经 <code>app.i18n.text(key)</code>；扫描仅 1 处中文字符串为设备名匹配逻辑（<code>BrandIcon.qml:30</code>），非展示文案。</li>
+    <li>硬编码颜色集中在 Theme 令牌；组件内仅 <code>Switch.qml</code> 一处 <code>#FFFFFF</code>、黑色阴影与品牌固定色等合理硬编码。</li>
+  </ul>
+
+  <h3>6.5 重复代码与口径一致性</h3>
+  <ul>
+    <li><b>控制器重复：</b>AccountController / DeviceController 的 <code>busy / authenticated / lastMessage / captchaImage</code> 信号转发近乎同构（P2-8）。</li>
+    <li><b>门户客户端重复：</b><code>decodeBody</code>、<code>enc</code> 百分号编码、状态置位 / 消息设置在三个门户客户端各写一份（P2-8）。</li>
+    <li><b>编码口径：</b>两套 8080 门户口令处理不一致（P2-2）；写侧表单编码支持 GBK，读侧解码未跟上（P1-2）。</li>
+  </ul>
+
+  <h3>6.6 跨层 / 非法依赖校验</h3>
+  <ul>
+    <li>未发现 QML 跨层直连 core / 存储 / 网络；未发现非法跨域资源获取（QML 内 <code>http(s)://</code> 仅出现在 SVG 的 XML 命名空间声明，非真实请求）。</li>
+    <li>唯一分层瑕疵为 QML 直写 <code>app.config.*</code>（15 处，P2-7），属视图越权触碰持久化模型，当前由 setter 校验兜底。</li>
+  </ul>
+</section>
+
+<!-- ============ UI / 主题 / 适配 ============ -->
+<section id="ui">
+  <h2>七、UI、主题样式 & 多系统适配专项</h2>
+
+  <h3>7.1 主题统一性</h3>
+  <ul>
+    <li>色板 / 字号 / 间距 / 圆角 / 状态色全部集中在 <code>Theme.qml</code>：深 / 浅双态，状态色 green/orange/red/blue/gray 深色态同色相提亮；字号阶梯 11→34、间距 4→32、圆角 8→16 + 胶囊。</li>
+    <li>未发现样式多处重复定义或互相覆盖；组件统一引用 <code>th.*</code> 令牌。</li>
+    <li>图标经 <code>Icon</code> 组件 <code>IconImage.color</code> 着色，跟随主题 <code>th.text</code>，避免暗色态深色图标不可见（<code>Icon.qml:11,25</code>）。</li>
+  </ul>
+
+  <h3>7.2 布局 / DPI / 高分屏</h3>
+  <ul>
+    <li>缩放体系：<code>uiScale = fontScale × userScale × screenScale</code>，收敛 0.8–2.2；<code>dp()</code> 把设计像素映射到逻辑像素；字号跟随系统字体并限制 0.9–1.75（<code>Theme.qml:85–102</code>）。</li>
+    <li>断点：<code>compactBreakpoint 600</code>、<code>wideBreakpoint 960</code>；页面内容宽屏居中、<code>contentMaxWidth</code> 受限（<code>PageScaffold.qml:14,19,70–71</code>）。</li>
+    <li>窗口默认 400×720 竖屏，最小 320×480 并与屏幕可用尺寸取小（<code>Main.qml:15–23</code>）；水平滚动条关闭、垂直按需。</li>
+  </ul>
+
+  <h3>7.3 多系统表现核查</h3>
+  <table>
+    <thead><tr><th>维度</th><th>现状</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td>暗色 / 亮色</td><td>三态：跟随系统 / 浅色 / 深色；跟随系统取 <code>styleHints.colorScheme</code>，Unknown 时按系统调色板亮度反推（<code>Theme.qml:14–30</code>）</td><td><span class="tag t-ok">覆盖</span></td></tr>
+      <tr><td>控件样式</td><td>强制 Basic 样式以允许 background/contentItem 深度定制，保证全平台一致渲染（<code>main.cpp:81–84</code>）</td><td><span class="tag t-ok">已处理</span></td></tr>
+      <tr><td>托盘 / 后台常驻</td><td><code>TrayController</code> 仅 WIN32 编译接入；macOS / Linux / Android 无托盘实现（<code>CMakeLists.txt:120–123</code>）</td><td><span class="tag t-p2">差异 P2-10</span></td></tr>
+      <tr><td>字体渲染</td><td>未内嵌字体，中文 / 混排依赖各系统字体回退；缺字环境存在渲染不一致风险</td><td><span class="tag t-p2">缺口 P2-10</span></td></tr>
+      <tr><td>Qt 网络 / SSL 依赖</td><td>Qt6 Network 全平台链接；SSL 后端随各平台 OpenSSL/SecureTransport/Schannel 差异，证书校验行为依赖平台默认库</td><td><span class="tag t-info">需在兼容矩阵标注</span></td></tr>
+      <tr><td>异常弹窗 / 通知</td><td>ToastHost 上抛告警；事件未读红点挂账号 Tab；登录遮罩按需弹出可取消</td><td><span class="tag t-ok">覆盖</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>7.4 前后端口径一致性</h3>
+  <ul>
+    <li>配置项前后端命名对齐（username/password/autoLogin/rememberPassword/keepaliveMinSec 等）；前端草稿字段与后端 setter 一一对应。</li>
+    <li>已知口径缺口：账户余额 / 套餐 / 时长前端有展示位，后端无数据源（P1-3）；目标 MAC 前端有展示位，后端恒空（P2-9）。</li>
+  </ul>
+</section>
+
+<!-- ============ 可扩展性 ============ -->
+<section id="ext">
+  <h2>八、可扩展性专项评估</h2>
+
+  <h3>8.1 综合评分</h3>
+  <div class="score-bar"><i style="width:70%"></i></div>
+  <p class="small muted">7 / 10：分层与门面分离良好，core 可独立替换；扣分集中在门户 / 控制器重复度、证书与账户解析占位、配置写路径绕过门面、状态机缺退避。</p>
+
+  <h3>8.2 耦合度与高内聚判断</h3>
+  <ul>
+    <li><b>优点：</b>UI 与业务经门面解耦；网络客户端、存储、调度、i18n、日志各自独立；新增门户类型可在 core 内平行扩展；配置 / 文案外置。</li>
+    <li><b>瓶颈：</b>① 三个门户客户端与两个设备/账户控制器存在同构重复，抽公共底座前新增门户会复制代码；② 证书、账户解析为占位，相关扩展需先补协议层；③ 配置写入口分散在 QML，后续加审计 / 埋点 / 校验易漏；④ 保活状态机缺退避与互斥，增强可靠性需改动 KeepAlive 与 PortalClient 守卫。</li>
+  </ul>
+
+  <h3>8.3 拟新增功能改造难度</h3>
+  <table>
+    <thead><tr><th>新功能</th><th>改造难度</th><th>评估依据</th></tr></thead>
+    <tbody>
+      <tr><td>多账号切换</td><td><span class="tag t-p2">中</span></td><td>本机认证配置 CRUD 与选中态已由 LocalDeviceStore / LocalDeviceController 具备；主要缺口是账号间会话 Cookie、密钥与门户登录态的隔离与切换清理</td></tr>
+      <tr><td>登录 / 认证日志</td><td><span class="tag t-ok">低</span></td><td>Logger 有界存储 + 导出、EventBus/EventModel 事件底座已就绪，接事件类型与筛选即可</td></tr>
+      <tr><td>在线设备列表查看</td><td><span class="tag t-ok">低–中</span></td><td>DevicePortalClient 已解析 devices 且 UI 已对接；云端踢除、操作权限置灰为后端缺口（本期不涉及名额规避）</td></tr>
+      <tr><td>证书信任管理界面</td><td><span class="tag t-p1">中–高</span></td><td>需新增 CertificateStore 模块与证书解析 / 持久化 / 展示，现有骨架无证书抽象（P2-1）</td></tr>
+      <tr><td>账户中心数据展示</td><td><span class="tag t-p1">中</span></td><td>取决于 parseProfile 按真实主页样本补全；后端链路与 UI 入口已预留（P1-3）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.4 Bug 修复成本判断</h3>
+  <p>常规报文 / 文案 / 样式问题定位成本低（令牌与文案集中、日志可追溯）；涉及保活状态机、门户协议、密钥库的问题需要跨 core 与控制器协同，当前因重复代码存在“改一处漏一处”的放大风险（P2-8）。</p>
+</section>
+
+<!-- ============ 问题清单 ============ -->
+<section id="issues">
+  <h2>九、问题标准化清单（P0 / P1 / P2）</h2>
+  <p class="small muted">字段：问题ID · 风险等级 · 位置 · 现象描述 · 风险影响 · 修复方案（收敛修复 / 更换骨架 + 理由 + 工作量）。工作量为粗略人日估算。</p>
+
+  <h3>P0 阻断 / 高危 —— 0 项</h3>
+  <p class="muted">本轮未检出必须优先阻断的 P0 项：默认证书校验开启、无明文口令落盘、QML 无跨层网络访问、i18n 覆盖完整。下列 P1 项应排入近期计划修复。</p>
+
+  <h3>P1 严重缺陷 —— 5 项</h3>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p1">P1</span><span class="id">P1-1</span><span>保活重连缺退避 / 上限 / 互斥，busy 时重连被静默吞掉</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/KeepAlive.cpp:105–106</code>（达阈值直接 <code>login()</code>）；<code class="loc">src/core/PortalClient.cpp:324</code>（<code>if(m_busy) return;</code> 不发 <code>loginFinished</code>）</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>连续失败达阈值即直接触发重登，无指数退避、无最大连续重试次数、无重登进行中互斥；若认证请求在途（<code>m_busy=true</code>），<code>login()</code> 静默返回且不上报结果，KeepAlive 侧无补偿重试。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>掉线后恢复被拉长到下一轮 150–210s 探测；门户限流 / 网络抖动时可能周期性重复打认证接口；busy 竞态下保活实际失效。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复（现有骨架调整）</span>：① <code>PortalClient::login</code> 在 busy 时仍回传 <code>loginFinished(false, 占用原因)</code> 或暴露 <code>isBusy</code> 供 KeepAlive 判断；② KeepAlive 引入指数退避（基准→上限封顶，如 30s→600s）、最大连续重登次数与成功复位、重登进行中互斥标志；③ 重登结果回调按成败决定退避重排。<br>
+        <b>理由：</b>状态机骨架已在 KeepAlive / PortalClient，补守卫与退避即可，无需更换骨架。<br>
+        <b>工作量：</b>约 1–1.5 人日（含退避与抖动验证、竞态自测）。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p1">P1</span><span class="id">P1-2</span><span>三门户 GBK 响应解码回退 UTF-8，中文错误报文乱码</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/PortalClient.cpp:220–227</code>（含 TODO(P1)）；<code class="loc">src/core/AccountPortalClient.cpp:68–84</code>；<code class="loc">src/core/DevicePortalClient.cpp:66–83</code>；写侧 <code class="loc">src/core/FormEncoding.cpp:90–123</code> 已用 QTextCodec</div></div>
+      <div class="field"><div class="fk">现象描述</div><div><code>decodeBody</code> 仅对 windows-1252 / ISO-8859-1 走 QStringDecoder；识别为 GBK/GB2312 时回退 <code>QString::fromUtf8</code>。写侧表单编码已接入 Qt5Compat QTextCodec，读侧三处未对齐。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>服务端中文提示（欠费、受限、设备超限、验证码错误等）可能乱码，错误原因不可读，易造成成功 / 失败误判，也无法正确展示给用户。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：读侧接入 Qt5Compat <code>QTextCodec</code>（Core5Compat 已链接，<code>CMakeLists.txt:17,229</code>）统一 GBK/GB2312 解码；抽取公共解码工具消除三处重复。<br>
+        <b>理由：</b>依赖已就位，仅补齐读路径并去重，不涉及协议改动。<br>
+        <b>工作量：</b>约 0.5 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p1">P1</span><span class="id">P1-3</span><span>账户门户 profile 解析为空占位，整条账号门户登录链路后端闲置</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/AccountPortalClient.cpp:322–331</code>（<code>parseProfile</code> 清空 profile/services）；<code class="loc">src/app/AccountController.hpp:40–48</code>（fetchCaptcha/loginWithCode/logout/clearSession/services/captchaImage 未对接）；<code class="loc">qml/pages/AccountDashboardPage.qml:27,160,175,198,222</code></div></div>
+      <div class="field"><div class="fk">现象描述</div><div><code>refreshProfile</code> 后 profile/services 恒空，账号页套餐流量 / 在线时长 / 余额显示占位；PrimeFaces 验证码登录、登出、会话清除后端已实现但 UI 无入口。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>已写后端长期闲置，与 UI 版本口径漂移；界面“看似有功能实则空转”，增加维护与误解成本。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复（先行）</span>：账号页明确标注“账号数据暂不可用”或隐藏空卡片，避免空转误导。<br>
+        <span class="fix-tag fix-ref">更换骨架 / 补全</span>：按 <code>docs/NAC-SELF-SERVICE.md</code> 标签-值布局实现 <code>parseProfile</code>，并在账号页接入验证码登录 / 登出。<br>
+        <b>理由：</b>解析依赖真实主页样本抓包，属协议补全而非架构重构；若近期不上账号中心，建议先裁剪闲置后端链路以降成本。<br>
+        <b>工作量：</b>解析 + UI 接入约 2–3 人日（含抓包核对）；裁剪闲置链路约 0.5 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p1">P1</span><span class="id">P1-4</span><span>8080 自助门户全程 HTTP 明文，口令仅做可逆编码</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/AccountPortalClient.cpp:178–188</code>；<code class="loc">src/core/DevicePortalClient.cpp:288–298</code>；<code class="loc">src/core/SelfServiceCodec.cpp:34–48</code>（escape + Latin1 + Base64，可逆）；Constants 中 HEALTH_URL 为 <code>http://nac.gdei.edu.cn:8080/...</code></div></div>
+      <div class="field"><div class="fk">现象描述</div><div>两个自助门户走 8080 明文 HTTP，口令经 Base64 / escape 编码（可还原）后提交，无 TLS、无证书层；编码在 UI / 注释中不应被表述为加密。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>同网段可嗅探 / 重放自助门户凭据；可逆编码不能替代加密保护。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复（现有协议骨架内）</span>：① 文档与 UI 明确标注 8080 为明文门户、不在不可信网络使用；② 探测门户是否提供 https / 8443 等 SSL 入口，有则优先；③ 文案不得把编码称为加密。<br>
+        <span class="fix-tag fix-ref">更换骨架（若门户支持）</span>：为自助门户接入 TLS 通道。<br>
+        <b>理由：</b>明文是服务端协议约束，客户端无法单方加密；先做风险标注与可选 HTTPS 探测。<br>
+        <b>工作量：</b>标注 + 地址探测约 0.5 人日；TLS 接入取决于门户是否支持。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p1">P1</span><span class="id">P1-5</span><span>Linux/Android 后备密钥库为编译期 pepper，不抗逆向；旧裸 Base64 兼容读取无完整性校验</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/secretstore_fallback.cpp:47–49</code>（appPepper 编译期常量）；<code class="loc">:117–121</code>（旧 Base64 直接 fromBase64 还原）；对比 <code>secretstore_win.cpp</code> DPAPI、<code>secretstore_mac.cpp</code> Keychain</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>非 Win/mac 平台口令以 PBKDF2-HMAC-SHA256 + HMAC keystream + encrypt-then-MAC 存储，但派生 pepper 硬编码进二进制；历史裸 Base64 值在解密前不校验格式 / 标签即直接还原。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>拿到二进制与配置文件的攻击者可离线还原 Linux/Android 本地保存的口令；旧格式迁移路径无完整性保护。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：① 收紧 / 移除旧裸 Base64 自动兼容读取，旧值标记需重新输入；② 保持 <code>backend()</code> 如实标注脆弱性。<br>
+        <span class="fix-tag fix-ref">更换骨架</span>：Linux 接 Secret Service（libsecret）、Android 接 Keystore 平台密钥库。<br>
+        <b>理由：</b>平台密钥库是 OS 级能力，需按系统集成；当前后备相较裸 Base64 已是改善，非阻断项。<br>
+        <b>工作量：</b>移除旧兼容约 0.2 人日；Linux keystore 约 2 人日、Android Keystore 约 2 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <h3>P2 优化 / 规范 —— 11 项</h3>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-1</span><span>证书管理器模块缺失：无导入 / 根信任 / 过期检测 / 内网 CA 单张信任</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/PortalClient.cpp:33–43,87</code>；全仓无 QSslCertificate / QSslConfiguration / addCaCertificate / caCertificates / QSslKey</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>任务书要求的“内置证书管理器”未实现：无证书加载 / 解析 / 持久化、无链校验与根信任管理、无过期检测与替换缓存、无导入导出；内网自签 / 私有 CA 只能靠全局跳过校验兼容。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>内网证书环境被迫全局关校验（中间人风险）；证书过期 / 变更无主动告警，排障缺少指纹与颁发者可见性。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-ref">更换骨架（新增模块）</span>：新增 CertificateStore，解析并持久化用户信任的内网 CA（QSslCertificate + QSslConfiguration::addCaCertificate），按主机绑定指纹 / 有效期并做过期提醒；全局跳过作为最后手段并强告警。<br>
+        <b>理由：</b>现有网络层无证书抽象，需新增子模块。<br>
+        <b>工作量：</b>基础 CA 导入 + 信任注入约 2–3 人日；过期提醒 / 指纹展示约 1 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-2</span><span>两套 8080 门户口令编码口径不一致</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/AccountPortalClient.cpp:181</code>（SelfServiceCodec::encodePassword）vs <code class="loc">src/core/DevicePortalClient.cpp:294</code>（loginCodeInput = enc(pass)，百分号编码）</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>PrimeFaces(PC) 与 ICEfaces 两套门户对前端口令处理不同；是否各自符合服务端预期需对照真实抓包复核，存在其中一套编码错误导致登录失败的可能。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>跨门户口径漂移，后期维护易混淆；口令编码错误会表现为难以定位的登录失败。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：分别对照两门户抓包样本核对编码，抽公共口令编码步骤并注释来源；若一套为误实现则订正。<br>
+        <b>理由：</b>属协议核对与小范围订正，不需重构。<b>工作量：</b>约 0.5–1 人日（含抓包核对）。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-3</span><span>事件桥接耦合英文日志前缀判定，文案 / 翻译改动即断裂</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/app/EventBridge.cpp:107,112,117</code>（startsWith "Offline probe failed" / "Offline after" / "SSL verification skipped by config"）；对照 <code>:88</code> 已改为 i18n key 匹配</div></div>
+      <div class="field"><div class="fk">现象描述</div><div><code>onLogAdded</code> 靠匹配双语日志串的英文前缀派生保活 / SSL 事件；日志措辞、翻译或前缀调整后事件会静默丢失。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>保活失败、重登、跳过校验等告警事件漏推；脆弱的文本耦合降低可维护性。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：在 KeepAlive / PortalClient 侧直接发结构化信号（级别 + 事件 key + 参数），EventBridge 订阅信号而非解析日志文本，日志仅留痕。<br>
+        <b>理由：</b>信号机制已存在，把派生入口从日志挪到事件信号即可。<b>工作量：</b>约 0.5 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-4</span><span>本地档案切换阻断使用魔法数字 state()==2</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/app/LocalDeviceController.cpp:262</code>（<code>m_auth-&gt;state() == 2</code>）；枚举见 <code>core/Types.hpp</code>：Unknown0 / Offline1 / Authenticating2 / Online3 / Error4</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>认证中状态以硬编码数字 2 比较，未使用 <code>AuthState::Authenticating</code> 枚举名；枚举顺序调整后语义可能错位。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>可读性差，重构枚举时易引入隐性逻辑错误。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：引入 Types.hpp 并改用枚举比较。<b>理由：</b>纯可读性订正。<b>工作量：</b>约 0.1 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-5</span><span>配置加载时 lang 未走 setter 范围校验</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/ConfigStore.cpp:170</code>（直接 <code>static_cast&lt;Lang&gt;(...toInt())</code>）；对照 setter <code>:79–86</code> 有范围校验、<code>themeMode :171</code> 有 qBound</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>损坏 / 被篡改的配置中 lang 越界值直接落入 <code>m_lang</code>，绕过 setter 范围校验；I18n 词典按枚举索引，越界可能取空或异常。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>异常配置可导致语言状态不确定。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：load() 对 lang 做同样范围 clamp / 回退 ZhCN，或复用 setLang。<b>理由：</b>与现有 setter 校验对齐即可。<b>工作量：</b>约 0.1 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-6</span><span>持久日志文件 Append 无大小轮转（内存条目已有界）</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/core/Logger.cpp:46–47</code>（Append 打开 gdei-connect.log）；内存上限 <code class="loc">Logger.hpp:46</code> MAX_ENTRIES=500 环形裁剪已具备</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>持久日志文件持续追加，无大小上限 / 日期轮转；内存 Entry 列表已有 500 条上限，文件侧未对齐。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>长时间运行后日志文件缓慢膨胀，占用磁盘。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：文件按大小 / 日期轮转并保留 N 份。<b>理由：</b>日志模块内部增强，不影响外部接口。<b>工作量：</b>约 0.5 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-7</span><span>QML 视图层直写 app.config.*，绕过控制器门面（15 处）</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">qml/pages/LoginPage.qml:108,133,157,171</code>；<code class="loc">qml/pages/AdvancedSettingsPage.qml:139,267,443–449,499</code>；<code class="loc">qml/components/ThemeSelector.qml:43</code></div></div>
+      <div class="field"><div class="fk">现象描述</div><div>视图直接绑定 / 写配置模型字段，配置写入口未收束到控制器；当前靠 ConfigStore setter clamp 兜底，未造成数据损坏。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>后续增加校验 / 审计 / 埋点时写路径分散易漏；分层上视图越权触碰持久化层。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：经 Session / Config 门面方法写入（门面内做校验、事件、持久化），QML 仅调用门面；短期可保留直写并在架构文档标注为过渡。<b>理由：</b>门面层已存在，收束写路径即可。<b>工作量：</b>约 0.5–1 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-8</span><span>控制器与门户客户端存在同构重复代码</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/app/AccountController.cpp</code> 与 <code>DeviceController.cpp</code>（busy/authenticated/lastMessage/captchaImage 信号转发）；<code>PortalClient / AccountPortalClient / DevicePortalClient</code> 的 decodeBody、enc、状态置位、消息设置</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>两个控制器成员、信号、转发逻辑近乎复制；三个门户客户端的解码 / 编码 / 状态管理各写一份。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>重复代码易漂移，改一处漏一处；新增门户会继续复制粘贴。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：抽取门户控制器基类 / 通用状态转发模板，公共解码、表单、状态逻辑下沉 core。<b>理由：</b>模式重复但各自门户字段不同，抽公共底座即可，无需重写。<b>工作量：</b>约 1–1.5 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-9</span><span>targetMac 恒空，目标 MAC 信息缺口</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/app/NetworkInfoController.cpp:64</code>（<code>targetMac() const { return QString(); }</code>）</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>目标（NAT 出口 / 直连 IP）MAC 无法获取，UI 显示不可用；属 NAT 环境限制，文档已中性化标注。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>信息展示位长期为空；非安全缺陷。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：维持中性化展示；若处于直连子网，可经 ARP / 邻接表尝试解析，失败仍显不可用。<b>理由：</b>受网络环境约束，按需实现。<b>工作量：</b>约 0.5 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-10</span><span>托盘 / 后台常驻仅 Windows；字体未内嵌，跨平台渲染依赖系统</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">CMakeLists.txt:120–123</code>（TrayController 仅 WIN32）；<code class="loc">qml/theme/Theme.qml:85–91</code>（字体取系统应用字体）</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>托盘入口仅 Windows；macOS / Linux / Android 无托盘与后台常驻方案；中文字体未内嵌，缺字环境下混排渲染不一致。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>跨平台体验不一致；部分系统字体回退异常时排版 / 中文显示受损。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：明确各平台支持矩阵；macOS / Linux 补托盘或文档标注差异；评估内嵌 Noto / 思源子集。<b>理由：</b>属平台能力补齐与打包资源决策。<b>工作量：</b>托盘跨平台约 1–2 人日 / 平台；字体内嵌约 0.5 人日。
+      </div></div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-head"><span class="tag t-p2">P2</span><span class="id">P2-11</span><span>内部属性 / 方法过度暴露给 QML</span></div>
+    <div class="issue-body">
+      <div class="field"><div class="fk">位置</div><div><code class="loc">src/app/SessionController.hpp:20,22</code>（route / operation）；<code class="loc">src/app/AuthController.hpp:24</code>（lastMessage）；<code class="loc">src/app/EventBus.hpp:35</code>（publish 标为 Q_INVOKABLE）</div></div>
+      <div class="field"><div class="fk">现象描述</div><div>内部状态机属性经 Q_PROPERTY 暴露但 QML 未读；<code>publish</code> 是后端内部发布入口，暴露到 QML 形成理论越权发事件面。</div></div>
+      <div class="field"><div class="fk">风险影响</div><div>扩大可被视图调用的接口面，弱化封装。</div></div>
+      <div class="field"><div class="fk">修复方案</div><div>
+        <span class="fix-tag fix-conv">收敛修复</span>：内部属性去掉 Q_PROPERTY 暴露或改普通成员；publish 移除 Q_INVOKABLE。<b>理由：</b>纯接口面收束。<b>工作量：</b>约 0.2 人日。
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 附录 ============ -->
+<section id="appendix">
+  <h2>十、附录</h2>
+
+  <h3>附录 A · i18n 覆盖核对</h3>
+  <ul>
+    <li>四语言（zhCN / zhTW / enGB / ja）词典各 <b>306</b> 键，跨语言差集为 <b>0</b>。</li>
+    <li>源码引用译文键 278 个，未发现悬空译文键；3 个脚本命中为门禁 actionKey（<code>remote.open</code> / <code>settings.save</code>）与动态拼接前缀（<code>events.source.</code>），非译文键。</li>
+    <li>统一消息本地化走 <code>key|arg1|arg2</code> 协议，先翻译 key 再按序填参；非已注册 key 原样透传。</li>
+  </ul>
+
+  <h3>附录 B · 已核验通过项（正面基线）</h3>
+  <table>
+    <thead><tr><th>类别</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td>分层依赖</td><td>QML 无 QNAM / XHR / fetch / WorkerScript / LocalStorage；无跨层直连 core；无非法跨域资源获取</td></tr>
+      <tr><td>证书默认策略</td><td>默认严格校验；跳过需配置显式开启 + 警告留痕 + UI 二次确认</td></tr>
+      <tr><td>口令存储</td><td>Win DPAPI / mac Keychain / 后备 PBKDF2 + encrypt-then-MAC + 完整性 tag；日志敏感字段（userPwd/loginCodeInput/token/csrf 等）脱敏</td></tr>
+      <tr><td>配置校验</td><td>setter 范围校验 / clamp；高级设置前端草稿 + validate 双保险</td></tr>
+      <tr><td>有界数据结构</td><td>EventModel 历史上限 200；Logger 内存上限 500 环形裁剪</td></tr>
+      <tr><td>认证健壮性</td><td>CSRF 提取、Cookie 跟随、errorNumber 1/7/8 分支、空响应旁证探测、启动只读探测标定初始态</td></tr>
+      <tr><td>工程配置</td><td>C++20、Qt6 固定组件、Core5Compat 链接、MSVC/MinGW 字符集宏、Android 配置、macOS AGL 剥离、版本号两处一致</td></tr>
+      <tr><td>主题适配</td><td>令牌集中、双态色板、字号 / 间距 / 圆角阶梯、dp/uiScale 缩放、宽屏居中与断点、图标随主题着色</td></tr>
+    </tbody>
+  </table>
+
+  <h3>附录 C · 已知后端 / 抓包缺口（历史归档，非本轮新增）</h3>
+  <ul>
+    <li>半连通判定、诊断工具集平台范围、友好网卡名 / 型号 / 驱动、网关字段、云端设备踢除与权限置灰、charset 嗅探回填，均为待抓包 / 待实现项。</li>
+    <li>账户中心字段（余额 / 套餐 / 时长）解析依赖 main.jsf 主页真实样本，见 <code>docs/NAC-SELF-SERVICE.md</code>。</li>
+  </ul>
+
+  <h3>附录 D · 审计范围与方法说明</h3>
+  <ul>
+    <li>方法：源码静态阅读 + 全仓 API / 符号 / 文案检索 + 前后端成员双向对账；未运行动态抓包，报文行为以源码与既有 docs 基线为准。</li>
+    <li>范围：<code>src/</code>（app / core / platform）、<code>qml/</code>（pages / components / theme）、<code>CMakeLists.txt</code>；未深入评审 <code>packaging/</code> 脚本与 <code>.github/</code> CI 流水线细节。</li>
+    <li>约束：本报告不设计、不评估任何绕过校园网 3 台设备上限检测的方案；仅覆盖本机保活、掉线识别、自动重连与证书管理正确性。</li>
+  </ul>
+</section>
+
+<div class="footer">gdei-auth-client 全栈审计报告 · 生成于 2026-11-24 · 版本 0.2.1 · 静态单文件，可直接离线打开</div>
+
+</div>
+</body>
+</html>

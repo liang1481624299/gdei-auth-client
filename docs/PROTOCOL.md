@@ -17,7 +17,7 @@
 | 门户可达性探测 / probe | `http://nac.gdei.edu.cn:8080/mselfservice/snac/macList.xhtml`（匿名 302 跳登录，认证后 200） |
 | 8080 根入口 / 8080 root | `http://nac.gdei.edu.cn:8080/`（匿名 200，126 B，页面内 JS `window.location.href='/selfservice/index.xhtml'`） |
 | 8080 captive 入口 / 8080 portal entry | `http://nac.gdei.edu.cn:8080/portal?nasip=192.168.100.8`（302 → `/portal/?nasip=192.168.100.8`；已在线会话再访问返回 200 空体） |
-| 外网连通性探测 / NCSI | `http://www.msftconnecttest.com/connecttest.txt`（body 含 `Microsoft` 视为已认证上网） |
+| 外网连通性探测 / NCSI | `http://www.msftconnecttest.com/connecttest.txt`（body 含 `Microsoft` 视为已认证上网）；备选标准端点 `http://edge-http.microsoft.com/captiveportal/generate_204`（在线回 `204 No Content`，被劫持回 302/200 门户页） |
 | 自助门户登录页 / self-service login | `http://nac.gdei.edu.cn:8080/mselfservice/login.jsf`（详见第 6 节） |
 | 自助门户首页 / self-service home | `/mselfservice/user/index.jsf` |
 | 绑定终端列表 / bound terminal list | `/mselfservice/snac/macList.xhtml` |
@@ -25,10 +25,13 @@
 
 ## 2. 请求要点 / Request
 
-**登录时序 / Flow**：`GET` 入口 `/portal?nasip=<nasip>`（302 → `/portal/?nasip=<nasip>`，200 空体，**响应头无 `Set-Cookie`**）→ `GET` 登录页 `/portal/2021/login.jsp?nasip=<nasip>`（HTML 隐藏域；页面**无 CSRF/token 隐藏域**）→ `POST` 表单提交。captive 认证为**无状态**：服务端按来源 IP 鉴权，表单 `basip` / `userip` 隐藏域均为空，不依赖 Cookie 会话；前两步 GET 主要是对齐浏览器时序与渲染页面。
+**登录时序 / Flow**：`GET` 入口 `/portal?nasip=<nasip>`（302 → `/portal/?nasip=<nasip>`，200 空体，**响应头无 `Set-Cookie`**）→ `GET` 登录页 `/portal/2021/login.jsp?nasip=<nasip>`（HTML 隐藏域；页面**无 CSRF/token 隐藏域**）→ `POST` 表单提交。captive 认证为**无状态**：服务端按来源 IP 鉴权，`userip` 隐藏域为空，`basip` 取 NAS（AC）地址（渲染值 `192.168.100.8`），不依赖 Cookie 会话；前两步 GET 主要是对齐浏览器时序与渲染页面。
+
+> **请求头实测要点（2026-11-25 探针复核）**：门户过滤器要求 `Accept` 与 `Accept-Language` **同时存在**；只带其一或都不带，页面 GET 与 `pws` POST 一律回 `200 Content-Length: 0` 空体。页面浏览用 `Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`，AJAX 提交用 `Accept: application/json, text/javascript, */*; q=0.01`，`Accept-Language: en-US,en;q=0.9`（英文皮肤，表单 `language=English`）。
 
 - 方法：`POST`，`Content-Type: application/x-www-form-urlencoded; charset=UTF-8`
 - 带 `X-Requested-With: XMLHttpRequest`，`Origin: https://nac.gdei.edu.cn`，`Referer: https://nac.gdei.edu.cn/portal/2021/login.jsp`（Referer 不带 `nasip` 查询串）。
+- 必须同时带 `Accept`（AJAX：`application/json, text/javascript, */*; q=0.01`）与 `Accept-Language: en-US,en;q=0.9`；缺任一门户回 200 空体（见上方探针说明）。
 - 直连 IP 时仍需在 `Host` 头带原始域名。
 
 **`hello1/2/3/4/5` Cookie 是前端"记住用户名密码"记忆，不是服务端会话标识**（2026-11-22 阅 `common_head_service_code.js` / `common.js` 确认）：由页面 JS `document.cookie` 写入，`Path=/portal/`，有效期一年；`hello1`=用户名，`hello2`=是否勾选记住密码，`hello3`=口令经每字符 `XOR 0xff` 本地混淆后的串（固定混淆，可逆，**与上线提交的 `userPwd` 无关**），`hello4`=服务类型值，`hello5`=服务类型文本。服务端 captive 认证不读这些 Cookie；客户端无需复刻该记忆逻辑。
@@ -49,7 +52,7 @@
 | `userPwd` | **Base64(UTF-8 明文口令)**，标准 Base64 |
 | `userurl` | 空 |
 | `userip` | 空 |
-| `basip` | 空（登录页隐藏域 `value=""`；服务端按来源 IP 鉴权） |
+| `basip` | NAS（AC）地址 `192.168.100.8`（登录页隐藏域渲染值；服务端仍按来源 IP 鉴权） |
 | `language` | `English` |
 | `usermac` | `null` |
 | `wlannasid` | 空 |
@@ -71,7 +74,7 @@
 ### 实测登录 Body（示例）
 
 ```
-freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&userip=&basip=&language=English&usermac=null&wlannasid=&wlanssid=&entrance=null&loginVerifyCode=&userDynamicPwddd=&customPageId=105&send_dynamic_pwd_type=0&pwdMode=0&portalProxyIP=210.38.64.39&portalProxyPort=50200&dcPwdNeedEncrypt=1&assignIpType=0&appRootUrl=https%3A%2F%2Fnac.gdei.edu.cn%2Fportal%2F&manualUrl=&manualUrlEncryptKey=
+freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&userip=&basip=192.168.100.8&language=English&usermac=null&wlannasid=&wlanssid=&entrance=null&loginVerifyCode=&userDynamicPwddd=&customPageId=105&send_dynamic_pwd_type=0&pwdMode=0&portalProxyIP=210.38.64.39&portalProxyPort=50200&dcPwdNeedEncrypt=1&assignIpType=0&appRootUrl=https%3A%2F%2Fnac.gdei.edu.cn%2Fportal%2F&manualUrl=&manualUrlEncryptKey=
 ```
 
 > 示例中的账号与口令已脱敏；`userPwd` 为口令 UTF-8 字节的标准 Base64。
@@ -123,7 +126,7 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 }
 ```
 
-> 下线 `POST /portal/pws?t=lo` 复用上线的隐藏域集合，但 **`userName` / `userPwd` 实测为空**（在线会话由服务端按来源 IP / 会话释放，不提交凭据）；`basip` / `userip` 同样为空。**Request cookies 为空**（实测 "No request cookies were sent"），再次印证 captive 认证无状态、不依赖 `hello*` 记忆 Cookie。
+> 下线 `POST /portal/pws?t=lo` 复用上线的隐藏域集合，但 **`userName` / `userPwd` 实测为空**（在线会话由服务端按来源 IP / 会话释放，不提交凭据）；`userip` 为空，`basip` 仍带 NAS 地址。**Request cookies 为空**（实测 "No request cookies were sent"），再次印证 captive 认证无状态、不依赖 `hello*` 记忆 Cookie。
 
 ### 3.1 成功报文字段（`pl` 参数 / 响应体 JSON，2026-11-22 实测）
 
@@ -163,7 +166,7 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 | `clientPrivateIp` | str | 客户端私网 IP；实测空，由服务端按来源地址识别 |
 | `userurl` | str | 用户原始访问 URL，实测空 |
 | `usermac` | null | 用户 MAC；`null` 表示未上报 |
-| `nasIp` | str | NAS / AC 地址；实测空串（与表单 `basip` 无关，后者亦为空） |
+| `nasIp` | str | NAS / AC 地址；实测空串（服务端回显字段，与表单 `basip` 不互为镜像） |
 | `clientLanguage` | str | 客户端语言，实测 `English` |
 | `ifTryUsePopupWindow` | bool | 是否尝试弹窗；实测 `false` |
 | `triggerRedirectUrl` | str | 触发重定向 URL，实测空 |
@@ -182,13 +185,13 @@ freeOTP_secret_hidden=&userName=<username>&userPwd=<base64(password)>&userurl=&u
 在线态由以下信号交叉得出，任一带宽均不单独决定离线：
 
 - 上线报文 `errorNumber=1`、已在线 `7` → 在线。
-- 外网 NCSI 探测：`2xx` + 响应体非空且含 `Microsoft` 特征串 → 外网可达。
+- 外网 NCSI 探测：`2xx` +（响应体非空且含 `Microsoft` 特征串，**或**状态码 `204 No Content`，对应 generate_204 类端点）→ 外网可达。
 - **空响应旁路**：已在线旁路时 `POST pws` 常回 `2xx` 空体。在线旁证为「会话 Cookie 非空」或「近期（`EMPTY_HINT_FRESH_MS`，120s 内）外网探测可达」；两类旁证都没有时，补发一次外网旁证探测，回调聚合后再定在线/失败，避免把已在线旁路误判为认证失败。
 - 本机网卡 IP 属于 `10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16` 等私网段**不参与**在线/离线判定，仅用于网络信息卡片展示。
 
 **一层 NAT（家用/宿舍路由器）适配**
 
-- H3C iMC Portal 按**源 IP** 在 NAS 上建会话；表单 `userip` / `basip` 留空，服务端取来源地址。路由器做一层 NAT 后，发往 `nac.gdei.edu.cn:443` 的报文经 NAT 换成校园分配 IP，认证构造不依赖本机私网段，**协议上可以成立**。
+- H3C iMC Portal 按**源 IP** 在 NAS 上建会话；表单 `userip` 留空，`basip` 带 NAS 地址，服务端取来源地址鉴权。路由器做一层 NAT 后，发往 `nac.gdei.edu.cn:443` 的报文经 NAT 换成校园分配 IP，认证构造不依赖本机私网段，**协议上可以成立**。
 - 网关侧限制（app 无法改变）：多台设备共用同一 NAT IP 时会话按 IP 维度；一台认证上线后，同 NAT 下其他设备可能直接旁路，一次下线会断开整个 NAT IP 的会话。
 - 网络信息卡片的「同/异子网」比较本机 IP 与备用公网 IP `210.38.64.39`；NAT 跨网时显示「不同子网」属常态，界面以中性信息色呈现，不作橙色告警。
 
